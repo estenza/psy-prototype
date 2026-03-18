@@ -1,0 +1,38 @@
+:root {
+  /* Accents */
+  --accent-primary: #007aff;
+  --accent-like: #ff3b30;
+  --accent-bookmark: #ffab36;
+  --accent-success: #34c759;
+
+  /* Backgrounds */
+  --background-primary: #ffffff;
+  --background-secondary: #f5f5f7;
+  --background-elevated: #ffffff;
+
+  /* Fills */
+  --fill-primary: rgba(120, 120, 128, 0.2);
+  --fill-secondary: rgba(120, 120, 128, 0.12);
+  --fill-tertiary: rgba(120, 120, 128, 0.18);
+  --fill-quaternary: rgba(120, 120, 128, 0.08);
+  --fill-card-hover: rgba(0, 0, 0, 0.01);
+  --fill-control-hover: rgba(120, 120, 128, 0.045);
+  --fill-like: rgba(255, 59, 48, 0.14);
+  --fill-like-hover: rgba(255, 59, 48, 0.22);
+  --fill-bookmark: rgba(255, 171, 54, 0.16);
+  --fill-bookmark-hover: rgba(255, 171, 54, 0.24);
+
+  /* Labels */
+  --label-primary: rgba(0, 0, 0, 0.88);
+  --label-secondary: rgba(60, 60, 67, 0.82);
+  --label-tertiary: rgba(60, 60, 67, 0.6);
+  --label-quaternary: rgba(60, 60, 67, 0.36);
+  --label-inverse: #ffffff;
+
+  /* Separators */
+  --separator-primary: rgba(60, 60, 67, 0.18);
+  --separator-strong: rgba(60, 60, 67, 0.28);
+
+  /* Overlays */
+  --tooltip-background: #939393;
+}

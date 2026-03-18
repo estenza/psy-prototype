@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# внутри
 
-## Getting Started
+Прототип главной страницы для анонимной платформы про психологические истории и поддержку. Проект собран на `Next.js`, `React` и `Tailwind CSS v4` и сейчас сфокусирован на чистом UI, понятной структуре и простой эволюции от mock-данных к реальному API.
 
-First, run the development server:
+## Установка и запуск
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Приложение будет доступно на `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Полезные команды:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+## Структура проекта
 
-To learn more about Next.js, take a look at the following resources:
+```text
+src/
+  app/                  # entrypoints Next.js app router
+  components/
+    layout/             # шапка, навигация, sidebar
+    ui/                 # tooltip, иконки и базовые UI-кирпичики
+  constants/            # навигация, режимы ленты, UI-константы
+  features/
+    feed/
+      components/       # режимы отображения ленты и feed-specific UI
+      mocks/            # mock-данные для ленты
+  hooks/                # client-side state hooks
+  lib/                  # небольшие переиспользуемые helpers и adapters
+  styles/               # design tokens
+  types/                # доменные типы и UI-модели
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Ключевые решения
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/app/page.tsx` оставлен тонким и в основном собирает экран из модулей.
+- Состояние ленты вынесено в `src/hooks/use-feed.ts`, поэтому UI-компоненты меньше завязаны на логику.
+- Типы вынесены в `src/types`, чтобы они не жили внутри feature-компонентов.
+- Моки и их адаптация разделены:
+  - `src/features/feed/mocks/mock-api-posts.ts` — сырой mock API shape
+  - `src/lib/post-adapter.ts` — маппинг API -> UI model
+  - `src/features/feed/mocks/mock-posts.ts` — готовые данные для интерфейса
+- Design tokens вынесены в `src/styles/tokens.css`, а глобальные utility-классы оставлены в `src/app/globals.css`.
+- Иконки разделены по смыслу на несколько файлов, чтобы избежать одного большого `index.tsx`.
 
-## Deploy on Vercel
+## Архитектурные принципы
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Без лишних абстракций: только те слои, которые реально помогают читать и менять код.
+- Компоненты по возможности презентационные.
+- Feature-логика сгруппирована по домену.
+- Shared helpers и общие типы не привязаны к конкретному экрану.
+- Цвета, режимы и навигация централизованы, а не размазаны по JSX.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Что менять чаще всего
+
+- Основная страница: `src/app/page.tsx`
+- Layout: `src/components/layout/*`
+- Лента и её режимы: `src/features/feed/components/*`
+- Mock-данные: `src/features/feed/mocks/*`
+- Токены: `src/styles/tokens.css`
+- Типы: `src/types/*`
+
+## Текущее состояние качества
+
+- `any` в проекте не используется.
+- ESLint уже настроен и используется как базовая проверка качества.
+- Prettier отдельно не добавлялся, чтобы не усложнять стек без явной необходимости.
