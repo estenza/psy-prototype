@@ -4,7 +4,7 @@ export function CardViewIcon() {
 
 export function CardModeIcon({ filled = false }: { filled?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none">
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
       {filled ? (
         <path
           d="M22 17C22 19.7614 19.7614 22 17 22H7C4.23858 22 2 19.7614 2 17V13H22V17ZM17 2C19.7614 2 22 4.23858 22 7V11H2V7C2 4.23858 4.23858 2 7 2H17Z"
@@ -34,7 +34,7 @@ export function CompactViewIcon() {
 
 export function CompactModeIcon({ filled = false }: { filled?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none">
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
       {filled ? (
         <path
           d="M22 17C22 19.7614 19.7614 22 17 22H7C4.23858 22 2 19.7614 2 17V16.5H22V17ZM22 14.5H2V9.5H22V14.5ZM17 2C19.7614 2 22 4.23858 22 7V7.5H2V7C2 4.23858 4.23858 2 7 2H17Z"
@@ -65,7 +65,7 @@ export function ForumViewIcon() {
 
 export function ForumModeIcon({ filled = false }: { filled?: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none">
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
       <path
         d="M9 12H21"
         stroke="currentColor"

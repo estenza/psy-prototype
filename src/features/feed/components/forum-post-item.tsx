@@ -1,6 +1,7 @@
 import { BookmarkIcon, ChatIcon } from "@/components/ui/icons";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
-import type { Post } from "@/types/feed";
+import { PostContextBadges } from "@/features/feed/components/post-context-badges";
+import type { Post } from "@/features/feed/types";
 
 type ForumPostItemProps = {
   post: Post;
@@ -14,7 +15,12 @@ export function ForumPostItem({
   return (
     <div className="flex items-center gap-4">
       <div className="min-w-0 flex-1">
-        <h2 className="text-label-primary overflow-hidden text-ellipsis whitespace-nowrap text-[18px] font-semibold leading-[1.2]">
+        <PostContextBadges
+          intent={post.intent}
+          topic={post.topic}
+          className="mb-2"
+        />
+        <h2 className="font-helvetica text-label-primary overflow-hidden text-ellipsis whitespace-nowrap text-[20px] font-semibold leading-6">
           {post.content.title}
         </h2>
         <div className="text-label-secondary mt-1.5 flex items-center gap-2 text-[14px] leading-5">
@@ -49,10 +55,10 @@ export function ForumPostItem({
           event.stopPropagation();
           onToggleBookmark(post.id);
         }}
-        className={`group/tooltip relative z-10 inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full transition ${
+        className={`group/tooltip relative z-10 inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full ${
           post.viewer.bookmarked
-            ? "bg-[var(--fill-bookmark)] text-[var(--accent-bookmark)] hover:bg-[var(--fill-bookmark-hover)]"
-            : "text-[var(--label-secondary)] hover:bg-[var(--fill-secondary)] hover:text-[var(--label-primary)]"
+            ? "interactive-accent-bookmark"
+            : "interactive-toggle-bookmark-plain"
         }`}
       >
         <BookmarkIcon filled={post.viewer.bookmarked} />

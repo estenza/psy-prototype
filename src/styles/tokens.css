@@ -1,4 +1,11 @@
 :root {
+  /* Layout */
+  --app-shell-max-width: 1440px;
+  --app-shell-content-max-width: 720px;
+  --app-shell-side-column-min-width: 248px;
+  --app-shell-side-rail-width: 244px;
+  --app-header-search-width: 560px;
+
   /* Accents */
   --accent-primary: #007aff;
   --accent-like: #ff3b30;
@@ -16,7 +23,7 @@
   --fill-tertiary: rgba(120, 120, 128, 0.18);
   --fill-quaternary: rgba(120, 120, 128, 0.08);
   --fill-card-hover: rgba(0, 0, 0, 0.01);
-  --fill-control-hover: rgba(120, 120, 128, 0.045);
+  --fill-control-hover: rgba(120, 120, 128, 0.08);
   --fill-like: rgba(255, 59, 48, 0.14);
   --fill-like-hover: rgba(255, 59, 48, 0.22);
   --fill-bookmark: rgba(255, 171, 54, 0.16);
@@ -24,8 +31,8 @@
 
   /* Labels */
   --label-primary: rgba(0, 0, 0, 0.88);
-  --label-secondary: rgba(60, 60, 67, 0.82);
-  --label-tertiary: rgba(60, 60, 67, 0.6);
+  --label-secondary: rgb(60, 60, 67);
+  --label-tertiary: rgba(60, 60, 67, 0.64);
   --label-quaternary: rgba(60, 60, 67, 0.36);
   --label-inverse: #ffffff;
 
@@ -35,4 +42,43 @@
 
   /* Overlays */
   --tooltip-background: #939393;
+}
+
+.theme-dark {
+  /* Accents */
+  --accent-primary: #0a84ff;
+  --accent-like: #ff6b5f;
+  --accent-bookmark: #ffbb4d;
+  --accent-success: #30d158;
+
+  /* Backgrounds */
+  --background-primary: #111215;
+  --background-secondary: #17191d;
+  --background-elevated: #1c1f24;
+
+  /* Fills */
+  --fill-primary: rgba(255, 255, 255, 0.18);
+  --fill-secondary: rgba(255, 255, 255, 0.1);
+  --fill-tertiary: rgba(255, 255, 255, 0.14);
+  --fill-quaternary: rgba(255, 255, 255, 0.06);
+  --fill-card-hover: rgba(255, 255, 255, 0.03);
+  --fill-control-hover: rgba(255, 255, 255, 0.08);
+  --fill-like: rgba(255, 107, 95, 0.18);
+  --fill-like-hover: rgba(255, 107, 95, 0.28);
+  --fill-bookmark: rgba(255, 187, 77, 0.18);
+  --fill-bookmark-hover: rgba(255, 187, 77, 0.26);
+
+  /* Labels */
+  --label-primary: rgba(255, 255, 255, 0.92);
+  --label-secondary: rgb(235, 235, 245);
+  --label-tertiary: rgba(235, 235, 245, 0.64);
+  --label-quaternary: rgba(235, 235, 245, 0.26);
+  --label-inverse: #111215;
+
+  /* Separators */
+  --separator-primary: rgba(255, 255, 255, 0.12);
+  --separator-strong: rgba(255, 255, 255, 0.18);
+
+  /* Overlays */
+  --tooltip-background: #24262b;
 }

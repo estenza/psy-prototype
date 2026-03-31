@@ -1,8 +1,11 @@
-import type { ApiPostRecord, Post } from "@/types/feed";
+import type { ApiPostRecord, Post } from "@/features/feed/types";
 
 export function mapApiPostToPost(record: ApiPostRecord): Post {
   return {
     id: record.id,
+    createdAt: new Date(record.created_at_iso),
+    intent: record.intent,
+    topic: record.topic,
     author: {
       name: record.author.display_name,
       handle: record.author.username,
@@ -21,6 +24,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
       likes: record.counters.likes,
     },
     viewer: {
+      isAuthor: record.viewer_state.is_author ?? false,
       liked: record.viewer_state.liked,
       bookmarked: record.viewer_state.bookmarked,
     },

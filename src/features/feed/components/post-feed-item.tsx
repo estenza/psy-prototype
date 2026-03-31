@@ -1,33 +1,27 @@
-import type { Post, ViewMode } from "@/types/feed";
 import { CardPostItem } from "@/features/feed/components/card-post-item";
 import { CompactPostItem } from "@/features/feed/components/compact-post-item";
-import { ForumPostItem } from "@/features/feed/components/forum-post-item";
+import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
+import type { Post, ViewMode } from "@/features/feed/types";
 
 type PostFeedItemProps = {
+  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
   post: Post;
   viewMode: ViewMode;
   onToggleLike: (postId: Post["id"]) => void;
-  onToggleBookmark: (postId: Post["id"]) => void;
 };
 
 export function PostFeedItem({
+  onPostMenuAction,
   post,
   viewMode,
   onToggleLike,
-  onToggleBookmark,
 }: PostFeedItemProps) {
-  if (viewMode === "forum") {
-    return (
-      <ForumPostItem post={post} onToggleBookmark={onToggleBookmark} />
-    );
-  }
-
   if (viewMode === "compact") {
     return (
       <CompactPostItem
         post={post}
         onToggleLike={onToggleLike}
-        onToggleBookmark={onToggleBookmark}
+        onPostMenuAction={onPostMenuAction}
       />
     );
   }
@@ -36,7 +30,7 @@ export function PostFeedItem({
     <CardPostItem
       post={post}
       onToggleLike={onToggleLike}
-      onToggleBookmark={onToggleBookmark}
+      onPostMenuAction={onPostMenuAction}
     />
   );
 }

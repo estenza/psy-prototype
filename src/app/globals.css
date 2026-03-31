@@ -4,37 +4,67 @@
 :root {
   --background: var(--background-primary);
   --foreground: var(--label-primary);
+  --app-header-height: 64px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
-html {
+html,
+body {
   height: 100%;
+  overscroll-behavior-y: none;
+}
+
+html {
   background: var(--background);
-  overscroll-behavior: none;
 }
 
 body {
-  height: 100%;
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  overflow: hidden;
-  overscroll-behavior: none;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+@keyframes feed-post-flash {
+  from {
+    background-color: rgba(0, 122, 255, 0.16);
+  }
+
+  to {
+    background-color: var(--background-primary);
+  }
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  letter-spacing: inherit;
 }
 
 @layer components {
+  .font-helvetica {
+    font-family: Helvetica, Arial, sans-serif;
+  }
+
   .surface-primary {
     background-color: var(--background-primary);
   }
 
   .surface-secondary {
     background-color: var(--background-secondary);
+  }
+
+  .surface-elevated {
+    background-color: var(--background-elevated);
   }
 
   .text-label-primary {
@@ -72,20 +102,257 @@ body {
 
   .interactive-fill:hover {
     background-color: var(--fill-tertiary);
+  }
+
+  .interactive-fill:active {
+    background-color: var(--fill-primary);
+    color: var(--label-primary);
+  }
+
+  .interactive-secondary {
+    background-color: var(--fill-secondary);
+    color: var(--label-primary);
+  }
+
+  .interactive-secondary:hover {
+    background-color: var(--fill-tertiary);
+  }
+
+  .interactive-secondary:active {
+    background-color: var(--fill-primary);
+  }
+
+  .interactive-control {
+    color: var(--label-secondary);
+  }
+
+  .interactive-control:hover {
+    background-color: var(--fill-control-hover);
+  }
+
+  .interactive-control:active {
+    background-color: var(--fill-secondary);
+    color: var(--label-primary);
+  }
+
+  .interactive-solid {
+    background-color: var(--label-primary);
+    color: var(--label-inverse);
+  }
+
+  .interactive-solid:hover {
+    opacity: 0.9;
+  }
+
+  .interactive-solid:active {
+    opacity: 1;
+  }
+
+  .interactive-solid:disabled,
+  .interactive-fill:disabled,
+  .interactive-secondary:disabled,
+  .interactive-control:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .interactive-accent-like {
+    background-color: var(--fill-like);
+    color: var(--accent-like);
+  }
+
+  .interactive-accent-like:hover {
+    background-color: var(--fill-like-hover);
+  }
+
+  .interactive-accent-like:active {
+    background-color: var(--fill-like-hover);
+  }
+
+  .interactive-accent-bookmark {
+    background-color: var(--fill-bookmark);
+    color: var(--accent-bookmark);
+  }
+
+  .interactive-accent-bookmark:hover {
+    background-color: var(--fill-bookmark-hover);
+  }
+
+  .interactive-accent-bookmark:active {
+    background-color: var(--fill-bookmark-hover);
+  }
+
+  .interactive-toggle-like {
+    background-color: var(--fill-secondary);
+    color: var(--label-secondary);
+  }
+
+  .interactive-toggle-like:hover {
+    background-color: var(--fill-tertiary);
+  }
+
+  .interactive-toggle-like:active {
+    background-color: var(--fill-primary);
+    color: var(--label-primary);
+  }
+
+  .interactive-toggle-bookmark {
+    background-color: var(--fill-secondary);
+    color: var(--label-secondary);
+  }
+
+  .interactive-toggle-bookmark:hover {
+    background-color: var(--fill-tertiary);
+  }
+
+  .interactive-toggle-bookmark:active {
+    background-color: var(--fill-primary);
+    color: var(--label-primary);
+  }
+
+  .interactive-toggle-bookmark-plain {
+    color: var(--label-secondary);
+  }
+
+  .interactive-toggle-bookmark-plain:hover {
+    background-color: var(--fill-control-hover);
+  }
+
+  .interactive-toggle-bookmark-plain:active {
+    background-color: var(--fill-secondary);
     color: var(--label-primary);
   }
 
   .search-field {
     background-color: var(--background-primary);
+    border: 1px solid var(--separator-strong);
     color: var(--label-secondary);
-    box-shadow: inset 0 0 0 1px var(--separator-strong);
+  }
+
+  .feed-post-flash {
+    animation: feed-post-flash 1000ms ease forwards;
   }
 
   .search-field:focus-within {
-    box-shadow: inset 0 0 0 2px var(--label-primary);
+    border-color: var(--label-primary);
   }
 
   .tooltip-surface {
     background-color: var(--tooltip-background);
+  }
+
+  .field-shell {
+    background-color: var(--background-elevated);
+    border: 1px solid var(--separator-primary);
+  }
+
+  .field-shell:hover:not(:focus-within) {
+    border-color: var(--separator-strong);
+  }
+
+  .field-shell:focus-within {
+    border-color: var(--label-primary);
+  }
+
+  .field-shell[data-invalid="true"] {
+    border-color: var(--accent-like);
+  }
+
+  .topic-editor-shell {
+    background-color: var(--background-elevated);
+    border: 1px solid var(--separator-primary);
+  }
+
+  .topic-editor-shell:hover:not(:focus-within) {
+    border-color: var(--separator-strong);
+  }
+
+  .topic-editor-shell:focus-within {
+    border-color: var(--label-primary);
+  }
+
+  .topic-editor-shell[data-invalid="true"] {
+    border-color: var(--accent-like);
+  }
+
+  .topic-editor-content .ProseMirror {
+    min-height: 112px;
+    color: var(--label-primary);
+    outline: none;
+    white-space: pre-wrap;
+  }
+
+  .topic-editor-content .ProseMirror p {
+    margin: 0;
+  }
+
+  .topic-editor-content .ProseMirror > * + * {
+    margin-top: 0.95rem;
+  }
+
+  .topic-editor-content .ProseMirror ul,
+  .topic-editor-content .ProseMirror ol {
+    padding-left: 1.3rem;
+  }
+
+  .topic-editor-content .ProseMirror ul {
+    list-style: disc;
+  }
+
+  .topic-editor-content .ProseMirror ol {
+    list-style: decimal;
+  }
+
+  .topic-editor-content .ProseMirror blockquote {
+    border-left: 3px solid var(--separator-strong);
+    color: var(--label-secondary);
+    padding-left: 1rem;
+  }
+
+  .topic-editor-content .ProseMirror a {
+    color: var(--label-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--separator-strong);
+    text-underline-offset: 3px;
+  }
+
+  .topic-editor-content .ProseMirror img {
+    border-radius: 1rem;
+    display: block;
+    max-width: 100%;
+  }
+
+  .topic-editor-content .ProseMirror div[data-embedded-media] {
+    background-color: var(--fill-quaternary);
+    border-radius: 1rem;
+    box-shadow: inset 0 0 0 1px var(--separator-primary);
+    overflow: hidden;
+  }
+
+  .topic-editor-content .ProseMirror div[data-embedded-media][data-kind="iframe"] {
+    aspect-ratio: 16 / 9;
+  }
+
+  .topic-editor-content .ProseMirror div[data-embedded-media] iframe,
+  .topic-editor-content .ProseMirror div[data-embedded-media] video {
+    border: 0;
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+
+  .topic-editor-content .ProseMirror span[data-spoiler] {
+    background-color: var(--fill-primary);
+    border-radius: 0.45rem;
+    color: transparent;
+    padding: 0 0.25rem;
+    transition:
+      color 120ms ease,
+      background-color 120ms ease;
+  }
+
+  .topic-editor-content .ProseMirror span[data-spoiler]:hover {
+    background-color: var(--fill-tertiary);
+    color: var(--label-primary);
   }
 }

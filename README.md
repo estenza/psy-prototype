@@ -22,49 +22,60 @@ npm run build
 
 ```text
 src/
-  app/                  # entrypoints Next.js app router
+  app/                        # entrypoints Next.js app router
   components/
-    layout/             # шапка, навигация, sidebar
-    ui/                 # tooltip, иконки и базовые UI-кирпичики
-  constants/            # навигация, режимы ленты, UI-константы
+    layout/                   # шапка, навигация, sidebar
+    ui/                       # tooltip, иконки и базовые UI-кирпичики
+  constants/                  # shared UI-константы вне конкретной feature
   features/
     feed/
-      components/       # режимы отображения ленты и feed-specific UI
-      mocks/            # mock-данные для ленты
-  hooks/                # client-side state hooks
-  lib/                  # небольшие переиспользуемые helpers и adapters
-  styles/               # design tokens
-  types/                # доменные типы и UI-модели
+      components/             # секция ленты и режимы отображения
+      constants/              # feed-specific константы
+      hooks/                  # feed-specific client state
+      lib/                    # feed-specific adapters/helpers
+      mocks/                  # mock API shape и подготовленные данные
+      types.ts                # типы ленты
+  lib/                        # небольшие shared helpers
+  styles/                     # design tokens
+  types/                      # только shared типы
 ```
 
 ## Ключевые решения
 
-- `src/app/page.tsx` оставлен тонким и в основном собирает экран из модулей.
-- Состояние ленты вынесено в `src/hooks/use-feed.ts`, поэтому UI-компоненты меньше завязаны на логику.
-- Типы вынесены в `src/types`, чтобы они не жили внутри feature-компонентов.
-- Моки и их адаптация разделены:
+- `src/app/page.tsx` остаётся тонким и в основном собирает экран из layout-модулей и feature-секций.
+- Вся логика и модели ленты сгруппированы внутри `src/features/feed`, чтобы feature было проще читать и переносить.
+- Mock-данные и адаптер оставлены раздельно:
   - `src/features/feed/mocks/mock-api-posts.ts` — сырой mock API shape
-  - `src/lib/post-adapter.ts` — маппинг API -> UI model
+  - `src/features/feed/lib/post-adapter.ts` — маппинг API -> UI model
   - `src/features/feed/mocks/mock-posts.ts` — готовые данные для интерфейса
+- Такая связка немного многословнее, но сохраняет готовность к подключению реального API без переписывания UI-модели.
 - Design tokens вынесены в `src/styles/tokens.css`, а глобальные utility-классы оставлены в `src/app/globals.css`.
-- Иконки разделены по смыслу на несколько файлов, чтобы избежать одного большого `index.tsx`.
+- Сортировка и переключение вида управляются из feed state, поэтому toolbar меняет не только UI-контролы, но и порядок/представление ленты.
 
 ## Архитектурные принципы
 
 - Без лишних абстракций: только те слои, которые реально помогают читать и менять код.
 - Компоненты по возможности презентационные.
 - Feature-логика сгруппирована по домену.
-- Shared helpers и общие типы не привязаны к конкретному экрану.
-- Цвета, режимы и навигация централизованы, а не размазаны по JSX.
+- Shared helpers и shared типы не привязаны к конкретному экрану.
+- Цвета и повторяемые UI-примитивы централизованы, а не размазаны по JSX.
 
 ## Что менять чаще всего
 
 - Основная страница: `src/app/page.tsx`
 - Layout: `src/components/layout/*`
-- Лента и её режимы: `src/features/feed/components/*`
+- Лента: `src/features/feed/components/*`
+- Состояние ленты: `src/features/feed/hooks/use-feed.ts`
 - Mock-данные: `src/features/feed/mocks/*`
+- Адаптер данных: `src/features/feed/lib/post-adapter.ts`
 - Токены: `src/styles/tokens.css`
-- Типы: `src/types/*`
+- Shared типы: `src/types/*`
+
+## Ограничения текущего прототипа
+
+- Сейчас реализован только главный экран.
+- Навигация и часть shell-элементов пока служат UI-контекстом для прототипа, а не полноценной маршрутизацией.
+- Данные ленты локальные, но их shape уже подготовлен для перехода к API.
 
 ## Текущее состояние качества
 

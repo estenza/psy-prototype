@@ -1,20 +1,21 @@
 import Image from "next/image";
-import { MoreIcon } from "@/components/ui/icons";
-import { HoverTooltip } from "@/components/ui/hover-tooltip";
+import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
+import { PostMoreMenu } from "@/features/feed/components/post-more-menu";
+import { PostContextBadges } from "@/features/feed/components/post-context-badges";
 import { PostActions } from "@/features/feed/components/post-actions";
 import { getUserAvatarTone } from "@/lib/avatar-tone";
-import type { Post } from "@/types/feed";
+import type { Post } from "@/features/feed/types";
 
 type CompactPostItemProps = {
   post: Post;
   onToggleLike: (postId: Post["id"]) => void;
-  onToggleBookmark: (postId: Post["id"]) => void;
+  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
 };
 
 export function CompactPostItem({
   post,
   onToggleLike,
-  onToggleBookmark,
+  onPostMenuAction,
 }: CompactPostItemProps) {
   return (
     <div className="flex gap-4">
@@ -34,52 +35,48 @@ export function CompactPostItem({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex min-h-10 items-center gap-3">
-          <button
-            type="button"
-            className={`relative z-10 flex h-10 w-10 flex-none cursor-pointer items-center justify-center rounded-full text-sm font-semibold ${getUserAvatarTone(post.author.name)}`}
-          >
-            {post.author.name.slice(0, 2).toUpperCase()}
-          </button>
-          <div className="min-w-0 flex-1 self-center">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0 text-[15px] leading-5">
-              <span className="text-label-primary relative z-10 inline-flex items-center self-center cursor-pointer font-semibold transition hover:text-[var(--label-secondary)]">
-                {post.author.name}
-              </span>
-              <span className="text-label-secondary relative z-10 inline-flex items-center self-center cursor-pointer transition hover:text-[var(--label-primary)]">
-                {post.author.handle}
-              </span>
-              <span className="text-label-secondary inline-flex items-center self-center text-[15px] font-black leading-none">
-                •
-              </span>
-              <span className="text-label-secondary inline-flex items-center self-center">
-                {post.activity.publishedAtLabel}
-              </span>
+        <div className="flex flex-col gap-2">
+          <div className="flex min-h-10 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                className={`relative z-10 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-[11px] font-semibold leading-4 ${getUserAvatarTone(post.author.name)}`}
+              >
+                {post.author.name.slice(0, 2).toUpperCase()}
+              </button>
+              <div className="text-label-tertiary flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0 text-[14px] leading-5">
+                <span className="relative z-10 inline-flex min-w-0 items-center self-center truncate cursor-pointer">
+                  {post.author.handle}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="inline-flex h-[3px] w-[3px] shrink-0 self-center rounded-full bg-[var(--label-tertiary)]"
+                />
+                <span className="inline-flex items-center self-center">
+                  {post.activity.publishedAtLabel}
+                </span>
+              </div>
             </div>
+            <PostMoreMenu post={post} onAction={onPostMenuAction} />
           </div>
-          <button
-            type="button"
-            aria-label="Еще"
-            className="group/tooltip text-label-secondary relative z-10 inline-flex cursor-pointer items-center justify-center self-center rounded-full p-2 transition hover:bg-[var(--fill-control-hover)] hover:text-[var(--label-primary)]"
-          >
-            <MoreIcon />
-            <HoverTooltip label="Еще" />
-          </button>
+
+          <PostContextBadges intent={post.intent} topic={post.topic} />
         </div>
 
-        <h2 className="text-label-primary mt-2 text-[18px] font-semibold leading-[1.15]">
-          {post.content.title}
-        </h2>
+        <div className="mt-3 flex flex-col gap-2 pl-0.5">
+          <h2 className="font-helvetica text-label-primary text-[20px] font-semibold leading-6">
+            {post.content.title}
+          </h2>
 
-        <p className="text-label-secondary mt-1.5 text-[15px] leading-[1.4]">
-          {post.content.excerpt}
-        </p>
+          <p className="text-label-secondary text-[16px] leading-[1.4]">
+            {post.content.excerpt}
+          </p>
+        </div>
 
         <PostActions
           post={post}
           onToggleLike={onToggleLike}
-          onToggleBookmark={onToggleBookmark}
-          className="relative z-10 mt-2.5 flex flex-wrap items-center gap-2"
+          className="relative z-10 mt-4 flex flex-wrap items-center gap-2 pt-1"
         />
       </div>
     </div>
