@@ -25,6 +25,10 @@ workflows.
 The secret name is the same in both environments on purpose. GitHub keeps them
 separate because they are stored per environment, not at repo level.
 
+The secret is passed directly into the Yandex GitHub Actions input
+`yc-sa-json-credentials`. The workflows do not read the key from a checked-in
+file and do not run `yc container registry configure-docker` manually.
+
 ## Where To Add The Secret In GitHub
 
 Add the secret as an environment secret, not a repository secret.
@@ -35,15 +39,20 @@ GitHub path:
 2. Go to `Settings`
 3. Go to `Environments`
 4. Open or create the `staging` environment
-5. Add a secret named `YC_SA_JSON_CREDENTIALS`
-6. Open or create the `production` environment
-7. Add a secret named `YC_SA_JSON_CREDENTIALS`
+5. Open `Secrets and variables` -> `Actions`
+6. Add a secret named `YC_SA_JSON_CREDENTIALS`
+7. Open or create the `production` environment
+8. Open `Secrets and variables` -> `Actions`
+9. Add a secret named `YC_SA_JSON_CREDENTIALS`
 
 ## What Value To Put In The Secret
 
 Use the full Yandex Cloud authorized key JSON for service account:
 
 - `ajeh4qnls5se5raj12ua`
+
+The JSON should be the full authorized key object, not just a token, not a
+service account ID, and not a path to a file.
 
 For now, the fastest practical setup is to use the same service account JSON in
 both environments. If you later want stricter separation, you can switch to
@@ -72,6 +81,32 @@ If the secret is missing, the workflows fail fast at:
 
 That is the current expected failure mode until the environment secrets are
 added.
+
+## Verification Checklist
+
+For staging:
+
+1. Add `YC_SA_JSON_CREDENTIALS` to GitHub `Settings -> Environments -> staging -> Secrets and variables -> Actions`
+2. Push a commit to `develop`
+3. Open the `Deploy Staging` run in GitHub Actions
+4. Confirm these steps pass:
+   - `Validate Yandex auth secret`
+   - `Authenticate Docker to Yandex Container Registry`
+   - `Build and push linux/amd64 staging image`
+   - `Deploy new staging Serverless Container revision`
+   - `Smoke check staging URL`
+
+For production:
+
+1. Add `YC_SA_JSON_CREDENTIALS` to GitHub `Settings -> Environments -> production -> Secrets and variables -> Actions`
+2. Push or merge a commit to `main`
+3. Open the `Deploy Production` run in GitHub Actions
+4. Confirm these steps pass:
+   - `Validate Yandex auth secret`
+   - `Authenticate Docker to Yandex Container Registry`
+   - `Build and push linux/amd64 image`
+   - `Deploy new Serverless Container revision`
+   - `Smoke check production URLs`
 
 ## Legacy `staging` Branch
 
