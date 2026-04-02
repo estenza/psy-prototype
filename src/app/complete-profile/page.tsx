@@ -28,7 +28,7 @@ export default async function CompleteProfilePage({
       <div className="mb-6 text-center">
         <Link
           href="/"
-          className="font-helvetica text-[32px] font-black leading-none text-[var(--label-primary)]"
+          className="app-brand font-helvetica text-[32px] font-black leading-none"
         >
           внутри.
         </Link>

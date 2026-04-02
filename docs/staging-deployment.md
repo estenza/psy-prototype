@@ -97,7 +97,7 @@ enable them:
 
 Notes:
 
-- Global staging UI marker is enabled by `APP_ENV=staging` and hidden for `APP_ENV=production`.
+- In staging, the `внутри.` logo is tinted blue via `APP_ENV=staging`; production keeps the default primary brand color.
 - Auth/session isolation is already separated by host and by staging container DB path.
 - If you want staging comments to be isolated from production comments, use a separate Hyvor website and separate Hyvor API keys.
 - SMTP settings should be separate if staging should send password reset emails without touching production mail flow.
