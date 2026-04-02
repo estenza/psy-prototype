@@ -59,6 +59,7 @@ Behavior:
 - Build: Docker Buildx builds `linux/amd64`
 - Push: image is pushed to `cr.yandex/crphtumcsi9us93u61ir/psy:latest`
 - Deploy: a new revision is deployed to `psy-container`
+- Runtime env: `APP_ENV=production` and `AUTH_APP_URL=https://vnutri.live`
 - Verify: the workflow runs HTTP smoke checks against
   `https://vnutri.live` and `https://www.vnutri.live`
 

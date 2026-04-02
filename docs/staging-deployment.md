@@ -104,21 +104,12 @@ Notes:
 - SMTP settings should be separate if staging should send password reset emails without touching production mail flow.
 - The `/` route is forced dynamic so staging does not keep serving stale environment-specific UI after a fresh deploy.
 
-## Certificate Status
+## Certificate And Domain Status
 
-The managed certificate request for `staging.vnutri.live` has been created and
-the DNS validation record is already in place.
-
-At the time of writing, the certificate status is still `VALIDATING`.
-
-After Yandex Cloud marks the certificate as `ISSUED`, attach it to the staging
-gateway:
-
-```bash
-yc serverless api-gateway add-domain psy-staging-gateway \
-  --domain staging.vnutri.live \
-  --certificate-id fpqed1r4fbmspgi2219k
-```
+- Managed certificate `fpqed1r4fbmspgi2219k` for `staging.vnutri.live` is
+  `ISSUED`
+- `staging.vnutri.live` is attached to `psy-staging-gateway`
+- HTTPS is live on `https://staging.vnutri.live`
 
 ## GitHub Environment Setup
 

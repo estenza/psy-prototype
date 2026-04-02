@@ -74,6 +74,7 @@ jobs:
           revision-image-url: ${{ env.IMAGE }}
           revision-env: |
             APP_ENV=production
+            AUTH_APP_URL=https://vnutri.live
 
       - name: Smoke check production URLs
         run: |
