@@ -7,13 +7,13 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: production-deploy
   cancel-in-progress: false
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   YC_FOLDER_ID: b1ghrmp0mr8mr0jcj9gc
   YC_SERVICE_ACCOUNT_ID: ajeh4qnls5se5raj12ua
   YC_CONTAINER_NAME: psy-container
@@ -30,6 +30,13 @@ jobs:
     environment: production
 
     steps:
+      - name: Validate Yandex auth secret
+        run: |
+          if [ -z "${{ secrets.YC_SA_JSON_CREDENTIALS }}" ]; then
+            echo "::error::Missing YC_SA_JSON_CREDENTIALS in the production GitHub Environment"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -39,7 +46,7 @@ jobs:
       - name: Authenticate Docker to Yandex Container Registry
         uses: yc-actions/yc-cr-login@v3
         with:
-          yc-sa-id: ${{ env.YC_SERVICE_ACCOUNT_ID }}
+          yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
 
       - name: Build and push linux/amd64 image
         uses: docker/build-push-action@v6
@@ -55,7 +62,7 @@ jobs:
         id: deploy
         uses: yc-actions/yc-sls-container-deploy@v4
         with:
-          yc-sa-id: ${{ env.YC_SERVICE_ACCOUNT_ID }}
+          yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
           container-name: ${{ env.YC_CONTAINER_NAME }}
           folder-id: ${{ env.YC_FOLDER_ID }}
           revision-service-account-id: ${{ env.YC_SERVICE_ACCOUNT_ID }}

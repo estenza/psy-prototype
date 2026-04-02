@@ -48,13 +48,13 @@ GitHub Actions workflows:
 ## Staging Deploy Flow
 
 1. Push to `staging`
-2. GitHub Actions authenticates to Yandex Cloud through GitHub OIDC
+2. GitHub Actions authenticates to Yandex Cloud with the `YC_SA_JSON_CREDENTIALS`
+   secret from the `staging` GitHub Environment
 3. Docker Buildx builds `linux/amd64`
 4. Image is pushed to `cr.yandex/crphtumcsi9us93u61ir/psy:staging`
 5. New revision is deployed to `psy-staging-container`
-6. Smoke check runs against the staging gateway default URL
-7. UI can be reviewed on the staging gateway URL immediately
-8. After the managed certificate is issued and attached, UI is reviewed on `https://staging.vnutri.live`
+6. Smoke check runs against `https://staging.vnutri.live`
+7. UI is reviewed on `https://staging.vnutri.live`
 
 ## DNS Records For Staging
 
@@ -73,6 +73,7 @@ must exist at the registrar or external DNS provider.
 
 Currently set on staging container revisions:
 
+- `APP_ENV=staging`
 - `AUTH_APP_URL=https://staging.vnutri.live`
 - `AUTH_DATABASE_PATH=/tmp/psy-staging.db`
 
@@ -97,10 +98,11 @@ enable them:
 
 Notes:
 
-- In staging, the `внутри.` logo is tinted blue by the `staging.vnutri.live` hostname; production hosts keep the default primary brand color.
+- In staging, branding is driven only by `APP_ENV=staging`. The blue logo is not tied to the branch name and is not inferred from the hostname.
 - Auth/session isolation is already separated by host and by staging container DB path.
 - If you want staging comments to be isolated from production comments, use a separate Hyvor website and separate Hyvor API keys.
 - SMTP settings should be separate if staging should send password reset emails without touching production mail flow.
+- The `/` route is forced dynamic so staging does not keep serving stale environment-specific UI after a fresh deploy.
 
 ## Certificate Status
 
@@ -118,15 +120,12 @@ yc serverless api-gateway add-domain psy-staging-gateway \
   --certificate-id fpqed1r4fbmspgi2219k
 ```
 
-## One-Time GitHub Setup
+## GitHub Environment Setup
 
-No GitHub secrets are required for deploy.
+Create a GitHub Environment named `staging` and add:
 
-The repository must allow GitHub OIDC access for both deployment branches in
-Yandex Cloud Workload Identity Federation:
+- `YC_SA_JSON_CREDENTIALS`
+  Yandex Cloud authorized key JSON for service account `ajeh4qnls5se5raj12ua`
 
-- `repo:<github-owner>/<github-repo>:ref:refs/heads/main`
-- `repo:<github-owner>/<github-repo>:ref:refs/heads/staging`
-
-Keep production and staging branch rules separate or equally constrained so no
-other branch can deploy by accident.
+Routine staging deploys should go through GitHub Actions. The local
+`scripts/deploy-staging.sh` flow is only an emergency fallback.

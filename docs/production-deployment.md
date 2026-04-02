@@ -55,7 +55,7 @@ Production auto-deploy is defined in
 Behavior:
 
 - Trigger: every push to `main`
-- Auth: GitHub OIDC -> Yandex Cloud Workload Identity Federation
+- Auth: `YC_SA_JSON_CREDENTIALS` from the `production` GitHub Environment
 - Build: Docker Buildx builds `linux/amd64`
 - Push: image is pushed to `cr.yandex/crphtumcsi9us93u61ir/psy:latest`
 - Deploy: a new revision is deployed to `psy-container`
@@ -64,35 +64,10 @@ Behavior:
 
 ### Required GitHub Secrets
 
-No GitHub secrets are required for Yandex Cloud authentication in the
-committed workflow. It uses GitHub OIDC with Workload Identity Federation
-instead of a long-lived static cloud key.
+Create a GitHub Environment named `production` and add:
 
-### One-Time GitHub/Yandex Cloud Setup
+- `YC_SA_JSON_CREDENTIALS`
+  Yandex Cloud authorized key JSON for service account `ajeh4qnls5se5raj12ua`
 
-Before the workflow can deploy, you need to connect this GitHub repository
-to Yandex Cloud Workload Identity Federation:
-
-1. In Yandex Cloud, create an OIDC Workload Identity Federation for GitHub Actions.
-2. Bind the existing service account `ajeh4qnls5se5raj12ua` to that federation.
-3. Add an access rule that allows tokens only from this repository and the
-   `main` branch.
-   Recommended subject pattern:
-   `repo:<github-owner>/<github-repo>:ref:refs/heads/main`
-4. Add a separate rule for the `staging` branch as well if you use the staging workflow:
-   `repo:<github-owner>/<github-repo>:ref:refs/heads/staging`
-5. Make sure GitHub Actions are enabled for the repository.
-
-The workflow already requests the GitHub permission needed for OIDC:
-
-- `id-token: write`
-- `contents: read`
-
-### Why No Secret Is Stored In GitHub
-
-This is safer than storing a Yandex Cloud service account key in GitHub
-Secrets:
-
-- GitHub issues a short-lived OIDC token per workflow run
-- Yandex Cloud exchanges it for a short-lived IAM token
-- there is no long-lived cloud credential stored in the repo
+Routine production deploys should go through GitHub Actions. The local
+`scripts/deploy-production.sh` flow is only an emergency fallback.
