@@ -11,7 +11,7 @@ Staging reuses the same Yandex Cloud pattern as production:
 
 Staging is separated from production by:
 
-- separate branch trigger: `staging`
+- separate branch trigger: `develop`
 - separate image tag: `cr.yandex/crphtumcsi9us93u61ir/psy:staging`
 - separate Serverless Container: `psy-staging-container`
 - separate API Gateway: `psy-staging-gateway`
@@ -37,8 +37,10 @@ Production resources remain unchanged.
 
 ## Branch Mapping
 
-- `staging` branch -> staging deploy
+- `develop` branch -> staging deploy
 - `main` branch -> production deploy
+- `feature/*` branches -> PRs into `develop`
+- `hotfix/*` branches -> PRs into `main`, then merge back into `develop`
 
 GitHub Actions workflows:
 
@@ -47,7 +49,7 @@ GitHub Actions workflows:
 
 ## Staging Deploy Flow
 
-1. Push to `staging`
+1. Push to `develop`
 2. GitHub Actions authenticates to Yandex Cloud with the `YC_SA_JSON_CREDENTIALS`
    secret from the `staging` GitHub Environment
 3. Docker Buildx builds `linux/amd64`
@@ -120,3 +122,14 @@ Create a GitHub Environment named `staging` and add:
 
 Routine staging deploys should go through GitHub Actions. The local
 `scripts/deploy-staging.sh` flow is only an emergency fallback.
+
+## Migration From The Legacy `staging` Branch
+
+To switch cleanly to the new branch model:
+
+1. Create `develop` from the current `staging` tip so staging keeps the same codebase.
+2. Push `develop` and confirm the staging workflow runs from `develop`.
+3. Update branch protections and default PR targets to use `develop` instead of `staging`.
+4. Freeze the old `staging` branch or delete it after the team has switched over.
+
+This keeps staging infrastructure unchanged while moving Git flow to the new standard branch strategy.

@@ -52,6 +52,9 @@ It rebuilds the Linux AMD64 image, pushes it to the current Yandex Container Reg
 Production auto-deploy is defined in
 `.github/workflows/deploy-production.yml`.
 
+The recommended Git branch strategy for how changes reach `main` is documented
+in [branch-workflow.md](./branch-workflow.md).
+
 Behavior:
 
 - Trigger: every push to `main`
