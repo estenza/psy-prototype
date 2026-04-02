@@ -81,7 +81,7 @@ export function FeedToolbar({
           </button>
           {openMenu === "topic" ? (
             <div className="surface-primary border-separator absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border p-1">
-              <div className="text-label-tertiary px-3 pb-1 pt-2 text-[11px] font-semibold uppercase">
+              <div className="text-label-tertiary px-3 pb-1 pt-2 text-[12px] font-semibold uppercase">
                 Темы
               </div>
               {POST_TOPIC_FILTER_OPTIONS.map((option) => {
@@ -130,7 +130,7 @@ export function FeedToolbar({
           </button>
           {openMenu === "sort" ? (
             <div className="surface-primary border-separator absolute left-0 top-full z-50 mt-1 w-44 rounded-xl border p-1">
-              <div className="text-label-tertiary px-3 pb-1 pt-2 text-[11px] font-semibold uppercase">
+              <div className="text-label-tertiary px-3 pb-1 pt-2 text-[12px] font-semibold uppercase">
                 Сортировка
               </div>
               {FEED_SORT_OPTIONS.map((option) => (
@@ -160,7 +160,7 @@ export function FeedToolbar({
             onClick={() =>
               setOpenMenu((current) => (current === "view" ? null : "view"))
             }
-            className="interactive-control flex cursor-pointer items-center gap-[3px] rounded-full px-3 py-2"
+            className="interactive-control flex cursor-pointer items-center gap-1 rounded-full px-3 py-2"
           >
             <span className="text-label-tertiary [&_svg]:h-4 [&_svg]:w-4">
               {viewMode === "card" ? (
@@ -173,7 +173,7 @@ export function FeedToolbar({
           </button>
           {openMenu === "view" ? (
             <div className="surface-primary border-separator absolute left-0 top-full z-50 mt-1 w-44 rounded-xl border p-1">
-              <div className="text-label-tertiary px-3 pb-1 pt-2 text-[11px] font-semibold uppercase">
+              <div className="text-label-tertiary px-3 pb-1 pt-2 text-[12px] font-semibold uppercase">
                 Вид
               </div>
               {FEED_VIEW_OPTIONS.map((option) => (

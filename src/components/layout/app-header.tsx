@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode, Ref } from "react";
 import { NotificationIcon, PlusCircleIcon, SearchIcon } from "@/components/ui/icons";
+import { useAuthClient } from "@/features/auth/components/auth-required-provider";
+import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
+import { AuthStatus } from "@/features/auth/components/auth-status";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
 
 type AppHeaderProps = {
-  profileInitials: string;
-  profileToneClass: string;
   showCreateAction?: boolean;
   showSearch?: boolean;
 };
@@ -79,37 +80,21 @@ function SearchTriggerButton({
   );
 }
 
-type ProfileButtonProps = {
-  profileInitials: string;
-  profileToneClass: string;
-};
-
-function ProfileButton({
-  profileInitials,
-  profileToneClass,
-}: ProfileButtonProps) {
-  return (
-    <button
-      className={`relative inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-full text-sm font-semibold ${profileToneClass}`}
-    >
-      {profileInitials}
-      <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border border-[var(--background-primary)] bg-[var(--accent-success)]" />
-    </button>
-  );
-}
-
 type CreateTopicButtonProps = {
   children?: ReactNode;
   className: string;
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
 };
 
 function CreateTopicButton({
   children,
   className,
+  onClick,
 }: CreateTopicButtonProps) {
   return (
     <Link
       href="/create-topic"
+      onClick={onClick}
       className={`interactive-control inline-flex flex-none cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold text-[var(--label-primary)] transition-colors ${className}`}
     >
       <span className="flex-none">
@@ -121,11 +106,11 @@ function CreateTopicButton({
 }
 
 export function AppHeader({
-  profileInitials,
-  profileToneClass,
   showCreateAction = true,
   showSearch = true,
 }: AppHeaderProps) {
+  const { user } = useAuthClient();
+  const { requireAuth } = useAuthRequiredAction();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileSearchOverlayRef = useRef<HTMLDivElement | null>(null);
   const mobileSearchTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -165,6 +150,10 @@ export function AppHeader({
     };
   }, [isMobileSearchOpen]);
 
+  async function handleCreateTopicClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    await requireAuth(event);
+  }
+
   return (
     <header className="surface-primary border-separator fixed inset-x-0 top-0 z-50 border-b">
       {isMobileSearchOpen ? (
@@ -201,14 +190,14 @@ export function AppHeader({
           <div className="flex items-center justify-start gap-4">
             <div className="flex items-center gap-0">
               {showCreateAction ? (
-                <CreateTopicButton className="px-7 py-3" />
+                <CreateTopicButton
+                  className="px-7 py-3"
+                  onClick={handleCreateTopicClick}
+                />
               ) : null}
-              <NotificationButton />
+              {user ? <NotificationButton /> : null}
             </div>
-            <ProfileButton
-              profileInitials={profileInitials}
-              profileToneClass={profileToneClass}
-            />
+            <AuthStatus />
           </div>
         </div>
 
@@ -222,17 +211,17 @@ export function AppHeader({
           ) : null}
           <div className="flex items-center gap-0">
             {showCreateAction ? (
-              <CreateTopicButton className="px-5 py-3">
+              <CreateTopicButton
+                className="px-5 py-3"
+                onClick={handleCreateTopicClick}
+              >
                 <span className="hidden sm:inline">Создать обсуждение</span>
                 <span className="sm:hidden">Обсуждение</span>
               </CreateTopicButton>
             ) : null}
-            <NotificationButton />
+            {user ? <NotificationButton /> : null}
           </div>
-          <ProfileButton
-            profileInitials={profileInitials}
-            profileToneClass={profileToneClass}
-          />
+          <AuthStatus compact />
         </div>
       </div>
 

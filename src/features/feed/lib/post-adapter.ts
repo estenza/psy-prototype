@@ -7,6 +7,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
     intent: record.intent,
     topic: record.topic,
     author: {
+      id: record.author.id,
       name: record.author.display_name,
       handle: record.author.username,
     },
@@ -24,7 +25,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
       likes: record.counters.likes,
     },
     viewer: {
-      isAuthor: record.viewer_state.is_author ?? false,
+      isAuthor: false,
       liked: record.viewer_state.liked,
       bookmarked: record.viewer_state.bookmarked,
     },

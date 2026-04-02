@@ -12,6 +12,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
 import { Button } from "@/components/ui/button";
+import { useAuthClient } from "@/features/auth/components/auth-required-provider";
+import { getUserHandle } from "@/features/auth/lib/profile";
 import {
   createPublishedPost,
   findPublishedPostById,
@@ -40,7 +42,6 @@ import {
   serializeTopicSnapshot,
 } from "@/features/topic-creation/lib/draft-storage";
 import type { TopicDraft } from "@/features/topic-creation/types";
-import { getUserAvatarTone } from "@/lib/avatar-tone";
 import type { PostIntent, PostTopic } from "@/types/post-taxonomy";
 
 function getNextSavedDraftState(
@@ -60,7 +61,7 @@ function getNextSavedDraftState(
   };
 }
 
-const TITLE_PROGRESS_RADIUS = 15;
+const TITLE_PROGRESS_RADIUS = 14;
 const TITLE_PROGRESS_CIRCUMFERENCE = 2 * Math.PI * TITLE_PROGRESS_RADIUS;
 
 type TitleProgressIndicatorProps = {
@@ -103,7 +104,7 @@ function TitleProgressIndicator({
               r={TITLE_PROGRESS_RADIUS}
               fill="none"
               stroke="var(--fill-secondary)"
-              strokeWidth="2.5"
+              strokeWidth="2"
             />
             <circle
               cx="18"
@@ -111,7 +112,7 @@ function TitleProgressIndicator({
               r={TITLE_PROGRESS_RADIUS}
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.5"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeDasharray={TITLE_PROGRESS_CIRCUMFERENCE}
               strokeDashoffset={strokeDashoffset}
@@ -119,7 +120,7 @@ function TitleProgressIndicator({
           </svg>
 
           {isWarning ? (
-            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold leading-none tracking-[-0.02em]">
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold leading-none tracking-normal">
               {remainingCharacters}
             </span>
           ) : null}
@@ -131,6 +132,7 @@ function TitleProgressIndicator({
 
 export function CreateTopicScreen() {
   const router = useRouter();
+  const { user } = useAuthClient();
   const titleFieldRef = useRef<HTMLTextAreaElement | null>(null);
   const [initialDraft] = useState<TopicDraft>(createEmptyTopicDraft);
 
@@ -267,7 +269,13 @@ export function CreateTopicScreen() {
     const existingPost = editingPostId
       ? findPublishedPostById(editingPostId)
       : null;
+    const postAuthor = existingPost?.author ?? {
+      id: user?.id,
+      name: user?.displayName ?? "Автор",
+      handle: user ? getUserHandle(user) : "@author",
+    };
     const publishedPost = createPublishedPost({
+      author: postAuthor,
       content,
       existingPost,
       intent,
@@ -336,10 +344,7 @@ export function CreateTopicScreen() {
 
   return (
     <div className="surface-primary text-label-primary min-h-dvh">
-      <AppHeader
-        profileInitials="VZ"
-        profileToneClass={getUserAvatarTone("VZ")}
-      />
+      <AppHeader />
 
       <div className="pt-[var(--app-header-height)]">
         <main className="mx-auto w-full px-4 sm:px-6 xl:max-w-[var(--app-shell-max-width)] xl:px-5">
@@ -349,7 +354,7 @@ export function CreateTopicScreen() {
                 <div className="flex min-w-0 items-center gap-4">
                   <BackNavigationButton onClick={handleBack} />
 
-                  <h1 className="min-w-0 text-[22px] font-bold leading-7 tracking-[0.01em]">
+                  <h1 className="min-w-0 text-[22px] font-bold leading-7 tracking-normal">
                     Новое обсуждение
                   </h1>
                 </div>
@@ -407,7 +412,7 @@ export function CreateTopicScreen() {
                       event.currentTarget.style.height = "0px";
                       event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
                     }}
-                    className="text-label-primary min-h-[54px] w-full min-w-0 resize-none overflow-hidden bg-transparent py-[15px] text-[16px] leading-6 outline-none placeholder:text-[var(--label-quaternary)]"
+                    className="text-label-primary min-h-[54px] w-full min-w-0 resize-none overflow-hidden bg-transparent py-4 text-[16px] leading-6 outline-none placeholder:text-[var(--label-quaternary)]"
                   />
                   <TitleProgressIndicator
                     currentLength={titleLength}
@@ -416,7 +421,7 @@ export function CreateTopicScreen() {
                 </label>
 
                 {titleError ? (
-                  <p className="mt-3 text-[13px] leading-5 text-[var(--accent-like)]">
+                  <p className="mt-3 text-[14px] leading-5 text-[var(--accent-like)]">
                     Заголовок обязателен. Он поможет людям быстрее понять тему.
                   </p>
                 ) : null}

@@ -62,7 +62,7 @@ export function BookmarkIcon({ filled = false }: { filled?: boolean }) {
         d="M19 21L12 16L5 21V5C5 4.46957 5.21071 3.96086 5.58579 3.58579C5.96086 3.21071 6.46957 3 7 3H17C17.5304 3 18.0391 3.21071 18.4142 3.58579C18.7893 3.96086 19 4.46957 19 5V21Z"
         fill={filled ? "currentColor" : "none"}
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -77,7 +77,7 @@ export function EyeOffIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path
         d="M3.5 12C5.7 8.3 8.6 6.4 12 6.4C15.4 6.4 18.3 8.3 20.5 12C18.3 15.7 15.4 17.6 12 17.6C8.6 17.6 5.7 15.7 3.5 12Z"
@@ -96,7 +96,7 @@ export function FlagIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M5 20V5" strokeLinecap="round" />
       <path
@@ -115,7 +115,7 @@ export function ArrowLeftIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M15 18L9 12L15 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -129,7 +129,7 @@ export function ArrowRightIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M9 18L15 12L9 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -143,7 +143,7 @@ export function PlusCircleIcon() {
         d="M10 18.3332C14.6024 18.3332 18.3333 14.6022 18.3333 9.99984C18.3333 5.39746 14.6024 1.6665 10 1.6665C5.39763 1.6665 1.66667 5.39746 1.66667 9.99984C1.66667 14.6022 5.39763 18.3332 10 18.3332Z"
         stroke="currentColor"
         strokeOpacity="0.88"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -151,7 +151,7 @@ export function PlusCircleIcon() {
         d="M10 6.6665V13.3332"
         stroke="currentColor"
         strokeOpacity="0.88"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -159,7 +159,7 @@ export function PlusCircleIcon() {
         d="M6.66667 10H13.3333"
         stroke="currentColor"
         strokeOpacity="0.88"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -174,7 +174,7 @@ export function NotificationIcon() {
         d="M14.4446 6.83333C14.4446 5.68406 13.9764 4.58186 13.1429 3.7692C12.3094 2.95655 11.1789 2.5 10.0002 2.5C8.82142 2.5 7.69096 2.95655 6.85747 3.7692C6.02397 4.58186 5.55572 5.68406 5.55572 6.83333C5.55572 11.8889 3.3335 13.3333 3.3335 13.3333H16.6668C16.6668 13.3333 14.4446 11.8889 14.4446 6.83333Z"
         stroke="currentColor"
         strokeOpacity="0.88"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -182,7 +182,7 @@ export function NotificationIcon() {
         d="M12.5 15.8335C12.2459 16.3404 11.8813 16.7612 11.4425 17.0537C11.0038 17.3462 10.5063 17.5002 10 17.5002C9.49367 17.5002 8.99623 17.3462 8.55748 17.0537C8.11872 16.7612 7.75406 16.3404 7.5 15.8335"
         stroke="currentColor"
         strokeOpacity="0.88"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -202,7 +202,7 @@ export function MenuRailIcon() {
       className="h-4 w-4"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M6 8H18" strokeLinecap="round" />
       <path d="M6 12H18" strokeLinecap="round" />
@@ -218,7 +218,7 @@ export function BoldIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M8 5H13C15.5 5 17 6.4 17 8.7C17 10.4 15.8 11.7 14 12C16.2 12.2 17.5 13.6 17.5 15.8C17.5 18.4 15.8 20 12.8 20H8V5Z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -232,7 +232,7 @@ export function StrikethroughIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M6 12H18" strokeLinecap="round" />
       <path d="M15.5 6.5C14.9 5.6 13.7 5 12 5C9.7 5 8 6.2 8 8C8 10.7 11.1 11 12.8 11.4C14.7 11.8 16 12.4 16 14.3C16 16.4 14.1 18 11.4 18C9.2 18 7.5 17.2 6.5 15.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -247,7 +247,7 @@ export function QuoteIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M9.5 8C7.6 8.8 6.5 10.5 6.5 12.7V16H11V11H7.7" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M17.5 8C15.6 8.8 14.5 10.5 14.5 12.7V16H19V11H15.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -262,7 +262,7 @@ export function LinkActionIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M10.5 13.5L13.5 10.5" strokeLinecap="round" />
       <path d="M8.5 15.5L6.8 17.2C5.3 18.7 2.9 18.7 1.4 17.2C-0.1 15.7 -0.1 13.3 1.4 11.8L5 8.2C6.5 6.7 8.9 6.7 10.4 8.2" strokeLinecap="round" strokeLinejoin="round" transform="translate(6 0)" />
@@ -278,10 +278,10 @@ export function ImageIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <rect x="3" y="4" width="18" height="16" rx="3" />
-      <circle cx="9" cy="10" r="1.5" />
+      <circle cx="9" cy="10" r="2" />
       <path d="M5.5 17L10.2 12.5C10.7 12 11.5 12 12 12.4L14.8 14.8C15.3 15.2 16 15.2 16.5 14.8L18.5 13.1C19 12.7 19.7 12.7 20.2 13.1L21 13.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -294,7 +294,7 @@ export function VideoIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <rect x="3" y="5" width="13" height="14" rx="3" />
       <path d="M16 10L21 7.5V16.5L16 14" strokeLinecap="round" strokeLinejoin="round" />
@@ -309,7 +309,7 @@ export function SpoilerIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M4 12C6 8 8.7 6 12 6C15.3 6 18 8 20 12C18 16 15.3 18 12 18C8.7 18 6 16 4 12Z" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M3.5 20.5L20.5 3.5" strokeLinecap="round" />
@@ -324,11 +324,11 @@ export function BulletListIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
-      <circle cx="5" cy="7" r="1.2" fill="currentColor" />
-      <circle cx="5" cy="12" r="1.2" fill="currentColor" />
-      <circle cx="5" cy="17" r="1.2" fill="currentColor" />
+      <circle cx="5" cy="7" r="2" fill="currentColor" />
+      <circle cx="5" cy="12" r="2" fill="currentColor" />
+      <circle cx="5" cy="17" r="2" fill="currentColor" />
       <path d="M9 7H19" strokeLinecap="round" />
       <path d="M9 12H19" strokeLinecap="round" />
       <path d="M9 17H19" strokeLinecap="round" />
@@ -343,13 +343,90 @@ export function OrderedListIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M4 7H6V10" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M4 14C4.5 13.3 5.1 13 5.8 13C6.9 13 7.5 13.7 7.5 14.5C7.5 15.1 7.2 15.5 6.6 16L4 18H7.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M10 7H20" strokeLinecap="round" />
       <path d="M10 12H20" strokeLinecap="round" />
       <path d="M10 17H20" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ThumbUpOutlineIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path
+        d="M7.75 8.25V16.5H4.75C4.06 16.5 3.5 15.94 3.5 15.25V9.5C3.5 8.81 4.06 8.25 4.75 8.25H7.75Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 8.25L10.5 3.75C10.84 3.14 11.61 2.9 12.24 3.18C12.89 3.48 13.21 4.22 12.98 4.9L12.08 7.75H15.03C16.07 7.75 16.83 8.74 16.55 9.75L15.15 14.75C14.95 15.47 14.3 15.97 13.55 15.97H8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function MoreHorizontalIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-5 w-5" fill="currentColor">
+      <circle cx="4.5" cy="10" r="1.2" />
+      <circle cx="10" cy="10" r="1.2" />
+      <circle cx="15.5" cy="10" r="1.2" />
+    </svg>
+  );
+}
+
+export function SortCommentsIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
+      <path d="M5 5H15" strokeLinecap="round" />
+      <path d="M5 9H12" strokeLinecap="round" />
+      <path d="M5 13H9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ChevronDownSmallIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path d="M5 7.5L10 12.5L15 7.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function ChevronUpSmallIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path d="M5 12.5L10 7.5L15 12.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

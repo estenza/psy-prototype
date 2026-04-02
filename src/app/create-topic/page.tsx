@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CreateTopicScreen } from "@/features/topic-creation/components/create-topic-screen";
+import { CreateTopicEntry } from "@/features/topic-creation/components/create-topic-entry";
 
 export const metadata: Metadata = {
   title: "Новое обсуждение · внутри",
@@ -7,5 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default function CreateTopicPage() {
-  return <CreateTopicScreen />;
+  return <CreateTopicEntry />;
 }
+ 

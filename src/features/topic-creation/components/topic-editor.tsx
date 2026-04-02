@@ -84,8 +84,7 @@ export function TopicEditor({
       immediatelyRender: false,
       editorProps: {
         attributes: {
-          class:
-            "min-h-[112px] px-5 pb-5 pt-2 text-[16px] leading-[1.45]",
+          class: "min-h-[112px] px-5 pb-5 pt-2 text-[16px] leading-6",
         },
       },
       extensions: [
@@ -262,7 +261,7 @@ export function TopicEditor({
           {isEditorEmpty ? (
             <p
               aria-hidden="true"
-              className="pointer-events-none absolute left-5 top-2 text-[16px] leading-[1.45] text-[var(--label-quaternary)]"
+              className="pointer-events-none absolute left-5 top-2 text-[16px] leading-6 text-[var(--label-quaternary)]"
             >
               {placeholder}
             </p>
@@ -272,7 +271,7 @@ export function TopicEditor({
           ) : (
             <div
               aria-hidden="true"
-              className="ProseMirror min-h-[112px] px-5 pb-5 pt-2 text-[16px] leading-[1.45]"
+              className="ProseMirror min-h-[112px] px-5 pb-5 pt-2 text-[16px] leading-6"
             >
               {content ? (
                 <div dangerouslySetInnerHTML={{ __html: content }} />
@@ -283,7 +282,7 @@ export function TopicEditor({
       </div>
 
       {invalid ? (
-        <p className="text-[13px] leading-5 text-[var(--accent-like)]">
+        <p className="text-[14px] leading-5 text-[var(--accent-like)]">
           Добавьте текст темы, чтобы людям было на что откликнуться.
         </p>
       ) : null}

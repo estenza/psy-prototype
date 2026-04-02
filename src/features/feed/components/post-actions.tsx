@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   ChatIcon,
   HeartIcon,
@@ -40,15 +41,15 @@ export function PostActions({
         />
       </button>
 
-      <button
-        type="button"
+      <Link
+        href={`/discussions/${post.id}`}
         aria-label="Ответить"
         className="interactive-fill group/tooltip relative inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-normal"
       >
         <ChatIcon />
         <span>{post.stats.comments}</span>
         <HoverTooltip label="Ответить" />
-      </button>
+      </Link>
 
       <button
         type="button"

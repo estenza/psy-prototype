@@ -50,6 +50,7 @@ export type ApiPostRecord = {
   intent: PostIntent;
   topic?: PostTopic;
   author: {
+    id?: string;
     display_name: string;
     username: string;
   };

@@ -29,7 +29,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 @keyframes feed-post-flash {
@@ -39,6 +39,16 @@ body {
 
   to {
     background-color: var(--background-primary);
+  }
+}
+
+@keyframes comment-skeleton-shimmer {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 100% 50%;
   }
 }
 
@@ -287,12 +297,12 @@ select {
   }
 
   .topic-editor-content .ProseMirror > * + * {
-    margin-top: 0.95rem;
+    margin-top: 1rem;
   }
 
   .topic-editor-content .ProseMirror ul,
   .topic-editor-content .ProseMirror ol {
-    padding-left: 1.3rem;
+    padding-left: 20px;
   }
 
   .topic-editor-content .ProseMirror ul {
@@ -304,7 +314,7 @@ select {
   }
 
   .topic-editor-content .ProseMirror blockquote {
-    border-left: 3px solid var(--separator-strong);
+    border-left: 2px solid var(--separator-strong);
     color: var(--label-secondary);
     padding-left: 1rem;
   }
@@ -313,7 +323,7 @@ select {
     color: var(--label-primary);
     text-decoration: underline;
     text-decoration-color: var(--separator-strong);
-    text-underline-offset: 3px;
+    text-underline-offset: 4px;
   }
 
   .topic-editor-content .ProseMirror img {
@@ -343,9 +353,9 @@ select {
 
   .topic-editor-content .ProseMirror span[data-spoiler] {
     background-color: var(--fill-primary);
-    border-radius: 0.45rem;
+    border-radius: 8px;
     color: transparent;
-    padding: 0 0.25rem;
+    padding: 0 4px;
     transition:
       color 120ms ease,
       background-color 120ms ease;
@@ -354,5 +364,149 @@ select {
   .topic-editor-content .ProseMirror span[data-spoiler]:hover {
     background-color: var(--fill-tertiary);
     color: var(--label-primary);
+  }
+
+  .comment-editor-shell {
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .comment-editor-shell:hover:not(:focus-within) {
+    border-color: var(--separator-primary);
+    background-color: color-mix(in srgb, var(--background-primary) 96%, var(--fill-quaternary));
+  }
+
+  .comment-editor-shell:focus-within {
+    border-color: var(--separator-strong);
+  }
+
+  .comment-icon-button,
+  .comment-text-button,
+  .comment-menu-item,
+  .comment-sort-button,
+  .comment-thread-toggle,
+  .comment-inline-link {
+    transition:
+      background-color 120ms ease,
+      color 120ms ease,
+      border-color 120ms ease,
+      opacity 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .comment-icon-button:hover,
+  .comment-text-button:hover,
+  .comment-menu-item:hover,
+  .comment-sort-button:hover,
+  .comment-thread-toggle:hover,
+  .comment-inline-link:hover {
+    background-color: var(--fill-control-hover);
+  }
+
+  .comment-icon-button:active,
+  .comment-text-button:active,
+  .comment-menu-item:active,
+  .comment-sort-button:active,
+  .comment-thread-toggle:active,
+  .comment-inline-link:active {
+    background-color: var(--fill-secondary);
+    color: var(--label-primary);
+  }
+
+  .comment-icon-button:focus-visible,
+  .comment-text-button:focus-visible,
+  .comment-menu-item:focus-visible,
+  .comment-sort-button:focus-visible,
+  .comment-thread-toggle:focus-visible,
+  .comment-inline-link:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-primary) 28%, transparent);
+    outline-offset: 2px;
+  }
+
+  .comment-icon-button:disabled,
+  .comment-text-button:disabled,
+  .comment-menu-item:disabled,
+  .comment-sort-button:disabled,
+  .comment-thread-toggle:disabled,
+  .comment-inline-link:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+  }
+
+  .comment-menu-item {
+    color: var(--label-primary);
+  }
+
+  .comment-menu-item:disabled {
+    color: var(--label-tertiary);
+  }
+
+  .comment-rich-content[data-clamped="true"] {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+
+  .comment-rich-content > * {
+    margin: 0;
+  }
+
+  .comment-rich-content > * + * {
+    margin-top: 0.5rem;
+  }
+
+  .comment-rich-content a {
+    color: var(--accent-primary);
+    text-decoration: none;
+  }
+
+  .comment-rich-content strong {
+    font-weight: 600;
+  }
+
+  .comment-rich-content code {
+    background-color: var(--fill-quaternary);
+    border-radius: 6px;
+    padding: 1px 4px;
+  }
+
+  .comment-rich-content blockquote {
+    border-left: 2px solid var(--separator-primary);
+    color: var(--label-secondary);
+    padding-left: 0.75rem;
+  }
+
+  .comment-rich-content img {
+    border-radius: 12px;
+    display: block;
+    max-width: 100%;
+  }
+
+  .comment-thread-rail {
+    border-left: 1px solid var(--fill-primary);
+  }
+
+  .comment-root-thread-rail {
+    border-left: 1px solid var(--fill-primary);
+  }
+
+  .comment-thread-corner {
+    border-bottom: 1px solid var(--fill-primary);
+    border-left: 1px solid var(--fill-primary);
+    border-bottom-left-radius: 16px;
+  }
+
+  .comment-skeleton {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--fill-quaternary) 78%, transparent),
+      color-mix(in srgb, var(--fill-primary) 60%, transparent),
+      color-mix(in srgb, var(--fill-quaternary) 78%, transparent)
+    );
+    background-size: 200% 100%;
+    animation: comment-skeleton-shimmer 1.25s linear infinite;
   }
 }

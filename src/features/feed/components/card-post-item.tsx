@@ -24,7 +24,7 @@ export function CardPostItem({
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              className={`relative z-10 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-[11px] font-semibold leading-4 ${getUserAvatarTone(post.author.name)}`}
+              className={`relative z-10 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-[12px] font-semibold leading-4 ${getUserAvatarTone(post.author.name)}`}
             >
               {post.author.name.slice(0, 2).toUpperCase()}
             </button>
@@ -34,7 +34,7 @@ export function CardPostItem({
               </span>
               <span
                 aria-hidden="true"
-                className="inline-flex h-[3px] w-[3px] shrink-0 self-center rounded-full bg-[var(--label-tertiary)]"
+                className="inline-flex h-1 w-1 shrink-0 self-center rounded-full bg-[var(--label-tertiary)]"
               />
               <span className="inline-flex items-center self-center">
                 {post.activity.publishedAtLabel}
@@ -52,7 +52,7 @@ export function CardPostItem({
           {post.content.title}
         </h2>
 
-        <p className="text-label-secondary text-[16px] leading-[1.45]">
+        <p className="text-label-secondary text-[16px] leading-6">
           {post.content.excerpt}
         </p>
       </div>

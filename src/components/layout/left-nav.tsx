@@ -18,7 +18,7 @@ export function LeftNav({ items, activeSection }: LeftNavProps) {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-4 rounded-full px-4 py-3 text-[19px] transition ${
+                  className={`flex items-center gap-4 rounded-full px-4 py-3 text-[20px] transition ${
                     item.key === activeSection
                       ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
                       : "font-normal text-[var(--label-secondary)] hover:bg-[var(--fill-control-hover)]"

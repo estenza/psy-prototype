@@ -1,4 +1,6 @@
+import type { SessionUser } from "@/features/auth/types";
 import { mapApiPostsToFeed } from "@/features/feed/lib/post-adapter";
+import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
 import { mockApiPosts } from "@/features/feed/mocks/mock-api-posts";
 import type { Post } from "@/features/feed/types";
 
@@ -31,9 +33,9 @@ export function findStaticDiscussionPostById(postId: string) {
   return STATIC_DISCUSSION_POSTS.find((post) => post.id === postId) ?? null;
 }
 
-export function getDiscussionBodyText(post: Post) {
+export function getDiscussionBodyText(post: Post, currentUser: SessionUser | null) {
   const authoredBody =
-    post.viewer.isAuthor && post.editorState?.content
+    isPostOwnedByUser(post, currentUser) && post.editorState?.content
       ? normalizeRichTextContent(post.editorState.content)
       : "";
   const fallbackBody = STATIC_DISCUSSION_BODY_BY_ID.get(post.id) ?? post.content.excerpt;

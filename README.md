@@ -18,6 +18,27 @@ npm run lint
 npm run build
 ```
 
+## Восстановление пароля
+
+Флоу восстановления пароля использует одноразовые токены в локальной SQLite-базе и
+умеет отправлять письмо со ссылкой для сброса пароля. Для реальной отправки писем
+нужно настроить переменные окружения:
+
+```bash
+AUTH_APP_URL=https://vnutri.live
+AUTH_EMAIL_FROM=no-reply@vnutri.live
+AUTH_SMTP_HOST=smtp.example.com
+AUTH_SMTP_PORT=587
+AUTH_SMTP_SECURE=false
+AUTH_SMTP_USERNAME=login
+AUTH_SMTP_PASSWORD=secret
+AUTH_SMTP_HELO_HOST=vnutri.live
+```
+
+Если SMTP не настроен и приложение запущено локально не в `production`, API
+вернёт debug-ссылку на сброс пароля, чтобы флоу можно было проверить без почтового
+провайдера.
+
 ## Структура проекта
 
 ```text

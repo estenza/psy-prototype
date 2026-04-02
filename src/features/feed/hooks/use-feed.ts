@@ -2,6 +2,8 @@
 
 import { useLayoutEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthClient } from "@/features/auth/components/auth-required-provider";
+import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
 import {
   DEFAULT_FEED_SORT_MODE,
@@ -13,6 +15,7 @@ import {
   readHighlightedPublishedPostId,
   readPublishedPosts,
 } from "@/features/feed/lib/published-posts";
+import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
 import {
   requestTopicDraftRestore,
   saveTopicDraft,
@@ -71,6 +74,8 @@ export function useFeed({
   initialSortMode = DEFAULT_FEED_SORT_MODE,
 }: UseFeedOptions) {
   const router = useRouter();
+  const { user } = useAuthClient();
+  const { runIfAuthorized } = useAuthRequiredAction();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(
     null,
@@ -120,25 +125,27 @@ export function useFeed({
   }, [initialPosts]);
 
   const toggleLike = (postId: Post["id"]) => {
-    setPosts((current) =>
-      current.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              viewer: {
-                ...post.viewer,
-                liked: !post.viewer.liked,
-              },
-              stats: {
-                ...post.stats,
-                likes: post.viewer.liked
-                  ? post.stats.likes - 1
-                  : post.stats.likes + 1,
-              },
-            }
-          : post,
-      ),
-    );
+    void runIfAuthorized(() => {
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                viewer: {
+                  ...post.viewer,
+                  liked: !post.viewer.liked,
+                },
+                stats: {
+                  ...post.stats,
+                  likes: post.viewer.liked
+                    ? post.stats.likes - 1
+                    : post.stats.likes + 1,
+                },
+              }
+            : post,
+        ),
+      );
+    });
   };
 
   const toggleBookmark = (postId: Post["id"]) => {
@@ -164,7 +171,7 @@ export function useFeed({
     if (actionId === "edit") {
       const postToEdit = posts.find((post) => post.id === postId);
 
-      if (!postToEdit?.viewer.isAuthor || !postToEdit.editorState) {
+      if (!postToEdit || !isPostOwnedByUser(postToEdit, user) || !postToEdit.editorState) {
         return;
       }
 
@@ -179,7 +186,14 @@ export function useFeed({
     }
 
     if (actionId === "save") {
-      toggleBookmark(postId);
+      void runIfAuthorized(() => {
+        toggleBookmark(postId);
+      });
+      return;
+    }
+
+    if (actionId === "follow") {
+      void runIfAuthorized(async () => undefined);
       return;
     }
 

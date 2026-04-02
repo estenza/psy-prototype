@@ -32,15 +32,15 @@ export function ForumPostItem({
       </div>
 
       <div className="w-[96px] shrink-0 text-right sm:w-[112px]">
-        <div className="text-label-secondary text-[15px] font-semibold leading-5">
+        <div className="text-label-secondary text-[16px] font-semibold leading-5">
           {post.activity.lastCommentAtLabel}
         </div>
-        <div className="text-label-secondary mt-0.5 hidden text-[14px] leading-[1.25] sm:block">
+        <div className="text-label-secondary mt-0.5 hidden text-[14px] leading-4 sm:block">
           {post.activity.lastCommentAuthor}
         </div>
       </div>
 
-      <div className="text-label-secondary inline-flex shrink-0 items-center gap-2 text-[15px] font-semibold">
+      <div className="text-label-secondary inline-flex shrink-0 items-center gap-2 text-[16px] font-semibold">
         <ChatIcon />
         <span>{post.stats.comments}</span>
       </div>

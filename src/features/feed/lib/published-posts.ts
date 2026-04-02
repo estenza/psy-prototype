@@ -1,4 +1,5 @@
 import type { Post } from "@/features/feed/types";
+import type { UserSummary } from "@/types/user";
 import type { PostIntent, PostTopic } from "@/types/post-taxonomy";
 
 const PUBLISHED_POSTS_STORAGE_KEY = "psy-prototype:feed:published-posts";
@@ -6,12 +7,8 @@ const HIGHLIGHT_POST_ID_STORAGE_KEY = "psy-prototype:feed:highlight-post-id";
 const MAX_PUBLISHED_POSTS = 20;
 const PUBLISHED_POST_EXCERPT_LIMIT = 240;
 
-const CURRENT_AUTHOR = {
-  handle: "@vz",
-  name: "VZ",
-} as const;
-
 type CreatePublishedPostInput = {
+  author: UserSummary;
   content: string;
   existingPost?: Post | null;
   intent: PostIntent;
@@ -39,18 +36,17 @@ function buildLegacyEditorContent(post: StoredPublishedPost) {
 }
 
 function deserializePublishedPost(record: StoredPublishedPost): Post {
-  const isAuthor =
-    record.viewer?.isAuthor ?? record.author.handle === CURRENT_AUTHOR.handle;
+  const hasEditableSnapshot = Boolean(record.editorState || record.viewer?.isAuthor);
 
   return {
     ...record,
     createdAt: new Date(record.createdAtIso),
     viewer: {
-      isAuthor,
+      isAuthor: false,
       liked: record.viewer?.liked ?? false,
       bookmarked: record.viewer?.bookmarked ?? false,
     },
-    editorState: isAuthor
+    editorState: hasEditableSnapshot
       ? {
           content:
             record.editorState?.content ?? buildLegacyEditorContent(record),
@@ -101,6 +97,7 @@ function trimExcerpt(text: string) {
 }
 
 export function createPublishedPost({
+  author,
   content,
   existingPost = null,
   intent,
@@ -130,7 +127,7 @@ export function createPublishedPost({
     createdAt,
     intent,
     topic: topic ?? undefined,
-    author: CURRENT_AUTHOR,
+    author,
     activity:
       existingPost?.activity ?? {
         publishedAtLabel: "только что",
@@ -146,7 +143,7 @@ export function createPublishedPost({
       likes: 0,
     },
     viewer: {
-      isAuthor: true,
+      isAuthor: false,
       liked: existingPost?.viewer.liked ?? false,
       bookmarked: existingPost?.viewer.bookmarked ?? false,
     },

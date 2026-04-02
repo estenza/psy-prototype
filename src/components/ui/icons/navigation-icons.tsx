@@ -34,28 +34,28 @@ export function NavIcon({
       <path
         d="M17.1523 18.7868V16.7868C17.1523 15.7259 16.7309 14.7085 15.9808 13.9583C15.2306 13.2082 14.2132 12.7868 13.1523 12.7868H7.15234C6.09148 12.7868 5.07406 13.2082 4.32392 13.9583C3.57377 14.7085 3.15234 15.7259 3.15234 16.7868V18.7868"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="M10 10C11.6569 10 13 8.65685 13 7C13 5.34315 11.6569 4 10 4C8.34315 4 7 5.34315 7 7C7 8.65685 8.34315 10 10 10Z"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="M21.0002 18.7868V16.7868C21.0002 15.7259 20.5788 14.7085 19.8286 13.9583"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="M15 9.77071C16.0849 9.31896 16.8477 8.24855 16.8477 7C16.8477 5.75145 16.0849 4.68104 15 4.2293"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -70,7 +70,7 @@ export function BellIcon() {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="M6 9a6 6 0 1 1 12 0v4l1.5 2.5H4.5L6 13z" />
       <path d="M10 18a2 2 0 0 0 4 0" />
@@ -106,7 +106,7 @@ export function ChevronDownIcon() {
       className="h-4 w-4"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
     >
       <path d="m6 9 6 6 6-6" />
     </svg>

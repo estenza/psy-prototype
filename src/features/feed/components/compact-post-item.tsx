@@ -19,7 +19,7 @@ export function CompactPostItem({
 }: CompactPostItemProps) {
   return (
     <div className="flex gap-4">
-      <div className="border-separator surface-secondary hidden h-[84px] w-[132px] flex-none overflow-hidden rounded-[7px] border sm:block">
+      <div className="border-separator surface-secondary hidden h-[84px] w-[132px] flex-none overflow-hidden rounded-lg border sm:block">
         {post.media?.type === "image" ? (
           <Image
             src={post.media.src}
@@ -40,7 +40,7 @@ export function CompactPostItem({
             <div className="flex min-w-0 items-center gap-2">
               <button
                 type="button"
-                className={`relative z-10 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-[11px] font-semibold leading-4 ${getUserAvatarTone(post.author.name)}`}
+                className={`relative z-10 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-[12px] font-semibold leading-4 ${getUserAvatarTone(post.author.name)}`}
               >
                 {post.author.name.slice(0, 2).toUpperCase()}
               </button>
@@ -50,7 +50,7 @@ export function CompactPostItem({
                 </span>
                 <span
                   aria-hidden="true"
-                  className="inline-flex h-[3px] w-[3px] shrink-0 self-center rounded-full bg-[var(--label-tertiary)]"
+                  className="inline-flex h-1 w-1 shrink-0 self-center rounded-full bg-[var(--label-tertiary)]"
                 />
                 <span className="inline-flex items-center self-center">
                   {post.activity.publishedAtLabel}
@@ -68,7 +68,7 @@ export function CompactPostItem({
             {post.content.title}
           </h2>
 
-          <p className="text-label-secondary text-[16px] leading-[1.4]">
+          <p className="text-label-secondary text-[16px] leading-6">
             {post.content.excerpt}
           </p>
         </div>

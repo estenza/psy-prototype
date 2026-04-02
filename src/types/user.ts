@@ -4,4 +4,4 @@ export type User = {
   handle: string;
 };
 
-export type UserSummary = Pick<User, "name" | "handle">;
+export type UserSummary = Pick<User, "id" | "name" | "handle">;

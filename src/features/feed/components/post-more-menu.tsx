@@ -10,11 +10,13 @@ import {
   MoreIcon,
 } from "@/components/ui/icons";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
+import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import {
   COMMUNITY_POST_MENU_ACTIONS,
   OWN_POST_MENU_ACTIONS,
   type PostMenuActionId,
 } from "@/features/feed/constants/post-menu";
+import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
 import type { Post } from "@/features/feed/types";
 
 type PostMoreMenuProps = {
@@ -62,8 +64,10 @@ export function PostMoreMenu({
   onAction,
   post,
 }: PostMoreMenuProps) {
+  const { user } = useAuthClient();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const isOwnedByCurrentUser = isPostOwnedByUser(post, user);
 
   useEffect(() => {
     if (!isOpen) {
@@ -92,7 +96,7 @@ export function PostMoreMenu({
   }, [isOpen]);
 
   const actions = useMemo<PostMenuRenderItem[]>(() => {
-    const menuActions = post.viewer.isAuthor
+    const menuActions = isOwnedByCurrentUser
       ? OWN_POST_MENU_ACTIONS
       : COMMUNITY_POST_MENU_ACTIONS;
 
@@ -105,7 +109,7 @@ export function PostMoreMenu({
         tone: "tone" in action ? action.tone : undefined,
       };
     });
-  }, [onAction, post.id, post.viewer.bookmarked, post.viewer.isAuthor]);
+  }, [isOwnedByCurrentUser, onAction, post.id, post.viewer.bookmarked]);
 
   return (
     <div
