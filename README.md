@@ -1,12 +1,36 @@
 # внутри
 
-Прототип главной страницы для анонимной платформы про психологические истории и поддержку. Проект собран на `Next.js`, `React` и `Tailwind CSS v4` и сейчас сфокусирован на чистом UI, понятной структуре и простой эволюции от mock-данных к реальному API.
+`внутри` — это Next.js-приложение для анонимных психологических историй и
+поддержки. В репозитории уже есть живая production-среда, отдельный staging,
+базовый auth-флоу, восстановление пароля, профиль после регистрации и UI для
+основных пользовательских экранов.
 
-## Установка и запуск
+## Что сейчас в проекте
+
+- главная лента на `src/app/page.tsx`
+- регистрация и вход
+- восстановление пароля по email
+- шаг завершения профиля после первого входа
+- создание новой темы
+- staging и production deploy через GitHub Actions
+
+## Стек
+
+- Next.js 16
+- React 19
+- Tailwind CSS 4
+- TypeScript
+- SQLite для auth-данных
+- Yandex Cloud Serverless Container + API Gateway для staging и production
+
+## Быстрый старт
+
+Проект использует `yarn@4`.
 
 ```bash
-npm install
-npm run dev
+corepack enable
+yarn install
+yarn dev
 ```
 
 Приложение будет доступно на `http://localhost:3000`.
@@ -14,18 +38,19 @@ npm run dev
 Полезные команды:
 
 ```bash
-npm run lint
-npm run build
+yarn lint
+yarn build
+yarn start
 ```
 
-## Восстановление пароля
+## Переменные окружения
 
-Флоу восстановления пароля использует одноразовые токены в локальной SQLite-базе и
-умеет отправлять письмо со ссылкой для сброса пароля. Для реальной отправки писем
-нужно настроить переменные окружения:
+Локально приложение может работать почти без настройки, но для полного auth и
+почтового флоу полезны такие переменные:
 
 ```bash
-AUTH_APP_URL=https://vnutri.live
+AUTH_APP_URL=http://localhost:3000
+AUTH_DATABASE_PATH=./data/app.db
 AUTH_EMAIL_FROM=no-reply@vnutri.live
 AUTH_SMTP_HOST=smtp.example.com
 AUTH_SMTP_PORT=587
@@ -35,71 +60,93 @@ AUTH_SMTP_PASSWORD=secret
 AUTH_SMTP_HELO_HOST=vnutri.live
 ```
 
-Если SMTP не настроен и приложение запущено локально не в `production`, API
-вернёт debug-ссылку на сброс пароля, чтобы флоу можно было проверить без почтового
-провайдера.
+Примечания:
+
+- если `AUTH_DATABASE_PATH` не задан, локально используется `data/app.db`
+- если SMTP не настроен и приложение не в production, reset-password API
+  возвращает debug-ссылку вместо реальной отправки письма
+- staging и production задают свои runtime env через GitHub Actions deploy
+
+## Окружения
+
+- production: `https://vnutri.live`
+- staging: `https://staging.vnutri.live`
+
+Визуальные отличия staging управляются только через `APP_ENV=staging`, а не
+через название ветки или домен в коде компонента.
+
+## Ветки и релизы
+
+Репозиторий переведён на простой рабочий flow:
+
+- `main` -> production
+- `develop` -> staging
+- `feature/*` -> PR в `develop`
+- `hotfix/*` -> PR в `main`, потом merge обратно в `develop`
+
+Обычный путь релиза:
+
+1. делать работу в `feature/*`
+2. мерджить в `develop`
+3. проверять на staging
+4. продвигать в production PR-ом `develop -> main`
+
+Это позволяет смотреть всё на staging заранее и легко не тянуть неудачные
+эксперименты в production.
+
+## GitHub Actions Deploy
+
+Оба deploy workflow используют один и тот же auth path:
+
+- GitHub Environment secret `YC_SA_JSON_CREDENTIALS`
+- `develop` workflow читает его из environment `staging`
+- `main` workflow читает его из environment `production`
+
+Для нормальной работы нужно один раз настроить environment secrets в GitHub.
+Подробности ниже в документации.
+
+## Документация
+
+- [Branch workflow](./docs/branch-workflow.md)
+- [GitHub Actions deploy setup](./docs/github-actions-deploy-setup.md)
+- [Staging deployment](./docs/staging-deployment.md)
+- [Production deployment](./docs/production-deployment.md)
 
 ## Структура проекта
 
 ```text
 src/
-  app/                        # entrypoints Next.js app router
+  app/                        # routes и app router entrypoints
   components/
-    layout/                   # шапка, навигация, sidebar
-    ui/                       # tooltip, иконки и базовые UI-кирпичики
-  constants/                  # shared UI-константы вне конкретной feature
+    layout/                   # shell, header, nav, sidebars
+    ui/                       # общие UI-примитивы
+  constants/                  # shared константы
   features/
-    feed/
-      components/             # секция ленты и режимы отображения
-      constants/              # feed-specific константы
-      hooks/                  # feed-specific client state
-      lib/                    # feed-specific adapters/helpers
-      mocks/                  # mock API shape и подготовленные данные
-      types.ts                # типы ленты
-  lib/                        # небольшие shared helpers
+    auth/                     # регистрация, вход, reset password, profile flow
+    comments/                 # комментарии и связанный UI/state
+    discussions/              # создание и просмотр тем
+    feed/                     # лента и её состояние
+  lib/                        # shared helpers, db, env helpers
   styles/                     # design tokens
-  types/                      # только shared типы
+  types/                      # shared типы
+docs/                         # workflow и deploy документация
+scripts/                      # fallback deploy scripts
+infra/                        # инфраструктурные артефакты Yandex Cloud
 ```
-
-## Ключевые решения
-
-- `src/app/page.tsx` остаётся тонким и в основном собирает экран из layout-модулей и feature-секций.
-- Вся логика и модели ленты сгруппированы внутри `src/features/feed`, чтобы feature было проще читать и переносить.
-- Mock-данные и адаптер оставлены раздельно:
-  - `src/features/feed/mocks/mock-api-posts.ts` — сырой mock API shape
-  - `src/features/feed/lib/post-adapter.ts` — маппинг API -> UI model
-  - `src/features/feed/mocks/mock-posts.ts` — готовые данные для интерфейса
-- Такая связка немного многословнее, но сохраняет готовность к подключению реального API без переписывания UI-модели.
-- Design tokens вынесены в `src/styles/tokens.css`, а глобальные utility-классы оставлены в `src/app/globals.css`.
-- Сортировка и переключение вида управляются из feed state, поэтому toolbar меняет не только UI-контролы, но и порядок/представление ленты.
-
-## Архитектурные принципы
-
-- Без лишних абстракций: только те слои, которые реально помогают читать и менять код.
-- Компоненты по возможности презентационные.
-- Feature-логика сгруппирована по домену.
-- Shared helpers и shared типы не привязаны к конкретному экрану.
-- Цвета и повторяемые UI-примитивы централизованы, а не размазаны по JSX.
 
 ## Что менять чаще всего
 
-- Основная страница: `src/app/page.tsx`
-- Layout: `src/components/layout/*`
-- Лента: `src/features/feed/components/*`
-- Состояние ленты: `src/features/feed/hooks/use-feed.ts`
-- Mock-данные: `src/features/feed/mocks/*`
-- Адаптер данных: `src/features/feed/lib/post-adapter.ts`
-- Токены: `src/styles/tokens.css`
-- Shared типы: `src/types/*`
+- страницы и маршруты: `src/app/*`
+- auth: `src/features/auth/*`
+- лента: `src/features/feed/*`
+- обсуждения: `src/features/discussions/*`
+- layout и shell: `src/components/layout/*`
+- deploy docs и workflow: `docs/*`, `.github/workflows/*`
 
-## Ограничения текущего прототипа
+## Текущее качество и ограничения
 
-- Сейчас реализован только главный экран.
-- Навигация и часть shell-элементов пока служат UI-контекстом для прототипа, а не полноценной маршрутизацией.
-- Данные ленты локальные, но их shape уже подготовлен для перехода к API.
-
-## Текущее состояние качества
-
-- `any` в проекте не используется.
-- ESLint уже настроен и используется как базовая проверка качества.
-- Prettier отдельно не добавлялся, чтобы не усложнять стек без явной необходимости.
+- `yarn lint` используется как базовая проверка
+- staging и production уже существуют, но GitHub environment secrets должны
+  быть настроены для полностью автоматических deploy
+- локальные deploy scripts сохранены только как аварийный fallback, а не как
+  основной путь релиза
