@@ -1,0 +1,74 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  YC_FOLDER_ID: b1ghrmp0mr8mr0jcj9gc
+  YC_SERVICE_ACCOUNT_ID: ajeh4qnls5se5raj12ua
+  YC_CONTAINER_NAME: psy-container
+  YC_REGISTRY_ID: crphtumcsi9us93u61ir
+  IMAGE_NAME: psy
+  IMAGE_TAG: latest
+  IMAGE: cr.yandex/crphtumcsi9us93u61ir/psy:latest
+
+jobs:
+  deploy:
+    name: Build, Push, Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate Docker to Yandex Container Registry
+        uses: yc-actions/yc-cr-login@v3
+        with:
+          yc-sa-id: ${{ env.YC_SERVICE_ACCOUNT_ID }}
+
+      - name: Build and push linux/amd64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          provenance: false
+          push: true
+          tags: ${{ env.IMAGE }}
+
+      - name: Deploy new Serverless Container revision
+        id: deploy
+        uses: yc-actions/yc-sls-container-deploy@v4
+        with:
+          yc-sa-id: ${{ env.YC_SERVICE_ACCOUNT_ID }}
+          container-name: ${{ env.YC_CONTAINER_NAME }}
+          folder-id: ${{ env.YC_FOLDER_ID }}
+          revision-service-account-id: ${{ env.YC_SERVICE_ACCOUNT_ID }}
+          revision-cores: 1
+          revision-memory: 512Mb
+          revision-core-fraction: 100
+          revision-concurrency: 8
+          revision-execution-timeout: 30
+          revision-image-url: ${{ env.IMAGE }}
+          revision-env: |
+            APP_ENV=production
+
+      - name: Smoke check production URLs
+        run: |
+          curl --fail --show-error --silent --location --retry 5 --retry-delay 3 --head https://vnutri.live
+          curl --fail --show-error --silent --location --retry 5 --retry-delay 3 --head https://www.vnutri.live

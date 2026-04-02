@@ -46,3 +46,53 @@ yc serverless container revision deploy \
 Use `./scripts/deploy-production.sh`.
 
 It rebuilds the Linux AMD64 image, pushes it to the current Yandex Container Registry, deploys a new Serverless Container revision, and runs quick HTTPS smoke checks against both production hostnames.
+
+## GitHub Actions Auto-Deploy
+
+Production auto-deploy is defined in
+`.github/workflows/deploy-production.yml`.
+
+Behavior:
+
+- Trigger: every push to `main`
+- Auth: GitHub OIDC -> Yandex Cloud Workload Identity Federation
+- Build: Docker Buildx builds `linux/amd64`
+- Push: image is pushed to `cr.yandex/crphtumcsi9us93u61ir/psy:latest`
+- Deploy: a new revision is deployed to `psy-container`
+- Verify: the workflow runs HTTP smoke checks against
+  `https://vnutri.live` and `https://www.vnutri.live`
+
+### Required GitHub Secrets
+
+No GitHub secrets are required for Yandex Cloud authentication in the
+committed workflow. It uses GitHub OIDC with Workload Identity Federation
+instead of a long-lived static cloud key.
+
+### One-Time GitHub/Yandex Cloud Setup
+
+Before the workflow can deploy, you need to connect this GitHub repository
+to Yandex Cloud Workload Identity Federation:
+
+1. In Yandex Cloud, create an OIDC Workload Identity Federation for GitHub Actions.
+2. Bind the existing service account `ajeh4qnls5se5raj12ua` to that federation.
+3. Add an access rule that allows tokens only from this repository and the
+   `main` branch.
+   Recommended subject pattern:
+   `repo:<github-owner>/<github-repo>:ref:refs/heads/main`
+4. Add a separate rule for the `staging` branch as well if you use the staging workflow:
+   `repo:<github-owner>/<github-repo>:ref:refs/heads/staging`
+5. Make sure GitHub Actions are enabled for the repository.
+
+The workflow already requests the GitHub permission needed for OIDC:
+
+- `id-token: write`
+- `contents: read`
+
+### Why No Secret Is Stored In GitHub
+
+This is safer than storing a Yandex Cloud service account key in GitHub
+Secrets:
+
+- GitHub issues a short-lived OIDC token per workflow run
+- Yandex Cloud exchanges it for a short-lived IAM token
+- there is no long-lived cloud credential stored in the repo

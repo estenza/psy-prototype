@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EnvironmentMarker } from "@/components/layout/environment-marker";
 import { AuthRequiredProvider } from "@/features/auth/components/auth-required-provider";
 import "./globals.css";
 
@@ -15,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="antialiased">
+        <EnvironmentMarker />
         <AuthRequiredProvider>{children}</AuthRequiredProvider>
       </body>
     </html>

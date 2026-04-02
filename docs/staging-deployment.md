@@ -1,0 +1,132 @@
+# Staging Deployment Note
+
+## Staging Architecture
+
+Staging reuses the same Yandex Cloud pattern as production:
+
+- Docker image in the existing Container Registry
+- Serverless Container as runtime target
+- API Gateway in front of the container
+- Custom subdomain for browser review
+
+Staging is separated from production by:
+
+- separate branch trigger: `staging`
+- separate image tag: `cr.yandex/crphtumcsi9us93u61ir/psy:staging`
+- separate Serverless Container: `psy-staging-container`
+- separate API Gateway: `psy-staging-gateway`
+- separate custom hostname target: `staging.vnutri.live`
+- separate runtime environment variables for auth URL and auth DB path
+
+Production resources remain unchanged.
+
+## Created Yandex Cloud Resources
+
+- Serverless Container:
+  - name: `psy-staging-container`
+  - id: `bbau5donub8hrok6eqoc`
+  - default URL: `https://bbau5donub8hrok6eqoc.containers.yandexcloud.net/`
+- API Gateway:
+  - name: `psy-staging-gateway`
+  - id: `d5d6qfoc60m48deqn2q7`
+  - default gateway URL: `https://d5d6qfoc60m48deqn2q7.l3hh3szr.apigw.yandexcloud.net`
+- Managed certificate request:
+  - name: `vnutri-live-staging-cert`
+  - id: `fpqed1r4fbmspgi2219k`
+  - domain: `staging.vnutri.live`
+
+## Branch Mapping
+
+- `staging` branch -> staging deploy
+- `main` branch -> production deploy
+
+GitHub Actions workflows:
+
+- `.github/workflows/deploy-staging.yml`
+- `.github/workflows/deploy-production.yml`
+
+## Staging Deploy Flow
+
+1. Push to `staging`
+2. GitHub Actions authenticates to Yandex Cloud through GitHub OIDC
+3. Docker Buildx builds `linux/amd64`
+4. Image is pushed to `cr.yandex/crphtumcsi9us93u61ir/psy:staging`
+5. New revision is deployed to `psy-staging-container`
+6. Smoke check runs against the staging gateway default URL
+7. UI can be reviewed on the staging gateway URL immediately
+8. After the managed certificate is issued and attached, UI is reviewed on `https://staging.vnutri.live`
+
+## DNS Records For Staging
+
+The DNS zone `vnutri.live` already exists in Yandex Cloud DNS, and the staging
+records were added there.
+
+Current staging DNS records:
+
+- `_acme-challenge.staging.vnutri.live. 300 CNAME fpqed1r4fbmspgi2219k.cm.yandexcloud.net.`
+- `staging.vnutri.live. 300 CNAME d5d6qfoc60m48deqn2q7.l3hh3szr.apigw.yandexcloud.net.`
+
+If you later move DNS away from Yandex Cloud, these are the exact records that
+must exist at the registrar or external DNS provider.
+
+## Staging Environment Variables
+
+Currently set on staging container revisions:
+
+- `AUTH_APP_URL=https://staging.vnutri.live`
+- `AUTH_DATABASE_PATH=/tmp/psy-staging.db`
+
+Variables that should be configured separately for staging vs production if you
+enable them:
+
+- `APP_ENV`
+- `AUTH_APP_URL`
+- `AUTH_DATABASE_PATH`
+- `AUTH_EMAIL_FROM`
+- `AUTH_SMTP_HOST`
+- `AUTH_SMTP_PORT`
+- `AUTH_SMTP_SECURE`
+- `AUTH_SMTP_USERNAME`
+- `AUTH_SMTP_PASSWORD`
+- `AUTH_SMTP_HELO_HOST`
+- `AUTH_INITIAL_MODERATOR_EMAILS`
+- `HYVOR_TALK_WEBSITE_ID`
+- `HYVOR_TALK_DATA_API_KEY`
+- `HYVOR_TALK_CONSOLE_API_KEY`
+- `HYVOR_TALK_DATA_API_PUBLIC`
+
+Notes:
+
+- Global staging UI marker is enabled by `APP_ENV=staging` and hidden for `APP_ENV=production`.
+- Auth/session isolation is already separated by host and by staging container DB path.
+- If you want staging comments to be isolated from production comments, use a separate Hyvor website and separate Hyvor API keys.
+- SMTP settings should be separate if staging should send password reset emails without touching production mail flow.
+
+## Certificate Status
+
+The managed certificate request for `staging.vnutri.live` has been created and
+the DNS validation record is already in place.
+
+At the time of writing, the certificate status is still `VALIDATING`.
+
+After Yandex Cloud marks the certificate as `ISSUED`, attach it to the staging
+gateway:
+
+```bash
+yc serverless api-gateway add-domain psy-staging-gateway \
+  --domain staging.vnutri.live \
+  --certificate-id fpqed1r4fbmspgi2219k
+```
+
+## One-Time GitHub Setup
+
+No GitHub secrets are required for deploy.
+
+The repository must allow GitHub OIDC access for both deployment branches in
+Yandex Cloud Workload Identity Federation:
+
+- `repo:<github-owner>/<github-repo>:ref:refs/heads/main`
+- `repo:<github-owner>/<github-repo>:ref:refs/heads/staging`
+
+Keep production and staging branch rules separate or equally constrained so no
+other branch can deploy by accident.
