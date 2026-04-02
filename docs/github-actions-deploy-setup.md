@@ -75,13 +75,8 @@ added.
 
 ## Legacy `staging` Branch
 
-Safest recommendation:
+The active staging branch is `develop`.
 
-- keep the old remote `staging` branch temporarily as a frozen legacy branch
-- do not use it for new work
-- switch all active work and PRs to `develop`
-- delete remote `staging` after the team has fully switched and branch
-  protections/default PR targets are updated
-
-This avoids accidental disruption during the transition while still removing the
-old branch from the active workflow.
+The old remote `staging` branch is no longer part of the workflow and should be
+treated as deprecated history only. New work and PRs should use `develop`,
+`feature/*`, and `hotfix/*`.

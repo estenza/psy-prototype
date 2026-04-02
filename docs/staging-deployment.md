@@ -126,13 +126,20 @@ Create a GitHub Environment named `staging` and add:
 Routine staging deploys should go through GitHub Actions. The local
 `scripts/deploy-staging.sh` flow is only an emergency fallback.
 
-## Migration From The Legacy `staging` Branch
+## Legacy Branch Cleanup
 
-To switch cleanly to the new branch model:
+The active staging branch is now `develop`.
 
-1. Create `develop` from the current `staging` tip so staging keeps the same codebase.
-2. Push `develop` and confirm the staging workflow runs from `develop`.
-3. Update branch protections and default PR targets to use `develop` instead of `staging`.
-4. Freeze the old `staging` branch or delete it after the team has switched over.
+The legacy remote `staging` branch has been removed from the active workflow and
+should not be used anymore.
 
-This keeps staging infrastructure unchanged while moving Git flow to the new standard branch strategy.
+If an older local clone still has a `staging` branch, clean it up like this:
+
+```bash
+git fetch origin --prune
+git branch -m staging develop
+git branch --set-upstream-to=origin/develop develop
+```
+
+If you already have a local `develop` branch, simply delete the old local
+`staging` branch after confirming it has no unique commits.
