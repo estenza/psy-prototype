@@ -55,6 +55,9 @@ Production auto-deploy is defined in
 The recommended Git branch strategy for how changes reach `main` is documented
 in [branch-workflow.md](./branch-workflow.md).
 
+Shared GitHub Actions setup instructions live in
+[github-actions-deploy-setup.md](./github-actions-deploy-setup.md).
+
 Behavior:
 
 - Trigger: every push to `main`

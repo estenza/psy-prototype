@@ -47,6 +47,9 @@ GitHub Actions workflows:
 - `.github/workflows/deploy-staging.yml`
 - `.github/workflows/deploy-production.yml`
 
+Shared GitHub Actions setup instructions live in
+[github-actions-deploy-setup.md](./github-actions-deploy-setup.md).
+
 ## Staging Deploy Flow
 
 1. Push to `develop`
