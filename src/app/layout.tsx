@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EnvironmentAttributes } from "@/components/layout/environment-attributes";
+import Script from "next/script";
 import { AuthRequiredProvider } from "@/features/auth/components/auth-required-provider";
 import "./globals.css";
 
@@ -16,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="antialiased">
-        <EnvironmentAttributes />
+        <Script
+          id="staging-host-marker"
+          strategy="beforeInteractive"
+        >{`document.documentElement.dataset.appEnv = window.location.hostname === "staging.vnutri.live" ? "staging" : "production";`}</Script>
         <AuthRequiredProvider>{children}</AuthRequiredProvider>
       </body>
     </html>
