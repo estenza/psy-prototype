@@ -79,6 +79,15 @@ jobs:
           }
           NODE
 
+      - name: Validate auth database secret
+        env:
+          AUTH_DATABASE_URL: ${{ secrets.AUTH_DATABASE_URL }}
+        run: |
+          if [ -z "${AUTH_DATABASE_URL//[[:space:]]/}" ]; then
+            echo "::error::Missing AUTH_DATABASE_URL. Add it as an Environment secret in GitHub: Settings -> Environments -> staging -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -117,7 +126,7 @@ jobs:
           revision-env: |
             APP_ENV=staging
             AUTH_APP_URL=https://staging.vnutri.live
-            AUTH_DATABASE_PATH=/tmp/psy-staging.db
+            AUTH_DATABASE_URL=${{ secrets.AUTH_DATABASE_URL }}
 
       - name: Smoke check staging URL
         run: |

@@ -17,6 +17,7 @@ workflows.
   - branch trigger: `develop`
   - GitHub Environment: `staging`
   - required secret: `YC_SA_JSON_CREDENTIALS`
+  - required secret: `AUTH_DATABASE_URL`
 - Production workflow: `.github/workflows/deploy-production.yml`
   - branch trigger: `main`
   - GitHub Environment: `production`
@@ -45,7 +46,8 @@ GitHub path:
 4. Open or create the `staging` environment
 5. Open `Secrets and variables` -> `Actions`
 6. Add a secret named `YC_SA_JSON_CREDENTIALS`
-7. Add optional staging runtime secrets as needed:
+7. Add a secret named `AUTH_DATABASE_URL`
+8. Add optional staging runtime secrets as needed:
    - `HYVOR_TALK_DATA_API_KEY`
    - `HYVOR_TALK_CONSOLE_API_KEY`
    - `AUTH_EMAIL_FROM`
@@ -55,11 +57,11 @@ GitHub path:
    - `AUTH_SMTP_USERNAME`
    - `AUTH_SMTP_PASSWORD`
    - `AUTH_SMTP_HELO_HOST`
-8. Open or create the `production` environment
-9. Open `Secrets and variables` -> `Actions`
-10. Add a secret named `YC_SA_JSON_CREDENTIALS`
-11. Add a secret named `AUTH_DATABASE_URL`
-12. Add runtime secrets needed by production:
+9. Open or create the `production` environment
+10. Open `Secrets and variables` -> `Actions`
+11. Add a secret named `YC_SA_JSON_CREDENTIALS`
+12. Add a secret named `AUTH_DATABASE_URL`
+13. Add runtime secrets needed by production:
     - `HYVOR_TALK_DATA_API_KEY`
     - `HYVOR_TALK_CONSOLE_API_KEY`
     - `AUTH_EMAIL_FROM`
@@ -96,21 +98,20 @@ Serverless Container in the same cloud network without SSL:
 ## One-Time GitHub Setup Still Required
 
 1. Create GitHub Environment `staging`
-2. Add environment secret `YC_SA_JSON_CREDENTIALS` to `staging`
+2. Add environment secrets `YC_SA_JSON_CREDENTIALS` and `AUTH_DATABASE_URL` to `staging`
 3. Create GitHub Environment `production`
-4. Add environment secret `YC_SA_JSON_CREDENTIALS` to `production`
-5. Add environment secret `AUTH_DATABASE_URL` to `production`
-6. Add Hyvor runtime secrets to `production`
-7. Add SMTP runtime secrets to `production` if password reset emails must work on live
-8. Optionally restrict deployment branches in GitHub Environments:
+4. Add environment secrets `YC_SA_JSON_CREDENTIALS` and `AUTH_DATABASE_URL` to `production`
+5. Add Hyvor runtime secrets to `production`
+6. Add SMTP runtime secrets to `production` if password reset emails must work on live
+7. Optionally restrict deployment branches in GitHub Environments:
    - `staging` environment -> `develop`
    - `production` environment -> `main`
-9. Protect `main` from direct pushes
-10. Optionally protect `develop` as well
+8. Protect `main` from direct pushes
+9. Optionally protect `develop` as well
 
 ## Expected Result After Setup
 
-- push to `develop` -> staging build/push/deploy
+- push to `develop` -> staging build/push/deploy with explicit runtime PostgreSQL auth config
 - push to `main` -> production build/push/deploy with explicit runtime PostgreSQL auth config
 
 If the secret is missing, the workflows fail fast at:
@@ -125,9 +126,10 @@ added.
 For staging:
 
 1. Add `YC_SA_JSON_CREDENTIALS` to GitHub `Settings -> Environments -> staging -> Secrets and variables -> Actions`
-2. Push a commit to `develop`
-3. Open the `Deploy Staging` run in GitHub Actions
-4. Confirm these steps pass:
+2. Add `AUTH_DATABASE_URL` to the same Environment
+3. Push a commit to `develop`
+4. Open the `Deploy Staging` run in GitHub Actions
+5. Confirm these steps pass:
    - `Validate deploy configuration`
    - `Authenticate Docker to Yandex Container Registry`
    - `Build and push linux/amd64 staging image`

@@ -146,13 +146,13 @@ function initializeDatabase(database: DatabaseSync) {
   `);
 }
 
-function assertSafeProductionDatabaseConfig() {
+function assertSafeDeployedDatabaseConfig() {
   const appEnvironment = getAppEnvironment();
   const authDatabaseUrl = process.env.AUTH_DATABASE_URL?.trim() || "";
 
-  if (appEnvironment === "production" && !authDatabaseUrl) {
+  if ((appEnvironment === "production" || appEnvironment === "staging") && !authDatabaseUrl) {
     throw new Error(
-      "Production auth storage requires AUTH_DATABASE_URL. Refusing to fall back to SQLite in the container filesystem.",
+      "Staging and production auth storage require AUTH_DATABASE_URL. Refusing to fall back to SQLite in the container filesystem.",
     );
   }
 }
@@ -164,7 +164,7 @@ export function getDatabase() {
     return globalCache.__psyPrototypeDatabase;
   }
 
-  assertSafeProductionDatabaseConfig();
+  assertSafeDeployedDatabaseConfig();
 
   mkdirSync(dirname(DATABASE_PATH), {
     recursive: true,

@@ -16,7 +16,7 @@ Staging is separated from production by:
 - separate Serverless Container: `psy-staging-container`
 - separate API Gateway: `psy-staging-gateway`
 - separate custom hostname target: `staging.vnutri.live`
-- separate runtime environment variables for auth URL and auth DB path
+- separate runtime environment variables for auth URL and auth database
 
 Production resources remain unchanged.
 
@@ -80,7 +80,7 @@ Currently set on staging container revisions:
 
 - `APP_ENV=staging`
 - `AUTH_APP_URL=https://staging.vnutri.live`
-- `AUTH_DATABASE_PATH=/tmp/psy-staging.db`
+- `AUTH_DATABASE_URL` from the `staging` GitHub Environment
 
 Variables that should be configured separately for staging vs production if you
 enable them:
@@ -88,7 +88,6 @@ enable them:
 - `APP_ENV`
 - `AUTH_APP_URL`
 - `AUTH_DATABASE_URL`
-- `AUTH_DATABASE_PATH`
 - `AUTH_EMAIL_FROM`
 - `AUTH_SMTP_HOST`
 - `AUTH_SMTP_PORT`
@@ -105,7 +104,7 @@ enable them:
 Notes:
 
 - In staging, branding is driven only by `APP_ENV=staging`. The blue logo is not tied to the branch name and is not inferred from the hostname.
-- Auth/session isolation is already separated by host and by staging container DB path.
+- Staging auth should use a shared PostgreSQL database via `AUTH_DATABASE_URL`, not per-container SQLite under `/tmp`.
 - If you want staging comments to be isolated from production comments, use a separate Hyvor website and separate Hyvor API keys.
 - SMTP settings should be separate if staging should send password reset emails without touching production mail flow.
 - The `/` route is forced dynamic so staging does not keep serving stale environment-specific UI after a fresh deploy.
@@ -123,6 +122,8 @@ Create a GitHub Environment named `staging` and add:
 
 - `YC_SA_JSON_CREDENTIALS`
   Yandex Cloud authorized key JSON for service account `ajeh4qnls5se5raj12ua`
+- `AUTH_DATABASE_URL`
+  PostgreSQL connection string for the staging auth database
 
 Recommended runtime secrets for staging parity:
 

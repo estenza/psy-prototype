@@ -14,10 +14,22 @@ HYVOR_TALK_WEBSITE_ID="${HYVOR_TALK_WEBSITE_ID:-15244}"
 
 IMAGE="cr.yandex/${REGISTRY_ID}/${IMAGE_NAME}:${IMAGE_TAG}"
 
+require_env() {
+  local name="$1"
+
+  if [ -z "${!name:-}" ]; then
+    echo "Missing required environment variable: ${name}" >&2
+    exit 1
+  fi
+}
+
+require_env AUTH_DATABASE_URL
+
 ENV_VARS=(
   "APP_ENV=staging"
   "AUTH_APP_URL=${STAGING_APP_URL}"
-  "AUTH_DATABASE_PATH=/tmp/psy-staging.db"
+  "AUTH_DATABASE_URL=${AUTH_DATABASE_URL}"
+  "AUTH_DATABASE_SSL=${AUTH_DATABASE_SSL:-false}"
   "HYVOR_TALK_WEBSITE_ID=${HYVOR_TALK_WEBSITE_ID}"
 )
 

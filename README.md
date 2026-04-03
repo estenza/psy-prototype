@@ -66,7 +66,7 @@ AUTH_SMTP_HELO_HOST=vnutri.live
 
 - если `AUTH_DATABASE_PATH` не задан, локально используется `data/app.db`
 - если задан `AUTH_DATABASE_URL`, auth-данные идут через PostgreSQL вместо SQLite
-- production больше не должен работать на SQLite fallback внутри контейнера
+- staging и production не должны работать на SQLite fallback внутри контейнера
 - если SMTP не настроен и приложение не в production, reset-password API
   возвращает debug-ссылку вместо реальной отправки письма
 - staging и production задают свои runtime env через GitHub Actions deploy
