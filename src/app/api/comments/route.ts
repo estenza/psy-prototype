@@ -11,8 +11,29 @@ import type {
   CreateCommentResult,
 } from "@/features/comments/types";
 
-function getRequestReferer(request: NextRequest) {
-  return request.headers.get("referer") ?? request.nextUrl.origin;
+function getUrlOrigin(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+function getHyvorRequestContext(request: NextRequest) {
+  const requestReferer = request.headers.get("referer");
+  const requestOrigin =
+    request.headers.get("origin") ??
+    getUrlOrigin(requestReferer) ??
+    request.nextUrl.origin;
+
+  return {
+    requestOrigin,
+    requestReferer,
+  };
 }
 
 function logRouteError(scope: string, error: unknown, extra?: Record<string, unknown>) {
@@ -91,9 +112,10 @@ export async function GET(request: NextRequest) {
     const config = getHyvorServerConfig(buildCommentsViewer(currentUser));
     const websiteSettings = await fetchHyvorWebsiteSettings().catch(() => null);
     const capabilities = buildCommentsCapabilities(config, websiteSettings);
-    const page = await fetchHyvorPageByIdentifier(pageId, getRequestReferer(request));
+    const requestContext = getHyvorRequestContext(request);
+    const page = await fetchHyvorPageByIdentifier(pageId, requestContext);
     const comments = page
-      ? await fetchAllHyvorComments(page.id, getRequestReferer(request))
+      ? await fetchAllHyvorComments(page.id, requestContext)
       : [];
 
     const payload: CommentsResponsePayload = {

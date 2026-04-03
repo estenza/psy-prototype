@@ -8,7 +8,7 @@ export async function POST() {
   const sessionToken = await readSessionTokenFromCookies();
 
   if (sessionToken) {
-    deleteSessionByToken(sessionToken);
+    await deleteSessionByToken(sessionToken);
   }
 
   const response = NextResponse.json({

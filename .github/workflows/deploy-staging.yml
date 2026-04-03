@@ -17,6 +17,7 @@ env:
   YC_FOLDER_ID: b1ghrmp0mr8mr0jcj9gc
   YC_SERVICE_ACCOUNT_ID: ajeh4qnls5se5raj12ua
   YC_CONTAINER_NAME: psy-staging-container
+  HYVOR_TALK_WEBSITE_ID: 15244
   IMAGE: cr.yandex/crphtumcsi9us93u61ir/psy:staging
   STAGING_URL: https://staging.vnutri.live
 
@@ -28,9 +29,13 @@ jobs:
     environment: staging
 
     steps:
-      - name: Validate Yandex auth secret
+      - name: Validate deploy configuration
         env:
           YC_SA_JSON_CREDENTIALS: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+          HYVOR_TALK_DATA_API_KEY: ${{ secrets.HYVOR_TALK_DATA_API_KEY }}
+          HYVOR_TALK_CONSOLE_API_KEY: ${{ secrets.HYVOR_TALK_CONSOLE_API_KEY }}
+          AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
+          AUTH_SMTP_HOST: ${{ secrets.AUTH_SMTP_HOST }}
         run: |
           if [ -z "${YC_SA_JSON_CREDENTIALS//[[:space:]]/}" ]; then
             echo "::error::Missing YC_SA_JSON_CREDENTIALS. Add it as an Environment secret in GitHub: Settings -> Environments -> staging -> Secrets and variables -> Actions."
@@ -40,6 +45,13 @@ jobs:
           node <<'NODE'
           const raw = process.env.YC_SA_JSON_CREDENTIALS;
           const expectedServiceAccountId = process.env.YC_SERVICE_ACCOUNT_ID?.trim();
+          const hyvorSecrets = [
+            "HYVOR_TALK_DATA_API_KEY",
+            "HYVOR_TALK_CONSOLE_API_KEY",
+          ].filter((name) => !(process.env[name]?.trim()));
+          const smtpConfigured = Boolean(
+            process.env.AUTH_EMAIL_FROM?.trim() && process.env.AUTH_SMTP_HOST?.trim(),
+          );
 
           let parsed;
 
@@ -76,6 +88,22 @@ jobs:
             console.log(
               `Yandex auth secret is present and valid for staging service account ${expectedServiceAccountId || parsed.service_account_id}.`,
             );
+          }
+
+          if (hyvorSecrets.length > 0) {
+            console.warn(
+              `::warning::Missing staging Environment secrets: ${hyvorSecrets.join(", ")}. .env.local is no longer baked into the Docker image, so Hyvor-powered comments may lose write/admin capabilities after deploy.`,
+            );
+          } else {
+            console.log("Hyvor runtime secrets are present for staging deploy.");
+          }
+
+          if (!smtpConfigured) {
+            console.warn(
+              "::warning::AUTH_EMAIL_FROM and/or AUTH_SMTP_HOST are missing in the staging Environment. Password reset emails will only work after SMTP secrets are configured.",
+            );
+          } else {
+            console.log("SMTP runtime configuration is present for staging deploy.");
           }
           NODE
 
@@ -118,6 +146,16 @@ jobs:
             APP_ENV=staging
             AUTH_APP_URL=https://staging.vnutri.live
             AUTH_DATABASE_PATH=/tmp/psy-staging.db
+            AUTH_EMAIL_FROM=${{ secrets.AUTH_EMAIL_FROM }}
+            AUTH_SMTP_HOST=${{ secrets.AUTH_SMTP_HOST }}
+            AUTH_SMTP_PORT=${{ secrets.AUTH_SMTP_PORT }}
+            AUTH_SMTP_SECURE=${{ secrets.AUTH_SMTP_SECURE }}
+            AUTH_SMTP_USERNAME=${{ secrets.AUTH_SMTP_USERNAME }}
+            AUTH_SMTP_PASSWORD=${{ secrets.AUTH_SMTP_PASSWORD }}
+            AUTH_SMTP_HELO_HOST=${{ secrets.AUTH_SMTP_HELO_HOST }}
+            HYVOR_TALK_WEBSITE_ID=${{ env.HYVOR_TALK_WEBSITE_ID }}
+            HYVOR_TALK_DATA_API_KEY=${{ secrets.HYVOR_TALK_DATA_API_KEY }}
+            HYVOR_TALK_CONSOLE_API_KEY=${{ secrets.HYVOR_TALK_CONSOLE_API_KEY }}
 
       - name: Smoke check staging URL
         run: |

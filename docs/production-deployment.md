@@ -65,7 +65,14 @@ Behavior:
 - Build: Docker Buildx builds `linux/amd64`
 - Push: image is pushed to `cr.yandex/crphtumcsi9us93u61ir/psy:latest`
 - Deploy: a new revision is deployed to `psy-container`
-- Runtime env: `APP_ENV=production` and `AUTH_APP_URL=https://vnutri.live`
+- Runtime env:
+  - `APP_ENV=production`
+  - `AUTH_APP_URL=https://vnutri.live`
+  - `AUTH_DATABASE_URL` from GitHub Environment secret
+  - `AUTH_DATABASE_SSL=false`
+  - Hyvor runtime keys from GitHub Environment secrets
+  - optional SMTP runtime keys from GitHub Environment secrets
+- Network: the container revision is attached to `enpgiiep4cceg1u2j18d`
 - Verify: the workflow runs HTTP smoke checks against
   `https://vnutri.live` and `https://www.vnutri.live`
 
@@ -75,6 +82,38 @@ Create a GitHub Environment named `production` and add:
 
 - `YC_SA_JSON_CREDENTIALS`
   Yandex Cloud authorized key JSON for service account `ajeh4qnls5se5raj12ua`
+- `AUTH_DATABASE_URL`
+  PostgreSQL connection string for the production auth database
+- `HYVOR_TALK_DATA_API_KEY`
+  runtime Hyvor Data API key
+- `HYVOR_TALK_CONSOLE_API_KEY`
+  runtime Hyvor Console API key
+
+Optional but needed for live password reset emails:
+
+- `AUTH_EMAIL_FROM`
+- `AUTH_SMTP_HOST`
+- `AUTH_SMTP_PORT`
+- `AUTH_SMTP_SECURE`
+- `AUTH_SMTP_USERNAME`
+- `AUTH_SMTP_PASSWORD`
+- `AUTH_SMTP_HELO_HOST`
 
 Routine production deploys should go through GitHub Actions. The local
 `scripts/deploy-production.sh` flow is only an emergency fallback.
+
+## Auth Storage Safety
+
+Production should not rely on SQLite inside the Docker image anymore.
+
+The repository now:
+
+- excludes `data/` from Docker build context
+- excludes `.env*` from Docker build context
+- builds with `AUTH_DATABASE_PATH=/tmp/psy-build-auth.db` so build-time auth
+  access cannot create `/app/data/app.db`
+- refuses to use SQLite fallback when `APP_ENV=production` and
+  `AUTH_DATABASE_URL` is missing
+
+The one-time migration path from the current baked-in production SQLite DB is
+documented in [auth-storage-migration.md](./auth-storage-migration.md).

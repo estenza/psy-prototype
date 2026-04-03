@@ -11,7 +11,7 @@ export default async function ResetPasswordPage({
 }) {
   const resolvedSearchParams = await searchParams;
   const token = resolvedSearchParams.token?.trim() || "";
-  const tokenValid = isPasswordResetTokenValid(token);
+  const tokenValid = await isPasswordResetTokenValid(token);
 
   return (
     <AuthPageShell>

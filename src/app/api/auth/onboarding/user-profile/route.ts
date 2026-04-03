@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     const currentUser = await requireCurrentUser();
     const input = (await request.json()) as CompleteUserProfileInput;
-    const user = completeUserProfile(currentUser, input);
+    const user = await completeUserProfile(currentUser, input);
 
     return NextResponse.json<AuthSuccessResponse>({
       ok: true,

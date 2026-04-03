@@ -42,14 +42,74 @@ export class HyvorApiError extends Error {
   }
 }
 
-function buildRefererHeaders(requestReferer: string | null) {
-  if (!requestReferer) {
+type HyvorRequestContext = {
+  requestOrigin: string | null;
+  requestReferer: string | null;
+};
+
+function normalizeOrigin(candidate: string | null) {
+  if (!candidate) {
+    return null;
+  }
+
+  try {
+    return new URL(candidate).origin;
+  } catch {
+    return null;
+  }
+}
+
+function buildRequestHeaders({
+  requestOrigin,
+  requestReferer,
+}: HyvorRequestContext) {
+  const origin = normalizeOrigin(requestOrigin) ?? normalizeOrigin(requestReferer);
+
+  if (!origin && !requestReferer) {
     return undefined;
   }
 
-  return {
-    Referer: requestReferer,
+  const headers: Record<string, string> = {};
+
+  if (origin) {
+    headers.Origin = origin;
+  }
+
+  if (requestReferer) {
+    headers.Referer = requestReferer;
+  } else if (origin) {
+    headers.Referer = `${origin}/`;
+  }
+
+  return headers;
+}
+
+function buildHyvorApiError({
+  response,
+  responseBody,
+  requestInfo,
+}: {
+  response: Response;
+  responseBody: string;
+  requestInfo?: {
+    method: string;
+    url: string;
   };
+}) {
+  const contentType = response.headers.get("content-type");
+  const safeMessage =
+    contentType?.includes("application/json")
+      ? responseBody || `Hyvor request failed with ${response.status}`
+      : `Hyvor request failed with ${response.status}`;
+
+  return new HyvorApiError({
+    message: safeMessage,
+    status: response.status,
+    method: requestInfo?.method ?? "GET",
+    url: requestInfo?.url ?? response.url,
+    responseBody,
+    contentType,
+  });
 }
 
 async function readHyvorResponse<T>(response: Response, requestInfo?: {
@@ -58,19 +118,10 @@ async function readHyvorResponse<T>(response: Response, requestInfo?: {
 }) {
   if (!response.ok) {
     const errorText = await response.text();
-    const contentType = response.headers.get("content-type");
-    const safeMessage =
-      contentType?.includes("application/json")
-        ? errorText || `Hyvor request failed with ${response.status}`
-        : `Hyvor request failed with ${response.status}`;
-
-    throw new HyvorApiError({
-      message: safeMessage,
-      status: response.status,
-      method: requestInfo?.method ?? "GET",
-      url: requestInfo?.url ?? response.url,
+    throw buildHyvorApiError({
+      response,
       responseBody: errorText,
-      contentType,
+      requestInfo,
     });
   }
 
@@ -103,11 +154,11 @@ function buildDataApiQuery({
 async function fetchHyvorDataApi<T>({
   path,
   params,
-  requestReferer,
+  requestContext,
 }: {
   path: string;
   params: Record<string, string>;
-  requestReferer: string | null;
+  requestContext: HyvorRequestContext;
 }) {
   const config = getHyvorServerConfig();
 
@@ -121,7 +172,7 @@ async function fetchHyvorDataApi<T>({
     const url = `${config.dataApiBaseUrl}/${path}?${query.toString()}`;
 
     return fetch(url, {
-      headers: buildRefererHeaders(requestReferer),
+      headers: buildRequestHeaders(requestContext),
       next: {
         revalidate: 30,
       },
@@ -148,9 +199,14 @@ async function fetchHyvorDataApi<T>({
     /invalid api key/i.test(firstErrorText);
 
   if (!shouldRetryWithoutApiKey) {
-    throw new Error(
-      firstErrorText || `Hyvor request failed with ${firstResponse.status}`,
-    );
+    throw buildHyvorApiError({
+      response: firstResponse,
+      responseBody: firstErrorText,
+      requestInfo: {
+        method: "GET",
+        url: firstResponse.url,
+      },
+    });
   }
 
   const secondResponse = await performRequest(false);
@@ -163,11 +219,11 @@ async function fetchHyvorDataApi<T>({
 
 export async function fetchHyvorPageByIdentifier(
   pageIdentifier: string,
-  requestReferer: string | null,
+  requestContext: HyvorRequestContext,
 ) {
   const pages = await fetchHyvorDataApi<HyvorDataPage[]>({
     path: "pages",
-    requestReferer,
+    requestContext,
     params: {
       limit: "1",
       filter: `identifier='${pageIdentifier.replace(/'/g, "\\'")}'`,
@@ -179,7 +235,7 @@ export async function fetchHyvorPageByIdentifier(
 
 export async function fetchAllHyvorComments(
   pageId: number,
-  requestReferer: string | null,
+  requestContext: HyvorRequestContext,
 ) {
   const comments: HyvorDataComment[] = [];
 
@@ -190,7 +246,7 @@ export async function fetchAllHyvorComments(
   ) {
     const batch = await fetchHyvorDataApi<HyvorDataComment[]>({
       path: "comments",
-      requestReferer,
+      requestContext,
       params: {
         limit: String(COMMENTS_PAGE_SIZE),
         offset: String(offset),

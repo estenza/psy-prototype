@@ -42,7 +42,7 @@ export async function PATCH(
 
     const { userId } = await context.params;
     const payload = (await request.json()) as AdminUpdateUserPayload;
-    const updatedUser = updateAdminUser(userId, payload);
+    const updatedUser = await updateAdminUser(userId, payload);
 
     return NextResponse.json({
       ok: true,

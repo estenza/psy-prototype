@@ -87,6 +87,7 @@ enable them:
 
 - `APP_ENV`
 - `AUTH_APP_URL`
+- `AUTH_DATABASE_URL`
 - `AUTH_DATABASE_PATH`
 - `AUTH_EMAIL_FROM`
 - `AUTH_SMTP_HOST`
@@ -122,6 +123,18 @@ Create a GitHub Environment named `staging` and add:
 
 - `YC_SA_JSON_CREDENTIALS`
   Yandex Cloud authorized key JSON for service account `ajeh4qnls5se5raj12ua`
+
+Recommended runtime secrets for staging parity:
+
+- `HYVOR_TALK_DATA_API_KEY`
+- `HYVOR_TALK_CONSOLE_API_KEY`
+- `AUTH_EMAIL_FROM`
+- `AUTH_SMTP_HOST`
+- `AUTH_SMTP_PORT`
+- `AUTH_SMTP_SECURE`
+- `AUTH_SMTP_USERNAME`
+- `AUTH_SMTP_PASSWORD`
+- `AUTH_SMTP_HELO_HOST`
 
 Routine staging deploys should go through GitHub Actions. The local
 `scripts/deploy-staging.sh` flow is only an emergency fallback.

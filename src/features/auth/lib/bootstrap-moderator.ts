@@ -16,17 +16,17 @@ export function isBootstrapModeratorEmail(email: string) {
   return getBootstrapModeratorEmails().has(email.trim().toLowerCase());
 }
 
-export function syncBootstrapModeratorGrant(user: SessionUser) {
+export async function syncBootstrapModeratorGrant(user: SessionUser) {
   if (!isBootstrapModeratorEmail(user.email) || user.isModerator) {
     return user;
   }
 
-  updateUserAdminFields({
+  await updateUserAdminFields({
     isModerator: true,
     userId: user.id,
   });
 
-  return findUserById(user.id) ?? {
+  return (await findUserById(user.id)) ?? {
     ...user,
     isModerator: true,
   };

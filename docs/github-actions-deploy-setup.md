@@ -21,6 +21,10 @@ workflows.
   - branch trigger: `main`
   - GitHub Environment: `production`
   - required secret: `YC_SA_JSON_CREDENTIALS`
+  - required secret: `AUTH_DATABASE_URL`
+
+Production also expects runtime values to come from GitHub Environment secrets
+instead of `.env.local` inside the Docker image.
 
 The secret name is the same in both environments on purpose. GitHub keeps them
 separate because they are stored per environment, not at repo level.
@@ -41,9 +45,30 @@ GitHub path:
 4. Open or create the `staging` environment
 5. Open `Secrets and variables` -> `Actions`
 6. Add a secret named `YC_SA_JSON_CREDENTIALS`
-7. Open or create the `production` environment
-8. Open `Secrets and variables` -> `Actions`
-9. Add a secret named `YC_SA_JSON_CREDENTIALS`
+7. Add optional staging runtime secrets as needed:
+   - `HYVOR_TALK_DATA_API_KEY`
+   - `HYVOR_TALK_CONSOLE_API_KEY`
+   - `AUTH_EMAIL_FROM`
+   - `AUTH_SMTP_HOST`
+   - `AUTH_SMTP_PORT`
+   - `AUTH_SMTP_SECURE`
+   - `AUTH_SMTP_USERNAME`
+   - `AUTH_SMTP_PASSWORD`
+   - `AUTH_SMTP_HELO_HOST`
+8. Open or create the `production` environment
+9. Open `Secrets and variables` -> `Actions`
+10. Add a secret named `YC_SA_JSON_CREDENTIALS`
+11. Add a secret named `AUTH_DATABASE_URL`
+12. Add runtime secrets needed by production:
+    - `HYVOR_TALK_DATA_API_KEY`
+    - `HYVOR_TALK_CONSOLE_API_KEY`
+    - `AUTH_EMAIL_FROM`
+    - `AUTH_SMTP_HOST`
+    - `AUTH_SMTP_PORT`
+    - `AUTH_SMTP_SECURE`
+    - `AUTH_SMTP_USERNAME`
+    - `AUTH_SMTP_PASSWORD`
+    - `AUTH_SMTP_HELO_HOST`
 
 ## What Value To Put In The Secret
 
@@ -58,26 +83,39 @@ For now, the fastest practical setup is to use the same service account JSON in
 both environments. If you later want stricter separation, you can switch to
 separate service accounts while keeping the same secret name per environment.
 
+For production auth storage:
+
+- `AUTH_DATABASE_URL` should be the full PostgreSQL connection string
+- the workflow passes `AUTH_DATABASE_SSL=false` for the first private-network rollout
+- the container revision is attached to network `enpgiiep4cceg1u2j18d`
+
+Yandex Cloud documentation says private PostgreSQL hosts can be reached from a
+Serverless Container in the same cloud network without SSL:
+- https://yandex.cloud/en/docs/managed-postgresql/qa/connection
+
 ## One-Time GitHub Setup Still Required
 
 1. Create GitHub Environment `staging`
 2. Add environment secret `YC_SA_JSON_CREDENTIALS` to `staging`
 3. Create GitHub Environment `production`
 4. Add environment secret `YC_SA_JSON_CREDENTIALS` to `production`
-5. Optionally restrict deployment branches in GitHub Environments:
+5. Add environment secret `AUTH_DATABASE_URL` to `production`
+6. Add Hyvor runtime secrets to `production`
+7. Add SMTP runtime secrets to `production` if password reset emails must work on live
+8. Optionally restrict deployment branches in GitHub Environments:
    - `staging` environment -> `develop`
    - `production` environment -> `main`
-6. Protect `main` from direct pushes
-7. Optionally protect `develop` as well
+9. Protect `main` from direct pushes
+10. Optionally protect `develop` as well
 
 ## Expected Result After Setup
 
 - push to `develop` -> staging build/push/deploy
-- push to `main` -> production build/push/deploy
+- push to `main` -> production build/push/deploy with explicit runtime PostgreSQL auth config
 
 If the secret is missing, the workflows fail fast at:
 
-- `Validate Yandex auth secret`
+- `Validate deploy configuration`
 
 That is the current expected failure mode until the environment secrets are
 added.
@@ -90,7 +128,7 @@ For staging:
 2. Push a commit to `develop`
 3. Open the `Deploy Staging` run in GitHub Actions
 4. Confirm these steps pass:
-   - `Validate Yandex auth secret`
+   - `Validate deploy configuration`
    - `Authenticate Docker to Yandex Container Registry`
    - `Build and push linux/amd64 staging image`
    - `Deploy new staging Serverless Container revision`
@@ -99,10 +137,12 @@ For staging:
 For production:
 
 1. Add `YC_SA_JSON_CREDENTIALS` to GitHub `Settings -> Environments -> production -> Secrets and variables -> Actions`
-2. Push or merge a commit to `main`
-3. Open the `Deploy Production` run in GitHub Actions
-4. Confirm these steps pass:
-   - `Validate Yandex auth secret`
+2. Add `AUTH_DATABASE_URL` to the same Environment
+3. Add Hyvor runtime secrets there too before the first image without `.env.local`
+4. Push or merge a commit to `main`
+5. Open the `Deploy Production` run in GitHub Actions
+6. Confirm these steps pass:
+   - `Validate deploy configuration`
    - `Authenticate Docker to Yandex Container Registry`
    - `Build and push linux/amd64 image`
    - `Deploy new Serverless Container revision`

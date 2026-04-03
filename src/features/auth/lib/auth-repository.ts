@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { getAuthPostgresPool, ensureAuthPostgresSchema, isPostgresAuthEnabled } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
 import type {
   AuthSession,
@@ -22,7 +23,7 @@ type UserRow = {
   avatar_url: string | null;
   role: UserRole;
   specialist_status: SpecialistStatus;
-  is_moderator: number;
+  is_moderator: number | boolean;
   onboarding_step: OnboardingStep;
   created_at: string;
   updated_at: string;
@@ -44,6 +45,41 @@ type PasswordResetTokenRow = {
   used_at: string | null;
   created_at: string;
 };
+
+const PG_USER_COLUMNS = `
+  id,
+  email,
+  password_hash,
+  display_name,
+  nickname,
+  first_name,
+  last_name,
+  patronymic,
+  avatar_url,
+  role,
+  specialist_status,
+  is_moderator,
+  onboarding_step,
+  created_at::text AS created_at,
+  updated_at::text AS updated_at
+`;
+
+const PG_SESSION_COLUMNS = `
+  id,
+  user_id,
+  token_hash,
+  expires_at::text AS expires_at,
+  created_at::text AS created_at
+`;
+
+const PG_PASSWORD_RESET_TOKEN_COLUMNS = `
+  id,
+  user_id,
+  token_hash,
+  expires_at::text AS expires_at,
+  used_at::text AS used_at,
+  created_at::text AS created_at
+`;
 
 function mapUser(row: UserRow): AuthUser {
   return {
@@ -74,7 +110,7 @@ function mapSession(row: SessionRow): AuthSession {
   };
 }
 
-function readUserRow(result: Record<string, unknown> | undefined) {
+function readUserRow(result: Record<string, unknown> | undefined | null) {
   if (!result) {
     return null;
   }
@@ -82,7 +118,7 @@ function readUserRow(result: Record<string, unknown> | undefined) {
   return result as unknown as UserRow;
 }
 
-function readSessionRow(result: Record<string, unknown> | undefined) {
+function readSessionRow(result: Record<string, unknown> | undefined | null) {
   if (!result) {
     return null;
   }
@@ -90,7 +126,7 @@ function readSessionRow(result: Record<string, unknown> | undefined) {
   return result as unknown as SessionRow;
 }
 
-function readPasswordResetTokenRow(result: Record<string, unknown> | undefined) {
+function readPasswordResetTokenRow(result: Record<string, unknown> | undefined | null) {
   if (!result) {
     return null;
   }
@@ -98,19 +134,60 @@ function readPasswordResetTokenRow(result: Record<string, unknown> | undefined) 
   return result as unknown as PasswordResetTokenRow;
 }
 
-export function deleteExpiredSessions() {
+async function queryPgRows<T extends Record<string, unknown>>(query: string, values: unknown[] = []) {
+  await ensureAuthPostgresSchema();
+  const result = await getAuthPostgresPool().query<T>(query, values);
+  return result.rows;
+}
+
+async function queryPgOne<T extends Record<string, unknown>>(query: string, values: unknown[] = []) {
+  const rows = await queryPgRows<T>(query, values);
+  return rows[0] ?? null;
+}
+
+async function execPg(query: string, values: unknown[] = []) {
+  await ensureAuthPostgresSchema();
+  await getAuthPostgresPool().query(query, values);
+}
+
+export async function deleteExpiredSessions() {
+  if (isPostgresAuthEnabled()) {
+    await execPg("DELETE FROM sessions WHERE expires_at <= $1", [
+      new Date().toISOString(),
+    ]);
+    return;
+  }
+
   getDatabase()
     .prepare("DELETE FROM sessions WHERE expires_at <= ?")
     .run(new Date().toISOString());
 }
 
-export function deleteExpiredPasswordResetTokens() {
+export async function deleteExpiredPasswordResetTokens() {
+  if (isPostgresAuthEnabled()) {
+    await execPg("DELETE FROM password_reset_tokens WHERE expires_at <= $1", [
+      new Date().toISOString(),
+    ]);
+    return;
+  }
+
   getDatabase()
     .prepare("DELETE FROM password_reset_tokens WHERE expires_at <= ?")
     .run(new Date().toISOString());
 }
 
-export function findUserByEmail(email: string) {
+export async function findUserByEmail(email: string) {
+  if (isPostgresAuthEnabled()) {
+    const row = readUserRow(
+      await queryPgOne<UserRow>(
+        `SELECT ${PG_USER_COLUMNS} FROM users WHERE email = $1 LIMIT 1`,
+        [email],
+      ),
+    );
+
+    return row ? mapUser(row) : null;
+  }
+
   const result = getDatabase()
     .prepare("SELECT * FROM users WHERE email = ? LIMIT 1")
     .get(email);
@@ -119,7 +196,25 @@ export function findUserByEmail(email: string) {
   return row ? mapUser(row) : null;
 }
 
-export function findUserWithPasswordByEmail(email: string) {
+export async function findUserWithPasswordByEmail(email: string) {
+  if (isPostgresAuthEnabled()) {
+    const row = readUserRow(
+      await queryPgOne<UserRow>(
+        `SELECT ${PG_USER_COLUMNS} FROM users WHERE email = $1 LIMIT 1`,
+        [email],
+      ),
+    );
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      passwordHash: row.password_hash,
+      user: mapUser(row),
+    };
+  }
+
   const result = getDatabase()
     .prepare("SELECT * FROM users WHERE email = ? LIMIT 1")
     .get(email);
@@ -136,7 +231,18 @@ export function findUserWithPasswordByEmail(email: string) {
   };
 }
 
-export function findUserByNickname(nickname: string) {
+export async function findUserByNickname(nickname: string) {
+  if (isPostgresAuthEnabled()) {
+    const row = readUserRow(
+      await queryPgOne<UserRow>(
+        `SELECT ${PG_USER_COLUMNS} FROM users WHERE nickname = $1 LIMIT 1`,
+        [nickname],
+      ),
+    );
+
+    return row ? mapUser(row) : null;
+  }
+
   const result = getDatabase()
     .prepare("SELECT * FROM users WHERE nickname = ? LIMIT 1")
     .get(nickname);
@@ -145,7 +251,18 @@ export function findUserByNickname(nickname: string) {
   return row ? mapUser(row) : null;
 }
 
-export function findUserById(id: string) {
+export async function findUserById(id: string) {
+  if (isPostgresAuthEnabled()) {
+    const row = readUserRow(
+      await queryPgOne<UserRow>(
+        `SELECT ${PG_USER_COLUMNS} FROM users WHERE id = $1 LIMIT 1`,
+        [id],
+      ),
+    );
+
+    return row ? mapUser(row) : null;
+  }
+
   const result = getDatabase()
     .prepare("SELECT * FROM users WHERE id = ? LIMIT 1")
     .get(id);
@@ -154,7 +271,16 @@ export function findUserById(id: string) {
   return row ? mapUser(row) : null;
 }
 
-export function countUsersWithRole(role: UserRole) {
+export async function countUsersWithRole(role: UserRole) {
+  if (isPostgresAuthEnabled()) {
+    const result = await queryPgOne<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM users WHERE role = $1",
+      [role],
+    );
+
+    return Number(result?.count ?? 0);
+  }
+
   const result = getDatabase()
     .prepare("SELECT COUNT(*) AS count FROM users WHERE role = ?")
     .get(role) as {
@@ -164,7 +290,15 @@ export function countUsersWithRole(role: UserRole) {
   return Number(result.count);
 }
 
-export function countModerators() {
+export async function countModerators() {
+  if (isPostgresAuthEnabled()) {
+    const result = await queryPgOne<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM users WHERE is_moderator = TRUE",
+    );
+
+    return Number(result?.count ?? 0);
+  }
+
   const result = getDatabase()
     .prepare("SELECT COUNT(*) AS count FROM users WHERE is_moderator = 1")
     .get() as {
@@ -174,7 +308,7 @@ export function countModerators() {
   return Number(result.count);
 }
 
-export function createUser({
+export async function createUser({
   avatarUrl = null,
   displayName,
   email,
@@ -203,6 +337,49 @@ export function createUser({
 }) {
   const now = new Date().toISOString();
   const id = randomUUID();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        INSERT INTO users (
+          id,
+          email,
+          password_hash,
+          display_name,
+          nickname,
+          first_name,
+          last_name,
+          patronymic,
+          avatar_url,
+          role,
+          specialist_status,
+          is_moderator,
+          onboarding_step,
+          created_at,
+          updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      `,
+      [
+        id,
+        email,
+        passwordHash,
+        displayName,
+        nickname,
+        firstName,
+        lastName,
+        patronymic,
+        avatarUrl,
+        role,
+        specialistStatus,
+        isModerator,
+        onboardingStep,
+        now,
+        now,
+      ],
+    );
+
+    return findUserById(id);
+  }
 
   getDatabase()
     .prepare(`
@@ -245,7 +422,7 @@ export function createUser({
   return findUserById(id);
 }
 
-export function createSession({
+export async function createSession({
   expiresAt,
   tokenHash,
   userId,
@@ -256,6 +433,30 @@ export function createSession({
 }) {
   const id = randomUUID();
   const createdAt = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        INSERT INTO sessions (
+          id,
+          user_id,
+          token_hash,
+          expires_at,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5)
+      `,
+      [id, userId, tokenHash, expiresAt, createdAt],
+    );
+
+    const row = readSessionRow(
+      await queryPgOne<SessionRow>(
+        `SELECT ${PG_SESSION_COLUMNS} FROM sessions WHERE id = $1 LIMIT 1`,
+        [id],
+      ),
+    );
+
+    return row ? mapSession(row) : null;
+  }
 
   getDatabase()
     .prepare(`
@@ -277,7 +478,7 @@ export function createSession({
   return row ? mapSession(row) : null;
 }
 
-export function createPasswordResetToken({
+export async function createPasswordResetToken({
   expiresAt,
   tokenHash,
   userId,
@@ -288,6 +489,32 @@ export function createPasswordResetToken({
 }) {
   const id = randomUUID();
   const createdAt = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        INSERT INTO password_reset_tokens (
+          id,
+          user_id,
+          token_hash,
+          expires_at,
+          used_at,
+          created_at
+        ) VALUES ($1, $2, $3, $4, NULL, $5)
+      `,
+      [id, userId, tokenHash, expiresAt, createdAt],
+    );
+
+    return readPasswordResetTokenRow(
+      await queryPgOne<PasswordResetTokenRow>(
+        `SELECT ${PG_PASSWORD_RESET_TOKEN_COLUMNS}
+         FROM password_reset_tokens
+         WHERE id = $1
+         LIMIT 1`,
+        [id],
+      ),
+    );
+  }
 
   getDatabase()
     .prepare(`
@@ -309,7 +536,51 @@ export function createPasswordResetToken({
   return readPasswordResetTokenRow(result);
 }
 
-export function findSessionWithUserByTokenHash(tokenHash: string) {
+export async function findSessionWithUserByTokenHash(tokenHash: string) {
+  const now = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    const result = await queryPgOne<
+      {
+        session_id: string;
+        session_user_id: string;
+        session_token_hash: string;
+        session_expires_at: string;
+        session_created_at: string;
+      } & UserRow
+    >(
+      `
+        SELECT
+          sessions.id AS session_id,
+          sessions.user_id AS session_user_id,
+          sessions.token_hash AS session_token_hash,
+          sessions.expires_at::text AS session_expires_at,
+          sessions.created_at::text AS session_created_at,
+          ${PG_USER_COLUMNS}
+        FROM sessions
+        INNER JOIN users ON users.id = sessions.user_id
+        WHERE sessions.token_hash = $1 AND sessions.expires_at > $2
+        LIMIT 1
+      `,
+      [tokenHash, now],
+    );
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      session: mapSession({
+        id: result.session_id,
+        user_id: result.session_user_id,
+        token_hash: result.session_token_hash,
+        expires_at: result.session_expires_at,
+        created_at: result.session_created_at,
+      }),
+      user: mapUser(result),
+    };
+  }
+
   const result = getDatabase()
     .prepare(`
       SELECT
@@ -338,7 +609,7 @@ export function findSessionWithUserByTokenHash(tokenHash: string) {
       WHERE sessions.token_hash = ? AND sessions.expires_at > ?
       LIMIT 1
     `)
-    .get(tokenHash, new Date().toISOString());
+    .get(tokenHash, now);
 
   if (!result) {
     return null;
@@ -364,7 +635,57 @@ export function findSessionWithUserByTokenHash(tokenHash: string) {
   };
 }
 
-export function findPasswordResetTokenWithUserByTokenHash(tokenHash: string) {
+export async function findPasswordResetTokenWithUserByTokenHash(tokenHash: string) {
+  const now = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    const result = await queryPgOne<
+      {
+        password_reset_token_id: string;
+        password_reset_token_user_id: string;
+        password_reset_token_hash: string;
+        password_reset_token_expires_at: string;
+        password_reset_token_used_at: string | null;
+        password_reset_token_created_at: string;
+      } & UserRow
+    >(
+      `
+        SELECT
+          password_reset_tokens.id AS password_reset_token_id,
+          password_reset_tokens.user_id AS password_reset_token_user_id,
+          password_reset_tokens.token_hash AS password_reset_token_hash,
+          password_reset_tokens.expires_at::text AS password_reset_token_expires_at,
+          password_reset_tokens.used_at::text AS password_reset_token_used_at,
+          password_reset_tokens.created_at::text AS password_reset_token_created_at,
+          ${PG_USER_COLUMNS}
+        FROM password_reset_tokens
+        INNER JOIN users ON users.id = password_reset_tokens.user_id
+        WHERE
+          password_reset_tokens.token_hash = $1
+          AND password_reset_tokens.used_at IS NULL
+          AND password_reset_tokens.expires_at > $2
+        LIMIT 1
+      `,
+      [tokenHash, now],
+    );
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      token: {
+        id: result.password_reset_token_id,
+        user_id: result.password_reset_token_user_id,
+        token_hash: result.password_reset_token_hash,
+        expires_at: result.password_reset_token_expires_at,
+        used_at: result.password_reset_token_used_at,
+        created_at: result.password_reset_token_created_at,
+      },
+      user: mapUser(result),
+    };
+  }
+
   const result = getDatabase()
     .prepare(`
       SELECT
@@ -397,7 +718,7 @@ export function findPasswordResetTokenWithUserByTokenHash(tokenHash: string) {
         AND password_reset_tokens.expires_at > ?
       LIMIT 1
     `)
-    .get(tokenHash, new Date().toISOString());
+    .get(tokenHash, now);
 
   if (!result) {
     return null;
@@ -425,7 +746,7 @@ export function findPasswordResetTokenWithUserByTokenHash(tokenHash: string) {
   };
 }
 
-export function updateUserProfileFields({
+export async function updateUserProfileFields({
   displayName,
   firstName,
   lastName,
@@ -444,10 +765,43 @@ export function updateUserProfileFields({
   role?: UserRole;
   userId: string;
 }) {
-  const currentUser = findUserById(userId);
+  const currentUser = await findUserById(userId);
 
   if (!currentUser) {
     return null;
+  }
+
+  const nextUpdatedAt = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        UPDATE users
+        SET
+          display_name = $1,
+          nickname = $2,
+          first_name = $3,
+          last_name = $4,
+          patronymic = $5,
+          role = $6,
+          onboarding_step = $7,
+          updated_at = $8
+        WHERE id = $9
+      `,
+      [
+        displayName ?? currentUser.displayName,
+        nickname === undefined ? currentUser.nickname : nickname,
+        firstName === undefined ? currentUser.firstName : firstName,
+        lastName === undefined ? currentUser.lastName : lastName,
+        patronymic === undefined ? currentUser.patronymic : patronymic,
+        role ?? currentUser.role,
+        onboardingStep ?? currentUser.onboardingStep,
+        nextUpdatedAt,
+        userId,
+      ],
+    );
+
+    return findUserById(userId);
   }
 
   getDatabase()
@@ -472,14 +826,14 @@ export function updateUserProfileFields({
       patronymic === undefined ? currentUser.patronymic : patronymic,
       role ?? currentUser.role,
       onboardingStep ?? currentUser.onboardingStep,
-      new Date().toISOString(),
+      nextUpdatedAt,
       userId,
     );
 
   return findUserById(userId);
 }
 
-export function updateUserAdminFields({
+export async function updateUserAdminFields({
   isModerator,
   role,
   specialistStatus,
@@ -490,10 +844,35 @@ export function updateUserAdminFields({
   specialistStatus?: SpecialistStatus;
   userId: string;
 }) {
-  const currentUser = findUserById(userId);
+  const currentUser = await findUserById(userId);
 
   if (!currentUser) {
     return null;
+  }
+
+  const nextUpdatedAt = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        UPDATE users
+        SET
+          role = $1,
+          specialist_status = $2,
+          is_moderator = $3,
+          updated_at = $4
+        WHERE id = $5
+      `,
+      [
+        role ?? currentUser.role,
+        specialistStatus ?? currentUser.specialistStatus,
+        isModerator === undefined ? currentUser.isModerator : isModerator,
+        nextUpdatedAt,
+        userId,
+      ],
+    );
+
+    return findUserById(userId);
   }
 
   getDatabase()
@@ -510,20 +889,35 @@ export function updateUserAdminFields({
       role ?? currentUser.role,
       specialistStatus ?? currentUser.specialistStatus,
       isModerator === undefined ? (currentUser.isModerator ? 1 : 0) : isModerator ? 1 : 0,
-      new Date().toISOString(),
+      nextUpdatedAt,
       userId,
     );
 
   return findUserById(userId);
 }
 
-export function updateUserPasswordHash({
+export async function updateUserPasswordHash({
   passwordHash,
   userId,
 }: {
   passwordHash: string;
   userId: string;
 }) {
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        UPDATE users
+        SET
+          password_hash = $1,
+          updated_at = $2
+        WHERE id = $3
+      `,
+      [passwordHash, new Date().toISOString(), userId],
+    );
+
+    return findUserById(userId);
+  }
+
   getDatabase()
     .prepare(`
       UPDATE users
@@ -537,25 +931,52 @@ export function updateUserPasswordHash({
   return findUserById(userId);
 }
 
-export function deleteSessionByTokenHash(tokenHash: string) {
+export async function deleteSessionByTokenHash(tokenHash: string) {
+  if (isPostgresAuthEnabled()) {
+    await execPg("DELETE FROM sessions WHERE token_hash = $1", [tokenHash]);
+    return;
+  }
+
   getDatabase()
     .prepare("DELETE FROM sessions WHERE token_hash = ?")
     .run(tokenHash);
 }
 
-export function deleteSessionsByUserId(userId: string) {
+export async function deleteSessionsByUserId(userId: string) {
+  if (isPostgresAuthEnabled()) {
+    await execPg("DELETE FROM sessions WHERE user_id = $1", [userId]);
+    return;
+  }
+
   getDatabase()
     .prepare("DELETE FROM sessions WHERE user_id = ?")
     .run(userId);
 }
 
-export function deletePasswordResetTokensByUserId(userId: string) {
+export async function deletePasswordResetTokensByUserId(userId: string) {
+  if (isPostgresAuthEnabled()) {
+    await execPg("DELETE FROM password_reset_tokens WHERE user_id = $1", [userId]);
+    return;
+  }
+
   getDatabase()
     .prepare("DELETE FROM password_reset_tokens WHERE user_id = ?")
     .run(userId);
 }
 
-export function markPasswordResetTokenAsUsed(tokenId: string) {
+export async function markPasswordResetTokenAsUsed(tokenId: string) {
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        UPDATE password_reset_tokens
+        SET used_at = $1
+        WHERE id = $2
+      `,
+      [new Date().toISOString(), tokenId],
+    );
+    return;
+  }
+
   getDatabase()
     .prepare(`
       UPDATE password_reset_tokens

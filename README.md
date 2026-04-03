@@ -20,7 +20,7 @@
 - React 19
 - Tailwind CSS 4
 - TypeScript
-- SQLite для auth-данных
+- SQLite локально и PostgreSQL-ready auth storage для cloud deploy
 - Yandex Cloud Serverless Container + API Gateway для staging и production
 
 ## Быстрый старт
@@ -51,6 +51,8 @@ yarn start
 ```bash
 AUTH_APP_URL=http://localhost:3000
 AUTH_DATABASE_PATH=./data/app.db
+AUTH_DATABASE_URL=postgresql://user:password@host:6432/database
+AUTH_DATABASE_SSL=false
 AUTH_EMAIL_FROM=no-reply@vnutri.live
 AUTH_SMTP_HOST=smtp.example.com
 AUTH_SMTP_PORT=587
@@ -63,6 +65,8 @@ AUTH_SMTP_HELO_HOST=vnutri.live
 Примечания:
 
 - если `AUTH_DATABASE_PATH` не задан, локально используется `data/app.db`
+- если задан `AUTH_DATABASE_URL`, auth-данные идут через PostgreSQL вместо SQLite
+- production больше не должен работать на SQLite fallback внутри контейнера
 - если SMTP не настроен и приложение не в production, reset-password API
   возвращает debug-ссылку вместо реальной отправки письма
 - staging и production задают свои runtime env через GitHub Actions deploy
@@ -101,6 +105,8 @@ AUTH_SMTP_HELO_HOST=vnutri.live
 - GitHub Environment secret `YC_SA_JSON_CREDENTIALS`
 - `develop` workflow читает его из environment `staging`
 - `main` workflow читает его из environment `production`
+- production workflow дополнительно требует `AUTH_DATABASE_URL`
+- Hyvor и SMTP runtime env тоже должны жить в GitHub Environments, а не в `.env.local` внутри Docker image
 
 Для нормальной работы нужно один раз настроить environment secrets в GitHub.
 Подробности ниже в документации.
@@ -109,6 +115,7 @@ AUTH_SMTP_HELO_HOST=vnutri.live
 
 - [Branch workflow](./docs/branch-workflow.md)
 - [GitHub Actions deploy setup](./docs/github-actions-deploy-setup.md)
+- [Auth storage migration](./docs/auth-storage-migration.md)
 - [Staging deployment](./docs/staging-deployment.md)
 - [Production deployment](./docs/production-deployment.md)
 

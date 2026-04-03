@@ -3,6 +3,7 @@ import "server-only";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { getAppEnvironment } from "@/lib/app-env";
 
 const DATABASE_PATH =
   process.env.AUTH_DATABASE_PATH?.trim() || join(process.cwd(), "data", "app.db");
@@ -145,12 +146,25 @@ function initializeDatabase(database: DatabaseSync) {
   `);
 }
 
+function assertSafeProductionDatabaseConfig() {
+  const appEnvironment = getAppEnvironment();
+  const authDatabaseUrl = process.env.AUTH_DATABASE_URL?.trim() || "";
+
+  if (appEnvironment === "production" && !authDatabaseUrl) {
+    throw new Error(
+      "Production auth storage requires AUTH_DATABASE_URL. Refusing to fall back to SQLite in the container filesystem.",
+    );
+  }
+}
+
 export function getDatabase() {
   const globalCache = globalThis as GlobalDatabaseCache;
 
   if (globalCache.__psyPrototypeDatabase) {
     return globalCache.__psyPrototypeDatabase;
   }
+
+  assertSafeProductionDatabaseConfig();
 
   mkdirSync(dirname(DATABASE_PATH), {
     recursive: true,
