@@ -17,6 +17,7 @@ env:
   YC_FOLDER_ID: b1ghrmp0mr8mr0jcj9gc
   YC_SERVICE_ACCOUNT_ID: ajeh4qnls5se5raj12ua
   YC_CONTAINER_NAME: psy-staging-container
+  YC_NETWORK_ID: enpgiiep4cceg1u2j18d
   IMAGE: cr.yandex/crphtumcsi9us93u61ir/psy:staging
   STAGING_URL: https://staging.vnutri.live
 
@@ -123,10 +124,12 @@ jobs:
           revision-concurrency: 8
           revision-execution-timeout: 30
           revision-image-url: ${{ env.IMAGE }}
+          revision-network-id: ${{ env.YC_NETWORK_ID }}
           revision-env: |
             APP_ENV=staging
             AUTH_APP_URL=https://staging.vnutri.live
             AUTH_DATABASE_URL=${{ secrets.AUTH_DATABASE_URL }}
+            AUTH_DATABASE_SSL=false
 
       - name: Smoke check staging URL
         run: |

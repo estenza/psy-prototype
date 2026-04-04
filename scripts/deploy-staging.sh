@@ -8,6 +8,7 @@ IMAGE_NAME="${IMAGE_NAME:-psy}"
 IMAGE_TAG="${IMAGE_TAG:-staging}"
 CONTAINER_NAME="${CONTAINER_NAME:-psy-staging-container}"
 SERVICE_ACCOUNT_ID="${SERVICE_ACCOUNT_ID:-ajeh4qnls5se5raj12ua}"
+NETWORK_ID="${NETWORK_ID:-enpgiiep4cceg1u2j18d}"
 STAGING_GATEWAY_URL="${STAGING_GATEWAY_URL:-https://d5d6qfoc60m48deqn2q7.l3hh3szr.apigw.yandexcloud.net}"
 STAGING_APP_URL="${STAGING_APP_URL:-https://staging.vnutri.live}"
 HYVOR_TALK_WEBSITE_ID="${HYVOR_TALK_WEBSITE_ID:-15244}"
@@ -68,6 +69,7 @@ yc serverless container revision deploy \
   --concurrency 8 \
   --execution-timeout 30s \
   --service-account-id "${SERVICE_ACCOUNT_ID}" \
+  --network-id "${NETWORK_ID}" \
   --environment "$(IFS=,; echo "${ENV_VARS[*]}")"
 
 echo
