@@ -2,51 +2,58 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import { useAppTheme } from "@/components/theme/app-theme-provider";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
-import { ROLE_LABELS } from "@/features/auth/constants";
-import { getUserHandle } from "@/features/auth/lib/profile";
+import { UserAvatar } from "@/features/auth/components/user-avatar";
 import { dispatchAuthStateChanged } from "@/features/auth/hooks/use-current-user";
-import { getUserAvatarTone } from "@/lib/avatar-tone";
 
 type AuthStatusProps = {
   compact?: boolean;
 };
 
-function AvatarBadge({
-  initials,
-  toneClass,
-}: {
-  initials: string;
-  toneClass: string;
-}) {
-  return (
-    <div
-      className={`relative inline-flex h-11 w-11 flex-none items-center justify-center rounded-full text-sm font-semibold ${toneClass}`}
-    >
-      {initials}
-      <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border border-[var(--background-primary)] bg-[var(--accent-success)]" />
-    </div>
-  );
-}
-
-function getInitials(displayName: string) {
-  const parts = displayName.split(/\s+/).filter(Boolean).slice(0, 2);
-
-  if (parts.length === 0) {
-    return "U";
-  }
-
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
-}
-
 export function AuthStatus({ compact = false }: AuthStatusProps) {
   const router = useRouter();
   const { status, user } = useAuthClient();
+  const { theme, toggleTheme } = useAppTheme();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (!menuRef.current?.contains(target)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMenuOpen]);
 
   async function handleSignOut() {
+    setIsMenuOpen(false);
     setIsSigningOut(true);
 
     try {
@@ -63,10 +70,7 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
 
   if (status === "loading") {
     return (
-      <div className="flex items-center gap-2">
-        <div className="bg-[color-mix(in_srgb,var(--label-primary)_10%,transparent)] h-11 w-24 animate-pulse rounded-full" />
-        <div className="bg-[color-mix(in_srgb,var(--label-primary)_10%,transparent)] h-11 w-11 animate-pulse rounded-full" />
-      </div>
+      <div className="bg-[color-mix(in_srgb,var(--label-primary)_10%,transparent)] h-11 w-11 animate-pulse rounded-full" />
     );
   }
 
@@ -81,50 +85,93 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
     );
   }
 
-  const initials = getInitials(user.displayName);
-  const toneClass = getUserAvatarTone(user.displayName);
-  const secondaryLabel = [getUserHandle(user), ROLE_LABELS[user.role], user.isModerator ? "moderator" : null]
-    .filter(Boolean)
-    .join(" · ");
+  const themeLabel = theme === "dark" ? "Темная" : "Светлая";
+  const menuWidthClass = compact ? "w-[240px]" : "w-[260px]";
+  const navigationItems = [
+    {
+      href: "/profile",
+      label: "Мой профиль",
+    },
+    {
+      href: "/settings",
+      label: "Настройки",
+    },
+    {
+      href: "/bookmarks",
+      label: "Закладки",
+    },
+    {
+      href: "/drafts",
+      label: "Черновики",
+    },
+  ];
 
   return (
-    <div className="flex items-center gap-3">
-      {!compact ? (
-        <div className="hidden min-w-0 flex-col items-end xl:flex">
-          <span className="truncate text-sm font-semibold text-[var(--label-primary)]">
-            {user.displayName}
-          </span>
-          <span className="text-[12px] leading-4 text-[var(--label-secondary)]">
-            {secondaryLabel}
-          </span>
+    <div ref={menuRef} className={`relative ${isMenuOpen ? "z-[90]" : "z-20"}`}>
+      <button
+        type="button"
+        aria-expanded={isMenuOpen}
+        aria-haspopup="menu"
+        aria-label="Открыть меню профиля"
+        onClick={() => {
+          setIsMenuOpen((currentState) => !currentState);
+        }}
+        className="inline-flex cursor-pointer rounded-full"
+      >
+        <UserAvatar
+          avatarUrl={user.avatarUrl}
+          name={user.displayName}
+          showStatusDot
+          size="md"
+        />
+      </button>
+
+      {isMenuOpen ? (
+        <div
+          className={`surface-elevated border-separator absolute right-0 top-[calc(100%+8px)] z-[100] rounded-[20px] border p-2 shadow-[0_14px_32px_rgba(0,0,0,0.08)] ${menuWidthClass}`}
+          role="menu"
+        >
+          {navigationItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              role="menuitem"
+              onClick={() => {
+                setIsMenuOpen(false);
+              }}
+              className="comment-menu-item flex w-full items-center justify-between rounded-[14px] px-3 py-3 text-left text-[14px]"
+            >
+              <span>{item.label}</span>
+            </Link>
+          ))}
+
+          <button
+            type="button"
+            role="menuitem"
+            onClick={toggleTheme}
+            className="comment-menu-item flex w-full cursor-pointer items-center justify-between rounded-[14px] px-3 py-3 text-left text-[14px]"
+          >
+            <span>Тема</span>
+            <span className="text-[12px] font-medium text-[var(--label-secondary)]">
+              {themeLabel}
+            </span>
+          </button>
+
+          <div className="border-separator my-2 border-t" />
+
+          <button
+            type="button"
+            role="menuitem"
+            disabled={isSigningOut}
+            onClick={() => {
+              void handleSignOut();
+            }}
+            className="comment-menu-item flex w-full cursor-pointer items-center justify-between rounded-[14px] px-3 py-3 text-left text-[14px] text-[var(--accent-like)]"
+          >
+            <span>{isSigningOut ? "Выходим..." : "Выйти"}</span>
+          </button>
         </div>
       ) : null}
-
-      {!compact ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="!rounded-full !px-4 !py-2 text-[13px] font-semibold"
-          disabled={isSigningOut}
-          onClick={handleSignOut}
-        >
-          {isSigningOut ? "Выходим..." : "Выйти"}
-        </Button>
-      ) : null}
-
-      {!compact && user.isModerator ? (
-        <Link
-          href="/admin/users"
-          className="interactive-control inline-flex h-9 items-center rounded-full px-4 text-[13px] font-semibold"
-        >
-          Admin
-        </Link>
-      ) : null}
-
-      <AvatarBadge
-        initials={initials}
-        toneClass={toneClass}
-      />
     </div>
   );
 }
