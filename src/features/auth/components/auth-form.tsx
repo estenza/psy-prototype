@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthField } from "@/features/auth/components/auth-field";
@@ -9,7 +9,6 @@ import {
   PASSWORD_MIN_LENGTH,
 } from "@/features/auth/constants";
 import { buildPostAuthRedirectPath } from "@/features/auth/lib/profile";
-import { dispatchAuthStateChanged } from "@/features/auth/hooks/use-current-user";
 import type { AuthErrorResponse, AuthSuccessResponse } from "@/features/auth/types";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -29,7 +28,6 @@ const INITIAL_FORM_STATE: FormState = {
 };
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [formState, setFormState] = useState(INITIAL_FORM_STATE);
   const [fieldErrors, setFieldErrors] = useState<
@@ -102,9 +100,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
-      dispatchAuthStateChanged();
-      router.replace(buildPostAuthRedirectPath(payload.user, nextPath));
-      router.refresh();
+      const redirectPath = buildPostAuthRedirectPath(payload.user, nextPath);
+
+      // The next screen is server-rendered from the fresh session cookie, so use
+      // a full document navigation instead of relying on client router cache.
+      window.location.replace(redirectPath);
     } catch (error) {
       setFormError(
         error instanceof Error ? error.message : "Не удалось выполнить запрос.",

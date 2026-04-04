@@ -21,7 +21,9 @@ RUN mkdir -p /usr/local/share/yarn-wrapper && \
 
 ENV PATH=/usr/local/share/yarn-wrapper:$PATH
 
-RUN yarn build
+# Keep build-time auth access away from /app/data so mutable SQLite state
+# never gets baked into the runtime image by accident.
+RUN AUTH_DATABASE_PATH=/tmp/psy-build-auth.db yarn build && rm -f /tmp/psy-build-auth.db
 
 ENV NODE_ENV=production
 

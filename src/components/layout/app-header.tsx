@@ -170,7 +170,7 @@ export function AppHeader({
           <div className="-ml-[52px] w-full max-w-[var(--app-shell-side-rail-width)]">
             <Link
               href="/"
-              className="font-helvetica text-label-primary cursor-pointer text-[32px] font-black leading-none"
+              className="app-brand font-helvetica cursor-pointer text-[32px] font-black leading-none"
             >
               внутри.
             </Link>

@@ -1,0 +1,136 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  YC_FOLDER_ID: b1ghrmp0mr8mr0jcj9gc
+  YC_SERVICE_ACCOUNT_ID: ajeh4qnls5se5raj12ua
+  YC_CONTAINER_NAME: psy-container
+  YC_REGISTRY_ID: crphtumcsi9us93u61ir
+  IMAGE_NAME: psy
+  IMAGE_TAG: latest
+  IMAGE: cr.yandex/crphtumcsi9us93u61ir/psy:latest
+
+jobs:
+  deploy:
+    name: Build, Push, Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Validate Yandex auth secret
+        env:
+          YC_SA_JSON_CREDENTIALS: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+        run: |
+          if [ -z "${YC_SA_JSON_CREDENTIALS//[[:space:]]/}" ]; then
+            echo "::error::Missing YC_SA_JSON_CREDENTIALS. Add it as an Environment secret in GitHub: Settings -> Environments -> production -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          node <<'NODE'
+          const raw = process.env.YC_SA_JSON_CREDENTIALS;
+          const expectedServiceAccountId = process.env.YC_SERVICE_ACCOUNT_ID?.trim();
+
+          let parsed;
+
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            console.error(
+              "::error::YC_SA_JSON_CREDENTIALS in the production Environment is not valid JSON. Paste the full Yandex Cloud authorized key JSON into GitHub: Settings -> Environments -> production -> Secrets and variables -> Actions.",
+            );
+            process.exit(1);
+          }
+
+          const requiredFields = ["id", "service_account_id", "private_key"];
+          const missingFields = requiredFields.filter((field) => {
+            const value = parsed?.[field];
+            return typeof value !== "string" || value.trim().length === 0;
+          });
+
+          if (missingFields.length > 0) {
+            console.error(
+              `::error::YC_SA_JSON_CREDENTIALS in the production Environment is missing required authorized-key fields: ${missingFields.join(", ")}.`,
+            );
+            process.exit(1);
+          }
+
+          if (
+            expectedServiceAccountId &&
+            parsed.service_account_id !== expectedServiceAccountId
+          ) {
+            console.error(
+              `::warning::YC_SA_JSON_CREDENTIALS is valid JSON, but it belongs to service account ${parsed.service_account_id}, while this workflow is configured for ${expectedServiceAccountId}.`,
+            );
+          } else {
+            console.log(
+              `Yandex auth secret is present and valid for production service account ${expectedServiceAccountId || parsed.service_account_id}.`,
+            );
+          }
+          NODE
+
+      - name: Validate auth database secret
+        env:
+          AUTH_DATABASE_URL: ${{ secrets.AUTH_DATABASE_URL }}
+        run: |
+          if [ -z "${AUTH_DATABASE_URL//[[:space:]]/}" ]; then
+            echo "::error::Missing AUTH_DATABASE_URL. Add it as an Environment secret in GitHub: Settings -> Environments -> production -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate Docker to Yandex Container Registry
+        uses: yc-actions/yc-cr-login@v3
+        with:
+          yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+
+      - name: Build and push linux/amd64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          provenance: false
+          push: true
+          tags: ${{ env.IMAGE }}
+
+      - name: Deploy new Serverless Container revision
+        id: deploy
+        uses: yc-actions/yc-sls-container-deploy@v4
+        with:
+          yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+          container-name: ${{ env.YC_CONTAINER_NAME }}
+          folder-id: ${{ env.YC_FOLDER_ID }}
+          revision-service-account-id: ${{ env.YC_SERVICE_ACCOUNT_ID }}
+          revision-cores: 1
+          revision-memory: 512Mb
+          revision-core-fraction: 100
+          revision-concurrency: 8
+          revision-execution-timeout: 30
+          revision-image-url: ${{ env.IMAGE }}
+          revision-env: |
+            APP_ENV=production
+            AUTH_APP_URL=https://vnutri.live
+            AUTH_DATABASE_URL=${{ secrets.AUTH_DATABASE_URL }}
+
+      - name: Smoke check production URLs
+        run: |
+          curl --fail --show-error --silent --location --retry 5 --retry-delay 3 --head https://vnutri.live
+          curl --fail --show-error --silent --location --retry 5 --retry-delay 3 --head https://www.vnutri.live

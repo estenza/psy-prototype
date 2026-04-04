@@ -10,7 +10,7 @@ export async function getCurrentUser() {
     return null;
   }
 
-  return getCurrentUserBySessionToken(sessionToken);
+  return await getCurrentUserBySessionToken(sessionToken);
 }
 
 export async function requireCurrentUser() {

@@ -67,15 +67,15 @@ export function normalizeAdminUsersFilters(input: {
   };
 }
 
-export function getAdminUsers(filters: AdminUsersFilters) {
-  return listAdminUsers(filters);
+export async function getAdminUsers(filters: AdminUsersFilters) {
+  return await listAdminUsers(filters);
 }
 
-export function updateAdminUser(
+export async function updateAdminUser(
   userId: string,
   payload: AdminUpdateUserPayload,
 ) {
-  const targetUser = findUserById(userId);
+  const targetUser = await findUserById(userId);
 
   if (!targetUser) {
     throw new AdminServiceError("Пользователь не найден.", 404);
@@ -96,14 +96,14 @@ export function updateAdminUser(
 
   const isRemovingModeratorGrant = targetUser.isModerator && !nextIsModerator;
 
-  if (isRemovingModeratorGrant && countModerators() <= 1) {
+  if (isRemovingModeratorGrant && (await countModerators()) <= 1) {
     throw new AdminServiceError(
       "Нельзя снять роль у последнего модератора.",
       409,
     );
   }
 
-  const updatedUser = updateUserAdminFields({
+  const updatedUser = await updateUserAdminFields({
     isModerator: nextIsModerator,
     role: nextRole,
     specialistStatus: nextSpecialistStatus,

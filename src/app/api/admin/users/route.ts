@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json<AdminUsersResponse>({
       filters,
-      users: getAdminUsers(filters),
+      users: await getAdminUsers(filters),
     });
   } catch (error) {
     return buildAdminAccessResponse(error);

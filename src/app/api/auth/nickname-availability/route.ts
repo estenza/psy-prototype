@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   const nickname = request.nextUrl.searchParams.get("nickname") ?? "";
-  const result = checkNicknameAvailability(nickname);
+  const result = await checkNicknameAvailability(nickname);
 
   return NextResponse.json<NicknameAvailabilityResponse>(result);
 }

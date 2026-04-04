@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAuthPostgresPool, ensureAuthPostgresSchema, isPostgresAuthEnabled } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
 import type { AdminListedUser, AdminUsersFilters } from "@/features/admin/types";
 import type { OnboardingStep, SpecialistStatus, UserRole } from "@/features/auth/types";
@@ -15,11 +16,28 @@ type AdminUserRow = {
   avatar_url: string | null;
   role: UserRole;
   specialist_status: SpecialistStatus;
-  is_moderator: number;
+  is_moderator: number | boolean;
   onboarding_step: OnboardingStep;
   created_at: string;
   updated_at: string;
 };
+
+const PG_ADMIN_USER_COLUMNS = `
+  id,
+  email,
+  display_name,
+  nickname,
+  first_name,
+  last_name,
+  patronymic,
+  avatar_url,
+  role,
+  specialist_status,
+  is_moderator,
+  onboarding_step,
+  created_at::text AS created_at,
+  updated_at::text AS updated_at
+`;
 
 function mapAdminUser(row: AdminUserRow): AdminListedUser {
   return {
@@ -40,26 +58,46 @@ function mapAdminUser(row: AdminUserRow): AdminListedUser {
   };
 }
 
-export function listAdminUsers(filters: AdminUsersFilters) {
+export async function listAdminUsers(filters: AdminUsersFilters) {
   const conditions: string[] = [];
   const params: string[] = [];
 
   if (filters.role !== "all") {
     if (filters.role === "moderator") {
-      conditions.push("is_moderator = 1");
+      conditions.push(isPostgresAuthEnabled() ? "is_moderator = TRUE" : "is_moderator = 1");
     } else {
-      conditions.push("role = ?");
+      conditions.push(isPostgresAuthEnabled() ? `role = $${params.length + 1}` : "role = ?");
       params.push(filters.role);
     }
   }
 
   if (filters.specialistStatus !== "all") {
-    conditions.push("specialist_status = ?");
+    conditions.push(
+      isPostgresAuthEnabled()
+        ? `specialist_status = $${params.length + 1}`
+        : "specialist_status = ?",
+    );
     params.push(filters.specialistStatus);
   }
 
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  if (isPostgresAuthEnabled()) {
+    await ensureAuthPostgresSchema();
+    const rows = await getAuthPostgresPool().query<AdminUserRow>(
+      `
+        SELECT
+          ${PG_ADMIN_USER_COLUMNS}
+        FROM users
+        ${whereClause}
+        ORDER BY created_at DESC
+      `,
+      params,
+    );
+
+    return rows.rows.map(mapAdminUser);
+  }
 
   const rows = getDatabase()
     .prepare(`

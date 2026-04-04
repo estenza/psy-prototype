@@ -266,13 +266,13 @@ function validateSpecialistProfileInput(input: CompleteSpecialistProfileInput) {
   };
 }
 
-function createSessionForUser(userId: string) {
-  deleteExpiredSessions();
+async function createSessionForUser(userId: string) {
+  await deleteExpiredSessions();
 
   const token = generateSessionToken();
   const tokenHash = hashSessionToken(token);
   const expiresAt = buildSessionExpiresAt();
-  const session = createSession({
+  const session = await createSession({
     expiresAt,
     tokenHash,
     userId,
@@ -291,7 +291,7 @@ function createSessionForUser(userId: string) {
   };
 }
 
-export function checkNicknameAvailability(rawNickname: string) {
+export async function checkNicknameAvailability(rawNickname: string) {
   const nickname = normalizeNickname(rawNickname);
 
   if (!nickname) {
@@ -326,17 +326,19 @@ export function checkNicknameAvailability(rawNickname: string) {
     };
   }
 
+  const existingUser = await findUserByNickname(nickname);
+
   return {
-    available: !findUserByNickname(nickname),
+    available: !existingUser,
     normalizedNickname: nickname,
-    reason: findUserByNickname(nickname) ? "Ник уже занят" : undefined,
+    reason: existingUser ? "Ник уже занят" : undefined,
   };
 }
 
 export async function signUp(input: SignUpInput) {
   const normalizedInput = validateSignUpInput(input);
 
-  if (findUserByEmail(normalizedInput.email)) {
+  if (await findUserByEmail(normalizedInput.email)) {
     throw new AuthServiceError({
       message: "Пользователь с таким email уже существует.",
       status: 409,
@@ -347,7 +349,7 @@ export async function signUp(input: SignUpInput) {
   }
 
   const passwordHash = await hashPassword(normalizedInput.password);
-  const user = createUser({
+  const user = await createUser({
     displayName: buildDisplayName({
       email: normalizedInput.email,
       role: "user",
@@ -366,8 +368,8 @@ export async function signUp(input: SignUpInput) {
     });
   }
 
-  const resolvedUser = syncBootstrapModeratorGrant(user);
-  const session = createSessionForUser(resolvedUser.id);
+  const resolvedUser = await syncBootstrapModeratorGrant(user);
+  const session = await createSessionForUser(resolvedUser.id);
 
   return {
     expiresAt: session.expiresAt,
@@ -378,7 +380,7 @@ export async function signUp(input: SignUpInput) {
 
 export async function signIn(input: SignInInput) {
   const normalizedInput = validateSignInInput(input);
-  const account = findUserWithPasswordByEmail(normalizedInput.email);
+  const account = await findUserWithPasswordByEmail(normalizedInput.email);
 
   if (!account) {
     throw new AuthServiceError({
@@ -399,8 +401,8 @@ export async function signIn(input: SignInInput) {
     });
   }
 
-  const resolvedUser = syncBootstrapModeratorGrant(account.user);
-  const session = createSessionForUser(resolvedUser.id);
+  const resolvedUser = await syncBootstrapModeratorGrant(account.user);
+  const session = await createSessionForUser(resolvedUser.id);
 
   return {
     expiresAt: session.expiresAt,
@@ -417,9 +419,9 @@ export async function requestPasswordReset(
   const successMessage =
     "Если аккаунт с таким email существует, мы отправили письмо со ссылкой для восстановления.";
 
-  deleteExpiredPasswordResetTokens();
+  await deleteExpiredPasswordResetTokens();
 
-  const user = findUserByEmail(normalizedInput.email);
+  const user = await findUserByEmail(normalizedInput.email);
 
   if (!user) {
     return {
@@ -427,13 +429,13 @@ export async function requestPasswordReset(
     };
   }
 
-  deletePasswordResetTokensByUserId(user.id);
+  await deletePasswordResetTokensByUserId(user.id);
 
   const rawToken = generatePasswordResetToken();
   const tokenHash = hashPasswordResetToken(rawToken);
   const expiresAt = buildPasswordResetExpiresAt();
 
-  createPasswordResetToken({
+  await createPasswordResetToken({
     expiresAt,
     tokenHash,
     userId: user.id,
@@ -463,24 +465,26 @@ export async function requestPasswordReset(
   }
 }
 
-export function isPasswordResetTokenValid(rawToken: string) {
+export async function isPasswordResetTokenValid(rawToken: string) {
   const token = rawToken.trim();
 
   if (!token) {
     return false;
   }
 
-  deleteExpiredPasswordResetTokens();
+  await deleteExpiredPasswordResetTokens();
 
-  return Boolean(findPasswordResetTokenWithUserByTokenHash(hashPasswordResetToken(token)));
+  return Boolean(
+    await findPasswordResetTokenWithUserByTokenHash(hashPasswordResetToken(token)),
+  );
 }
 
 export async function resetPassword(input: PasswordResetConfirmInput) {
   const normalizedInput = validatePasswordResetConfirmInput(input);
 
-  deleteExpiredPasswordResetTokens();
+  await deleteExpiredPasswordResetTokens();
 
-  const resetToken = findPasswordResetTokenWithUserByTokenHash(
+  const resetToken = await findPasswordResetTokenWithUserByTokenHash(
     hashPasswordResetToken(normalizedInput.token),
   );
 
@@ -495,7 +499,7 @@ export async function resetPassword(input: PasswordResetConfirmInput) {
   }
 
   const passwordHash = await hashPassword(normalizedInput.password);
-  const updatedUser = updateUserPasswordHash({
+  const updatedUser = await updateUserPasswordHash({
     passwordHash,
     userId: resetToken.user.id,
   });
@@ -507,19 +511,19 @@ export async function resetPassword(input: PasswordResetConfirmInput) {
     });
   }
 
-  deletePasswordResetTokensByUserId(resetToken.user.id);
-  deleteSessionsByUserId(resetToken.user.id);
+  await deletePasswordResetTokensByUserId(resetToken.user.id);
+  await deleteSessionsByUserId(resetToken.user.id);
 
   return {
     message: "Пароль обновлён. Теперь можно войти с новым паролем.",
   };
 }
 
-export function selectRole(user: SessionUser, input: SelectRoleInput) {
+export async function selectRole(user: SessionUser, input: SelectRoleInput) {
   const role = validateRoleSelection(input);
   const nextOnboardingStep = role === "specialist" ? "specialist-profile" : "user-profile";
 
-  const updatedUser = updateUserProfileFields({
+  const updatedUser = await updateUserProfileFields({
     displayName: buildDisplayName({
       email: user.email,
       firstName: user.firstName,
@@ -539,12 +543,12 @@ export function selectRole(user: SessionUser, input: SelectRoleInput) {
     });
   }
 
-  return syncBootstrapModeratorGrant(updatedUser);
+  return await syncBootstrapModeratorGrant(updatedUser);
 }
 
-export function completeUserProfile(user: SessionUser, input: CompleteUserProfileInput) {
+export async function completeUserProfile(user: SessionUser, input: CompleteUserProfileInput) {
   const nickname = validateNicknameInput(input);
-  const existingUser = findUserByNickname(nickname);
+  const existingUser = await findUserByNickname(nickname);
 
   if (existingUser && existingUser.id !== user.id) {
     throw new AuthServiceError({
@@ -556,7 +560,7 @@ export function completeUserProfile(user: SessionUser, input: CompleteUserProfil
     });
   }
 
-  const updatedUser = updateUserProfileFields({
+  const updatedUser = await updateUserProfileFields({
     displayName: buildDisplayName({
       email: user.email,
       nickname,
@@ -575,15 +579,15 @@ export function completeUserProfile(user: SessionUser, input: CompleteUserProfil
     });
   }
 
-  return syncBootstrapModeratorGrant(updatedUser);
+  return await syncBootstrapModeratorGrant(updatedUser);
 }
 
-export function completeSpecialistProfile(
+export async function completeSpecialistProfile(
   user: SessionUser,
   input: CompleteSpecialistProfileInput,
 ) {
   const normalizedInput = validateSpecialistProfileInput(input);
-  const updatedUser = updateUserProfileFields({
+  const updatedUser = await updateUserProfileFields({
     displayName: buildDisplayName({
       email: user.email,
       firstName: normalizedInput.firstName,
@@ -605,19 +609,19 @@ export function completeSpecialistProfile(
     });
   }
 
-  return syncBootstrapModeratorGrant(updatedUser);
+  return await syncBootstrapModeratorGrant(updatedUser);
 }
 
-export function getCurrentUserBySessionToken(sessionToken: string): SessionUser | null {
-  const session = findSessionWithUserByTokenHash(hashSessionToken(sessionToken));
+export async function getCurrentUserBySessionToken(sessionToken: string): Promise<SessionUser | null> {
+  const session = await findSessionWithUserByTokenHash(hashSessionToken(sessionToken));
 
   if (!session) {
     return null;
   }
 
-  return syncBootstrapModeratorGrant(session.user);
+  return await syncBootstrapModeratorGrant(session.user);
 }
 
-export function deleteSessionByToken(sessionToken: string) {
-  deleteSessionByTokenHash(hashSessionToken(sessionToken));
+export async function deleteSessionByToken(sessionToken: string) {
+  await deleteSessionByTokenHash(hashSessionToken(sessionToken));
 }

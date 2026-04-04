@@ -24,7 +24,7 @@ export default async function AdminUsersPage({
     specialistStatus: resolvedSearchParams.specialistStatus,
     role: resolvedSearchParams.role,
   });
-  const users = getAdminUsers(filters);
+  const users = await getAdminUsers(filters);
 
   return (
     <div className="surface-primary text-label-primary min-h-dvh">

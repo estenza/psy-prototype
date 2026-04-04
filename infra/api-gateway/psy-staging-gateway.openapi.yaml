@@ -1,0 +1,29 @@
+openapi: 3.0.0
+info:
+  title: psy-staging-container-gateway
+  version: 1.0.0
+servers:
+  - url: https://d5d6qfoc60m48deqn2q7.l3hh3szr.apigw.yandexcloud.net
+  - url: https://staging.vnutri.live
+paths:
+  /:
+    x-yc-apigateway-any-method:
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: bbau5donub8hrok6eqoc
+        service_account_id: ajeh4qnls5se5raj12ua
+  /{proxy+}:
+    x-yc-apigateway-any-method:
+      x-yc-apigateway-integration:
+        type: serverless_containers
+        container_id: bbau5donub8hrok6eqoc
+        service_account_id: ajeh4qnls5se5raj12ua
+      parameters:
+        - name: proxy
+          in: path
+          required: false
+          explode: false
+          style: simple
+          schema:
+            type: string
+            default: "-"

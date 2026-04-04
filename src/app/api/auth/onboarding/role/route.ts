@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     const currentUser = await requireCurrentUser();
     const input = (await request.json()) as SelectRoleInput;
-    const user = selectRole(currentUser, input);
+    const user = await selectRole(currentUser, input);
 
     return NextResponse.json<AuthSuccessResponse>({
       ok: true,

@@ -1,10 +1,12 @@
-"use client";
-
 import { AppHeader } from "@/components/layout/app-header";
 import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
 import { LeftNav } from "@/components/layout/left-nav";
 import { LegalSidebar } from "@/components/layout/legal-sidebar";
 import { FeedSection } from "@/features/feed/components/feed-section";
+
+// The home route carries environment-specific branding, so we disable
+// prerender caching to avoid stale staging visuals after a fresh deploy.
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
