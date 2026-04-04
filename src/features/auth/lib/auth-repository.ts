@@ -47,21 +47,21 @@ type PasswordResetTokenRow = {
 };
 
 const PG_USER_COLUMNS = `
-  id,
-  email,
-  password_hash,
-  display_name,
-  nickname,
-  first_name,
-  last_name,
-  patronymic,
-  avatar_url,
-  role,
-  specialist_status,
-  is_moderator,
-  onboarding_step,
-  created_at::text AS created_at,
-  updated_at::text AS updated_at
+  users.id,
+  users.email,
+  users.password_hash,
+  users.display_name,
+  users.nickname,
+  users.first_name,
+  users.last_name,
+  users.patronymic,
+  users.avatar_url,
+  users.role,
+  users.specialist_status,
+  users.is_moderator,
+  users.onboarding_step,
+  users.created_at::text AS created_at,
+  users.updated_at::text AS updated_at
 `;
 
 const PG_SESSION_COLUMNS = `
