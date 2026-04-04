@@ -195,6 +195,113 @@ export function NotificationIcon() {
   );
 }
 
+export function ProfileCircleIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5.5 19C6.7 15.9 9 14.5 12 14.5C15 14.5 17.3 15.9 18.5 19" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  );
+}
+
+export function SettingsSlidersIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M4 7H20" strokeLinecap="round" />
+      <path d="M4 17H20" strokeLinecap="round" />
+      <circle cx="9" cy="7" r="2.5" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="17" r="2.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function DraftsIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path
+        d="M7 4H14L18 8V20H7C5.9 20 5 19.1 5 18V6C5 4.9 5.9 4 7 4Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M14 4V8H18" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12H15" strokeLinecap="round" />
+      <path d="M9 16H13" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ThemeMoonIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path
+        d="M20 14.2C19.2 17.7 16 20.2 12.2 20.2C7.8 20.2 4.3 16.7 4.3 12.3C4.3 8.5 6.8 5.3 10.3 4.5C9.7 5.4 9.4 6.6 9.4 7.9C9.4 11.6 12.4 14.6 16.1 14.6C17.4 14.6 18.6 14.3 19.5 13.7C19.7 13.9 19.9 14.1 20 14.2Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function AdminShieldIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path
+        d="M12 3L18.5 5.5V11.5C18.5 15.3 15.8 18.8 12 20C8.2 18.8 5.5 15.3 5.5 11.5V5.5L12 3Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M9.5 12.5L11.2 14.2L14.8 10.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function LogOutIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M10 6H7C5.9 6 5 6.9 5 8V16C5 17.1 5.9 18 7 18H10" strokeLinecap="round" />
+      <path d="M13 8L17 12L13 16" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12H17" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function MenuRailIcon() {
   return (
     <svg

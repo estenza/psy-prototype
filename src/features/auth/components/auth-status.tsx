@@ -4,13 +4,41 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAppTheme } from "@/components/theme/app-theme-provider";
+import {
+  AdminShieldIcon,
+  BookmarkIcon,
+  DraftsIcon,
+  LogOutIcon,
+  ProfileCircleIcon,
+  SettingsSlidersIcon,
+  ThemeMoonIcon,
+} from "@/components/ui/icons";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { UserAvatar } from "@/features/auth/components/user-avatar";
 import { dispatchAuthStateChanged } from "@/features/auth/hooks/use-current-user";
+import { getUserHandle } from "@/features/auth/lib/profile";
+import type { AuthUser } from "@/features/auth/types";
 
 type AuthStatusProps = {
   compact?: boolean;
 };
+
+function getAdminBadgeLabel(
+  user: Pick<AuthUser, "isModerator"> & {
+    isAdmin?: boolean;
+  },
+) {
+  if (user.isAdmin) {
+    return "admin";
+  }
+
+  if (user.isModerator) {
+    return "moderator";
+  }
+
+  return null;
+}
 
 export function AuthStatus({ compact = false }: AuthStatusProps) {
   const router = useRouter();
@@ -86,25 +114,36 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
   }
 
   const themeLabel = theme === "dark" ? "Темная" : "Светлая";
-  const menuWidthClass = compact ? "w-[240px]" : "w-[260px]";
+  const menuWidthClass = compact ? "w-[272px]" : "w-[304px]";
+  const profileHandle = getUserHandle(user);
+  const adminBadgeLabel = getAdminBadgeLabel(user);
+  const hasAdminAccess = adminBadgeLabel !== null;
   const navigationItems = [
-    {
-      href: "/profile",
-      label: "Мой профиль",
-    },
     {
       href: "/settings",
       label: "Настройки",
+      icon: <SettingsSlidersIcon />,
     },
     {
       href: "/bookmarks",
       label: "Закладки",
+      icon: <BookmarkIcon />,
     },
     {
       href: "/drafts",
       label: "Черновики",
+      icon: <DraftsIcon />,
     },
-  ];
+    ...(hasAdminAccess
+      ? [
+          {
+            href: "/admin/users",
+            label: "Админка",
+            icon: <AdminShieldIcon />,
+          },
+        ]
+      : []),
+  ] as const;
 
   return (
     <div ref={menuRef} className={`relative ${isMenuOpen ? "z-[90]" : "z-20"}`}>
@@ -131,6 +170,35 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
           className={`surface-elevated border-separator absolute right-0 top-[calc(100%+8px)] z-[100] rounded-[20px] border p-2 shadow-[0_14px_32px_rgba(0,0,0,0.08)] ${menuWidthClass}`}
           role="menu"
         >
+          <Link
+            href="/profile"
+            role="menuitem"
+            onClick={() => {
+              setIsMenuOpen(false);
+            }}
+            className="comment-menu-item flex w-full items-center gap-3 rounded-[16px] px-3 py-3 text-left"
+          >
+            <span className="flex-none text-[var(--label-secondary)]">
+              <ProfileCircleIcon />
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--label-tertiary)]">
+                Мой профиль
+              </span>
+              <span className="mt-1 flex items-center gap-2">
+                <span className="truncate text-[15px] font-medium text-[var(--label-primary)]">
+                  {profileHandle}
+                </span>
+                {adminBadgeLabel ? (
+                  <span className="inline-flex flex-none items-center rounded-full bg-[var(--fill-tertiary)] px-2 py-1 text-[11px] font-semibold text-[var(--label-secondary)]">
+                    {adminBadgeLabel}
+                  </span>
+                ) : null}
+              </span>
+            </span>
+          </Link>
+
           {navigationItems.map((item) => (
             <Link
               key={item.href}
@@ -139,22 +207,32 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
               onClick={() => {
                 setIsMenuOpen(false);
               }}
-              className="comment-menu-item flex w-full items-center justify-between rounded-[14px] px-3 py-3 text-left text-[14px]"
+              className="comment-menu-item flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[14px]"
             >
-              <span>{item.label}</span>
+              <span className="flex-none text-[var(--label-secondary)]">{item.icon}</span>
+              <span className="flex-1">{item.label}</span>
             </Link>
           ))}
 
           <button
             type="button"
-            role="menuitem"
+            role="switch"
+            aria-checked={theme === "dark"}
             onClick={toggleTheme}
-            className="comment-menu-item flex w-full cursor-pointer items-center justify-between rounded-[14px] px-3 py-3 text-left text-[14px]"
+            className="comment-menu-item flex w-full cursor-pointer items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[14px]"
           >
-            <span>Тема</span>
-            <span className="text-[12px] font-medium text-[var(--label-secondary)]">
-              {themeLabel}
+            <span className="flex-none text-[var(--label-secondary)]">
+              <ThemeMoonIcon />
             </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-medium text-[var(--label-primary)]">
+                Тема
+              </span>
+              <span className="mt-0.5 block text-[12px] text-[var(--label-secondary)]">
+                {themeLabel}
+              </span>
+            </span>
+            <ToggleSwitch checked={theme === "dark"} />
           </button>
 
           <div className="border-separator my-2 border-t" />
@@ -166,9 +244,12 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
             onClick={() => {
               void handleSignOut();
             }}
-            className="comment-menu-item flex w-full cursor-pointer items-center justify-between rounded-[14px] px-3 py-3 text-left text-[14px] text-[var(--accent-like)]"
+            className="comment-menu-item flex w-full cursor-pointer items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[14px] text-[var(--accent-like)]"
           >
-            <span>{isSigningOut ? "Выходим..." : "Выйти"}</span>
+            <span className="flex-none">
+              <LogOutIcon />
+            </span>
+            <span className="flex-1">{isSigningOut ? "Выходим..." : "Выйти"}</span>
           </button>
         </div>
       ) : null}
