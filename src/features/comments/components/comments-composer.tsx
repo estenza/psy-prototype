@@ -35,6 +35,7 @@ export function CommentsComposer({
 }: CommentsComposerProps) {
   const [draft, setDraft] = useState("");
   const [isActive, setIsActive] = useState(autoFocus);
+  const showAvatar = viewer.isAuthenticated;
 
   const trimmedDraft = draft.trim();
   const canSubmit =
@@ -62,13 +63,15 @@ export function CommentsComposer({
   }
 
   return (
-    <div className="flex w-full items-start gap-3">
-      <CommentAvatar
-        avatarUrl={viewer.avatarUrl}
-        initials={viewer.initials}
-        name={viewer.displayName}
-        size={compact ? "sm" : "md"}
-      />
+    <div className={`flex w-full items-start ${showAvatar ? "gap-3" : ""}`.trim()}>
+      {showAvatar ? (
+        <CommentAvatar
+          avatarUrl={viewer.avatarUrl}
+          handle={viewer.handle}
+          name={viewer.displayName}
+          size={compact ? "sm" : "md"}
+        />
+      ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div

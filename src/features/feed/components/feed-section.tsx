@@ -24,7 +24,7 @@ export function FeedSection() {
   } = useFeed({ initialPosts: INITIAL_FEED_POSTS });
 
   return (
-    <section className="surface-primary border-separator min-w-0 border-l border-r">
+    <section className="surface-primary border-separator -mx-4 min-w-0 border-l border-r sm:-mx-6 lg:mx-0">
       <FeedToolbar
         activeTopic={activeTopic}
         sortMode={sortMode}

@@ -245,6 +245,64 @@ select {
     background-color: var(--background-primary);
     border: 1px solid var(--separator-strong);
     color: var(--label-secondary);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .search-field-input {
+    appearance: none;
+  }
+
+  .search-field-input::-webkit-search-cancel-button,
+  .search-field-input::-webkit-search-decoration,
+  .search-field-input::-webkit-search-results-button,
+  .search-field-input::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+  }
+
+  .search-field-placeholder {
+    color: var(--label-tertiary);
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: absolute;
+    transition: opacity 160ms ease;
+  }
+
+  .search-field-placeholder-text {
+    display: block;
+    left: 0;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 0,
+      #000 calc(100% - 28px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      90deg,
+      #000 0,
+      #000 calc(100% - 28px),
+      transparent
+    );
+    -webkit-mask-position: left top;
+    mask-position: left top;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    overflow: hidden;
+    position: absolute;
+    right: 0;
+    text-overflow: clip;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .search-field-input:focus + .search-field-placeholder,
+  .search-field-input:not(:placeholder-shown) + .search-field-placeholder {
+    opacity: 0;
   }
 
   .feed-post-flash {

@@ -24,6 +24,7 @@ export type AuthUser = {
   avatarUrl: string | null;
   role: UserRole;
   specialistStatus: SpecialistStatus;
+  isAdmin: boolean;
   isModerator: boolean;
   onboardingStep: OnboardingStep;
   createdAt: string;

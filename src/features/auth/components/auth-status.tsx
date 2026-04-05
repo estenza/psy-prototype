@@ -25,9 +25,7 @@ type AuthStatusProps = {
 };
 
 function getAdminBadgeLabel(
-  user: Pick<AuthUser, "isModerator"> & {
-    isAdmin?: boolean;
-  },
+  user: Pick<AuthUser, "isAdmin" | "isModerator">,
 ) {
   if (user.isAdmin) {
     return "admin";
@@ -98,7 +96,11 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
 
   if (status === "loading") {
     return (
-      <div className="bg-[color-mix(in_srgb,var(--label-primary)_10%,transparent)] h-11 w-11 animate-pulse rounded-full" />
+      <div
+        className={`bg-[color-mix(in_srgb,var(--label-primary)_10%,transparent)] animate-pulse rounded-full ${
+          compact ? "h-10 w-10 lg:h-11 lg:w-11" : "h-11 w-11"
+        }`}
+      />
     );
   }
 
@@ -106,7 +108,11 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
     return (
       <Link
         href="/sign-in"
-        className="interactive-fill inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold"
+        className={`interactive-solid inline-flex items-center rounded-full font-semibold ${
+          compact
+            ? "h-10 px-3 text-[13px] lg:h-11 lg:px-4 lg:text-sm"
+            : "h-11 px-4 text-sm"
+        }`}
       >
         Войти
       </Link>
@@ -114,7 +120,7 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
   }
 
   const themeLabel = theme === "dark" ? "Темная" : "Светлая";
-  const menuWidthClass = compact ? "w-[272px]" : "w-[304px]";
+  const menuWidthClass = compact ? "w-[272px] lg:w-[304px]" : "w-[304px]";
   const profileHandle = getUserHandle(user);
   const adminBadgeLabel = getAdminBadgeLabel(user);
   const hasAdminAccess = adminBadgeLabel !== null;
@@ -161,7 +167,7 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
           avatarUrl={user.avatarUrl}
           name={user.displayName}
           showStatusDot
-          size="md"
+          size={compact ? "sm" : "md"}
         />
       </button>
 

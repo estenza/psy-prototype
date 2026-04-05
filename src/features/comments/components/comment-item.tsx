@@ -50,13 +50,13 @@ export function CommentItem({
   const shouldClamp = comment.bodyText.length > COMMENT_PREVIEW_CHARACTER_LIMIT;
 
   return (
-    <article className="flex w-full items-start">
+    <article className="flex w-full items-start gap-3">
       <div
-        className={`relative shrink-0 ${isReply ? "w-6 pr-3" : "w-9 pr-4"}`.trim()}
+        className={`relative shrink-0 ${isReply ? "w-6" : "w-9"}`.trim()}
       >
         <CommentAvatar
           avatarUrl={comment.author.avatarUrl}
-          initials={comment.author.initials}
+          handle={comment.author.handle}
           name={comment.author.name}
           size={isReply ? "sm" : "md"}
         />

@@ -30,7 +30,7 @@ export default async function AdminUsersPage({
     <div className="surface-primary text-label-primary min-h-dvh">
       <AppHeader showCreateAction={false} />
 
-      <main className="mx-auto max-w-[1400px] px-4 pb-10 pt-[calc(var(--app-header-height)+28px)] sm:px-6">
+      <main className="mx-auto max-w-[1400px] px-4 pb-10 min-[721px]:pt-[calc(var(--app-header-height)+28px)] sm:px-6">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[12px] uppercase tracking-[0.08em] text-[var(--label-secondary)]">

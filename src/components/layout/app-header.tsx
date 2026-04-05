@@ -1,13 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode, Ref } from "react";
-import { NotificationIcon, PlusCircleIcon, SearchIcon } from "@/components/ui/icons";
+import type { ReactNode } from "react";
+import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
+import {
+  MenuRailIcon,
+  NavIcon,
+  NotificationIcon,
+  PlusCircleIcon,
+  SearchIcon,
+} from "@/components/ui/icons";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { AuthStatus } from "@/features/auth/components/auth-status";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
+import type { NavigationItemKey } from "@/types/navigation";
 
 type AppHeaderProps = {
   showCreateAction?: boolean;
@@ -17,32 +26,45 @@ type AppHeaderProps = {
 type SearchFieldProps = {
   autoFocus?: boolean;
   className: string;
+  inputClassName?: string;
   placeholder: string;
 };
 
 function SearchField({
   autoFocus = false,
   className,
+  inputClassName = "w-full",
   placeholder,
 }: SearchFieldProps) {
   return (
-    <label className={`search-field flex items-center gap-3 rounded-full text-sm ${className}`}>
-      <SearchIcon />
-      <input
-        autoFocus={autoFocus}
-        type="search"
-        placeholder={placeholder}
-        className="text-label-primary w-full min-w-0 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-[var(--label-secondary)]"
-      />
+    <label className={`search-field items-center gap-3 rounded-full text-sm ${className}`}>
+      <span className="text-label-tertiary">
+        <SearchIcon />
+      </span>
+      <div className="relative min-w-0 flex-1 overflow-hidden">
+        <input
+          aria-label={placeholder}
+          autoFocus={autoFocus}
+          type="search"
+          placeholder={placeholder}
+          className={`search-field-input text-label-primary block min-w-0 bg-transparent text-sm font-medium leading-5 outline-none placeholder:text-transparent ${inputClassName}`}
+        />
+        <span className="search-field-placeholder" aria-hidden="true">
+          <span className="search-field-placeholder-text">{placeholder}</span>
+        </span>
+      </div>
     </label>
   );
 }
+
+const circularControlClassName =
+  "interactive-control group/tooltip relative inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)] transition-colors";
 
 function NotificationButton() {
   return (
     <button
       aria-label="Уведомления"
-      className="interactive-control group/tooltip relative inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)] transition-colors"
+      className={circularControlClassName}
     >
       <NotificationIcon />
       <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent-like)] px-1 text-[10px] font-semibold text-[var(--label-inverse)]">
@@ -53,29 +75,24 @@ function NotificationButton() {
   );
 }
 
-type SearchTriggerButtonProps = {
-  buttonRef?: Ref<HTMLButtonElement>;
-  expanded: boolean;
-  onClick: () => void;
-};
-
-function SearchTriggerButton({
-  buttonRef,
+function MobileMenuButton({
   expanded,
   onClick,
-}: SearchTriggerButtonProps) {
+}: {
+  expanded: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
-      ref={buttonRef}
       type="button"
       aria-expanded={expanded}
-      aria-haspopup="dialog"
-      aria-label={expanded ? "Скрыть поиск" : "Искать"}
+      aria-haspopup="menu"
+      aria-label={expanded ? "Закрыть меню" : "Открыть меню"}
       onClick={onClick}
-      className="interactive-fill inline-flex h-11 flex-none cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-medium"
+      className={`${circularControlClassName} lg:hidden`}
     >
-      <SearchIcon />
-      <span>Искать</span>
+      <MenuRailIcon />
+      <HoverTooltip label="Меню" />
     </button>
   );
 }
@@ -105,39 +122,55 @@ function CreateTopicButton({
   );
 }
 
+function resolveActiveSection(pathname: string | null): NavigationItemKey {
+  const matchedItem = navItems.find((item) => {
+    if (item.href === "#") {
+      return false;
+    }
+
+    if (item.href === "/") {
+      return pathname === "/";
+    }
+
+    return pathname === item.href || pathname?.startsWith(`${item.href}/`);
+  });
+
+  return matchedItem?.key ?? DEFAULT_ACTIVE_SECTION;
+}
+
 export function AppHeader({
   showCreateAction = true,
   showSearch = true,
 }: AppHeaderProps) {
+  const pathname = usePathname();
   const { user } = useAuthClient();
   const { requireAuth } = useAuthRequiredAction();
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const mobileSearchOverlayRef = useRef<HTMLDivElement | null>(null);
-  const mobileSearchTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const isMobileSearchOpen = showSearch && mobileSearchOpen;
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const activeSection = resolveActiveSection(pathname);
 
   useEffect(() => {
-    if (!isMobileSearchOpen) {
+    if (!isMobileMenuOpen) {
       return;
     }
 
     function handlePointerDown(event: PointerEvent) {
-      const target = event.target as Node;
+      const target = event.target;
 
-      if (mobileSearchOverlayRef.current?.contains(target)) {
+      if (!(target instanceof Node)) {
         return;
       }
 
-      if (mobileSearchTriggerRef.current?.contains(target)) {
+      if (mobileMenuRef.current?.contains(target)) {
         return;
       }
 
-      setMobileSearchOpen(false);
+      setIsMobileMenuOpen(false);
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setMobileSearchOpen(false);
+        setIsMobileMenuOpen(false);
       }
     }
 
@@ -148,97 +181,94 @@ export function AppHeader({
       document.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isMobileSearchOpen]);
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   async function handleCreateTopicClick(event: React.MouseEvent<HTMLAnchorElement>) {
     await requireAuth(event);
   }
 
   return (
-    <header className="surface-primary border-separator fixed inset-x-0 top-0 z-50 border-b">
-      {isMobileSearchOpen ? (
-        <button
-          type="button"
-          aria-label="Закрыть поиск"
-          onClick={() => setMobileSearchOpen(false)}
-          className="fixed inset-x-0 bottom-0 top-[var(--app-header-height)] z-0 bg-[color-mix(in_srgb,var(--label-primary)_10%,transparent)] xl:hidden"
-        />
-      ) : null}
-
-      <div className="relative z-10 mx-auto flex h-16 w-full max-w-[var(--app-shell-max-width)] items-center gap-3 px-4 py-1 sm:px-6 xl:grid xl:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] xl:px-5">
-        <div className="flex flex-none items-center xl:justify-end xl:pl-10 xl:pr-6">
-          <div className="-ml-[52px] w-full max-w-[var(--app-shell-side-rail-width)]">
-            <Link
-              href="/"
-              className="app-brand font-helvetica cursor-pointer text-[32px] font-black leading-none"
-            >
-              внутри.
-            </Link>
-          </div>
-        </div>
-
-        <div className="hidden items-center justify-center xl:flex">
-          {showSearch ? (
-            <SearchField
-              className="w-full px-5 py-3"
-              placeholder="Поиск по историям, темам, психологам"
+    <header className="surface-primary border-separator z-50 border-b min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0">
+      <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] items-center gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[721px]:gap-3 min-[721px]:py-1 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-[var(--app-shell-side-offset)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+          <div ref={mobileMenuRef} className="relative flex items-center lg:hidden">
+            <MobileMenuButton
+              expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
             />
-          ) : null}
-        </div>
 
-        <div className="hidden xl:block xl:justify-self-start xl:pl-6 xl:pr-10">
-          <div className="flex items-center justify-start gap-4">
-            <div className="flex items-center gap-0">
-              {showCreateAction ? (
-                <CreateTopicButton
-                  className="px-7 py-3"
-                  onClick={handleCreateTopicClick}
-                />
-              ) : null}
-              {user ? <NotificationButton /> : null}
-            </div>
-            <AuthStatus />
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-1 items-center gap-1 xl:hidden">
-          {showSearch ? (
-            <SearchTriggerButton
-              buttonRef={mobileSearchTriggerRef}
-              expanded={isMobileSearchOpen}
-              onClick={() => setMobileSearchOpen((current) => !current)}
-            />
-          ) : null}
-          <div className="flex items-center gap-0">
-            {showCreateAction ? (
-              <CreateTopicButton
-                className="px-5 py-3"
-                onClick={handleCreateTopicClick}
+            {isMobileMenuOpen ? (
+              <nav
+                className="surface-elevated border-separator absolute left-0 top-[calc(100%+8px)] z-[100] w-[280px] max-w-[calc(100vw-24px)] rounded-[20px] border p-2 shadow-[0_14px_32px_rgba(0,0,0,0.08)]"
+                aria-label="Разделы"
+                role="menu"
               >
-                <span className="hidden sm:inline">Создать обсуждение</span>
-                <span className="sm:hidden">Обсуждение</span>
-              </CreateTopicButton>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    role="menuitem"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`comment-menu-item flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[15px] ${
+                      item.key === activeSection
+                        ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
+                        : "text-[var(--label-secondary)]"
+                    }`}
+                  >
+                    <span className="flex h-8 w-8 flex-none items-center justify-center">
+                      <NavIcon name={item.key} filled={item.key === activeSection} />
+                    </span>
+                    <span className="flex-1">{item.name}</span>
+                  </Link>
+                ))}
+              </nav>
             ) : null}
-            {user ? <NotificationButton /> : null}
           </div>
+
+          <Link
+            href="/"
+            className="app-brand font-helvetica hidden w-fit max-w-full cursor-pointer text-[26px] font-black leading-none min-[361px]:block sm:text-[30px] lg:max-w-[var(--app-shell-side-rail-width)] lg:text-[32px]"
+          >
+            внутри.
+          </Link>
+        </div>
+
+        {showSearch ? (
+          <SearchField
+            className="hidden w-full min-w-0 justify-self-center px-4 py-3 min-[721px]:flex sm:justify-self-auto lg:px-5"
+            placeholder="Поиск по историям, темам, психологам"
+          />
+        ) : null}
+
+        <div className="flex w-fit max-w-full min-w-0 items-center justify-end justify-self-end gap-1 sm:gap-2 lg:justify-start">
+          {showCreateAction ? (
+            <CreateTopicButton
+              className="h-10 px-3 text-[13px] min-[721px]:h-11 min-[721px]:px-4 min-[721px]:text-sm"
+              onClick={handleCreateTopicClick}
+            >
+              <>
+                <span className="inline lg:hidden">Создать</span>
+                <span className="hidden lg:inline">Создать обсуждение</span>
+              </>
+            </CreateTopicButton>
+          ) : null}
+          {user ? <NotificationButton /> : null}
           <AuthStatus compact />
         </div>
-      </div>
 
-      {isMobileSearchOpen ? (
-        <div
-          ref={mobileSearchOverlayRef}
-          className="surface-primary border-separator absolute inset-x-0 top-full z-20 border-b px-4 py-3 sm:px-6 xl:hidden"
-        >
-          <div className="mx-auto w-full max-w-[var(--app-shell-max-width)]">
-            <SearchField
-              autoFocus
-              className="w-full px-4 py-3"
-              placeholder="Поиск по историям, темам, психологам"
-            />
-          </div>
-        </div>
-      ) : null}
+        {showSearch ? (
+          <SearchField
+            className="col-span-2 flex w-full px-4 py-3 min-[721px]:hidden"
+            placeholder="Поиск по историям, темам, психологам"
+          />
+        ) : null}
+      </div>
     </header>
   );
 }

@@ -3,6 +3,7 @@ import "server-only";
 import { getAuthPostgresPool, ensureAuthPostgresSchema, isPostgresAuthEnabled } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
 import type { AdminListedUser, AdminUsersFilters } from "@/features/admin/types";
+import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
 import type { OnboardingStep, SpecialistStatus, UserRole } from "@/features/auth/types";
 
 type AdminUserRow = {
@@ -51,6 +52,7 @@ function mapAdminUser(row: AdminUserRow): AdminListedUser {
     avatarUrl: row.avatar_url,
     role: row.role,
     specialistStatus: row.specialist_status,
+    isAdmin: isBootstrapAdminEmail(row.email),
     isModerator: Boolean(row.is_moderator),
     onboardingStep: row.onboarding_step,
     createdAt: row.created_at,

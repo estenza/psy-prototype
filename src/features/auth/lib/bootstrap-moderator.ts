@@ -1,6 +1,7 @@
 import "server-only";
 
 import { findUserById, updateUserAdminFields } from "@/features/auth/lib/auth-repository";
+import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
 import type { SessionUser } from "@/features/auth/types";
 
 function getBootstrapModeratorEmails() {
@@ -13,7 +14,10 @@ function getBootstrapModeratorEmails() {
 }
 
 export function isBootstrapModeratorEmail(email: string) {
-  return getBootstrapModeratorEmails().has(email.trim().toLowerCase());
+  return (
+    getBootstrapModeratorEmails().has(email.trim().toLowerCase())
+    || isBootstrapAdminEmail(email)
+  );
 }
 
 export async function syncBootstrapModeratorGrant(user: SessionUser) {

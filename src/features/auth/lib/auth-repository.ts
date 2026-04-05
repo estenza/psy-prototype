@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { getAuthPostgresPool, ensureAuthPostgresSchema, isPostgresAuthEnabled } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
+import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
 import type {
   AuthSession,
   AuthUser,
@@ -93,6 +94,7 @@ function mapUser(row: UserRow): AuthUser {
     avatarUrl: row.avatar_url,
     role: row.role,
     specialistStatus: row.specialist_status,
+    isAdmin: isBootstrapAdminEmail(row.email),
     isModerator: Boolean(row.is_moderator),
     onboardingStep: row.onboarding_step,
     createdAt: row.created_at,

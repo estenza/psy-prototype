@@ -346,9 +346,9 @@ export function CreateTopicScreen() {
     <div className="surface-primary text-label-primary min-h-dvh">
       <AppHeader />
 
-      <div className="pt-[var(--app-header-height)]">
-        <main className="mx-auto w-full px-4 sm:px-6 xl:max-w-[var(--app-shell-max-width)] xl:px-5">
-          <section className="mx-auto min-h-[calc(100dvh-var(--app-header-height))] w-full xl:max-w-[672px]">
+      <div className="min-[721px]:pt-[var(--app-header-height)]">
+        <main className="mx-auto w-full px-4 sm:px-6 lg:max-w-[var(--app-shell-max-width)] lg:px-5">
+          <section className="mx-auto min-h-[calc(100dvh-var(--app-header-height))] w-full lg:max-w-[672px]">
             <form onSubmit={handlePublish} className="pb-20">
               <div className="flex items-start justify-between gap-6 pt-12">
                 <div className="flex min-w-0 items-center gap-4">

@@ -2,9 +2,11 @@
   /* Layout */
   --app-shell-max-width: 1440px;
   --app-shell-content-max-width: 720px;
-  --app-shell-side-column-min-width: 248px;
-  --app-shell-side-rail-width: 244px;
-  --app-header-search-width: 560px;
+  --app-shell-side-column-min-width: 264px;
+  --app-shell-side-rail-width: 260px;
+  --app-header-search-width: clamp(360px, calc(360px + (100vw - 1024px) * 0.4807692308), 560px);
+  --app-shell-side-offset: clamp(24px, calc(24px + (100vw - 1280px) * 0.1), 40px);
+  --app-shell-rail-gap: 24px;
 
   /* Accents */
   --accent-primary: #007aff;

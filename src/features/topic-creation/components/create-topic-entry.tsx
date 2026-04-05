@@ -27,7 +27,7 @@ export function CreateTopicEntry() {
     <div className="surface-primary text-label-primary min-h-dvh">
       <AppHeader showCreateAction={false} />
 
-      <main className="mx-auto flex min-h-dvh max-w-[760px] items-center justify-center px-4 pt-[var(--app-header-height)] sm:px-6">
+      <main className="mx-auto flex min-h-dvh max-w-[760px] items-center justify-center px-4 min-[721px]:pt-[var(--app-header-height)] sm:px-6">
         <div className="border-separator surface-primary w-full rounded-[28px] border px-5 py-7 text-center shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:px-7">
           <h1 className="font-helvetica text-[28px] font-bold leading-none">
             Создание обсуждения доступно после авторизации
