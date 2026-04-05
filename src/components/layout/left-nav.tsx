@@ -12,7 +12,7 @@ export function LeftNav({ items, activeSection }: LeftNavProps) {
     <aside className="surface-primary hidden lg:block lg:pl-[var(--app-shell-side-offset)] lg:pr-[var(--app-shell-rail-gap)]">
       <nav
         aria-label="Основная навигация"
-        className="sticky top-[var(--app-header-height)] h-[calc(100dvh-var(--app-header-height))] w-full overflow-y-auto py-4"
+        className="sticky top-[var(--app-header-height)] flex h-[calc(100dvh-var(--app-header-height))] w-full flex-col gap-1 overflow-y-auto py-4"
       >
         {items.map((item) => (
           <Link
@@ -20,8 +20,8 @@ export function LeftNav({ items, activeSection }: LeftNavProps) {
             href={item.href}
             className={`flex w-full items-center gap-4 rounded-full py-3 pl-4 pr-8 text-[20px] transition ${
               item.key === activeSection
-                ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
-                : "font-normal text-[var(--label-secondary)] hover:bg-[var(--fill-control-hover)]"
+                ? "font-semibold text-[var(--label-primary)]"
+                : "font-normal text-[var(--label-tertiary)] hover:bg-[var(--fill-control-hover)]"
             }`}
           >
             <span className="flex h-8 w-8 items-center justify-center">

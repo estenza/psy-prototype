@@ -43,6 +43,7 @@
   --separator-strong: rgba(60, 60, 67, 0.28);
 
   /* Overlays */
+  --tooltip-foreground: #ffffff;
   --tooltip-background: #939393;
 }
 
@@ -82,5 +83,6 @@
   --separator-strong: rgba(255, 255, 255, 0.18);
 
   /* Overlays */
-  --tooltip-background: #24262b;
+  --tooltip-foreground: #ffffff;
+  --tooltip-background: #4c515a;
 }

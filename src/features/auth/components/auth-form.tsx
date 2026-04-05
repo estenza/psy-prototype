@@ -2,12 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthField } from "@/features/auth/components/auth-field";
-import {
-  PASSWORD_MIN_LENGTH,
-} from "@/features/auth/constants";
 import { buildPostAuthRedirectPath } from "@/features/auth/lib/profile";
 import type { AuthErrorResponse, AuthSuccessResponse } from "@/features/auth/types";
 
@@ -39,20 +36,15 @@ export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === "sign-up";
 
   const heading = isSignUp ? "Регистрация" : "Вход";
-  const submitLabel = isSignUp ? "Создать аккаунт" : "Войти";
+  const subheading = isSignUp
+    ? "Зарегистрируйтесь, чтобы продолжить"
+    : "Войдите, чтобы продолжить";
+  const submitLabel = isSignUp ? "Зарегистрироваться" : "Войти";
   const submitPath = isSignUp ? "/api/auth/sign-up" : "/api/auth/sign-in";
   const nextPath = searchParams.get("next")?.trim() || "/";
   const alternateAuthHref = isSignUp
     ? `/sign-in?next=${encodeURIComponent(nextPath)}`
     : `/sign-up?next=${encodeURIComponent(nextPath)}`;
-
-  const helperText = useMemo(() => {
-    if (!isSignUp) {
-      return "Сначала войдите по email и паролю. Если профиль ещё не завершён, следующим шагом предложим выбрать роль и оформить публичные данные.";
-    }
-
-    return "Сначала создаём базовый доступ по email и паролю, а роль и публичные данные спросим уже после входа отдельным коротким шагом.";
-  }, [isSignUp]);
 
   function updateField(name: keyof FormState, value: string) {
     setFormState((currentState) => ({
@@ -116,12 +108,12 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:px-7">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
           {heading}
         </h1>
-        <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
-          {helperText}
+        <p className="text-label-tertiary text-[14px] leading-6">
+          {subheading}
         </p>
       </div>
 
@@ -132,12 +124,12 @@ export function AuthForm({ mode }: AuthFormProps) {
         <AuthField
           name="email"
           type="email"
-          label="Email для входа"
+          label="Email"
           value={formState.email}
           onChange={(value) => {
             updateField("email", value);
           }}
-          placeholder="Используем его для входа в аккаунт"
+          placeholder="Введите Email"
           error={fieldErrors.email}
           autoComplete="email"
         />
@@ -145,12 +137,12 @@ export function AuthForm({ mode }: AuthFormProps) {
         <AuthField
           name="password"
           type="password"
-          label="Пароль для доступа"
+          label="Пароль"
           value={formState.password}
           onChange={(value) => {
             updateField("password", value);
           }}
-          placeholder={`Минимум ${PASSWORD_MIN_LENGTH} символов. Публично он нигде не отображается`}
+          placeholder="Введите пароль"
           error={fieldErrors.password}
           autoComplete={isSignUp ? "new-password" : "current-password"}
         />

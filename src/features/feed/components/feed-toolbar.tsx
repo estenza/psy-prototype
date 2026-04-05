@@ -67,14 +67,18 @@ export function FeedToolbar({
 
   return (
     <div className="surface-primary border-separator relative z-30 border-b px-4 py-2 sm:px-5">
-      <div className="text-label-secondary relative z-40 flex items-center justify-start gap-0 text-sm">
+      <div className="relative z-40 flex items-center justify-start gap-0 text-sm">
         <div ref={topicMenuRef} className="relative">
           <button
             type="button"
             onClick={() =>
               setOpenMenu((current) => (current === "topic" ? null : "topic"))
             }
-            className="interactive-control flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-2"
+            className={`interactive-control flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-2 ${
+              openMenu === "topic"
+                ? "text-[var(--label-primary)]"
+                : "text-[var(--label-tertiary)]"
+            }`}
           >
             <span>{activeTopicLabel}</span>
             <ChevronDownIcon />
@@ -123,7 +127,11 @@ export function FeedToolbar({
             onClick={() =>
               setOpenMenu((current) => (current === "sort" ? null : "sort"))
             }
-            className="interactive-control flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-2"
+            className={`interactive-control flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-2 ${
+              openMenu === "sort"
+                ? "text-[var(--label-primary)]"
+                : "text-[var(--label-tertiary)]"
+            }`}
           >
             <span>{sortMode}</span>
             <ChevronDownIcon />
@@ -160,9 +168,13 @@ export function FeedToolbar({
             onClick={() =>
               setOpenMenu((current) => (current === "view" ? null : "view"))
             }
-            className="interactive-control flex cursor-pointer items-center gap-1 rounded-full px-3 py-2"
+            className={`interactive-control flex cursor-pointer items-center gap-1 rounded-full px-3 py-2 ${
+              openMenu === "view"
+                ? "text-[var(--label-primary)]"
+                : "text-[var(--label-tertiary)]"
+            }`}
           >
-            <span className="text-label-tertiary [&_svg]:h-4 [&_svg]:w-4">
+            <span className="[&_svg]:h-4 [&_svg]:w-4">
               {viewMode === "card" ? (
                 <CardModeIcon />
               ) : (

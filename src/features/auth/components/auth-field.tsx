@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 type AuthFieldProps = {
   autoCapitalize?: string;
   autoComplete?: string;
@@ -21,34 +23,49 @@ export function AuthField({
   maxLength,
   name,
   onChange,
-  placeholder,
   type = "text",
   value,
 }: AuthFieldProps) {
   const id = `auth-field-${name}`;
+  const [isFocused, setIsFocused] = useState(false);
+  const isFloating = isFocused || value.trim().length > 0;
 
   return (
     <label
       htmlFor={id}
-      className="flex flex-col gap-2"
+      className="flex w-full flex-col gap-2"
     >
-      <span className="text-[14px] font-medium text-[var(--label-primary)]">
-        {label}
-      </span>
-      <input
-        id={id}
-        name={name}
-        type={type}
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        autoCapitalize={autoCapitalize}
-        autoComplete={autoComplete}
-        maxLength={maxLength}
-        placeholder={placeholder}
-        className="border-separator bg-background-primary text-label-primary focus-visible:ring-accent-primary rounded-2xl border px-4 py-3 text-sm outline-none transition-shadow focus-visible:ring-2"
-      />
+      <div className="relative w-full">
+        <input
+          id={id}
+          name={name}
+          type={type}
+          value={value}
+          onChange={(event) => {
+            onChange(event.target.value);
+          }}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          maxLength={maxLength}
+          aria-label={label}
+          className={`bg-background-primary text-label-primary w-full rounded-2xl border px-4 pb-3 pt-6 text-[16px] leading-5 outline-none transition-colors ${
+            error
+              ? "border-[var(--accent-critical)] focus:border-[var(--accent-critical)]"
+              : "border-separator focus:border-[var(--label-primary)]"
+          }`}
+        />
+        <span
+          className={`pointer-events-none absolute left-4 right-4 top-1/2 origin-left text-[16px] leading-5 transform-gpu will-change-transform transition-[transform,color] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
+            isFloating
+              ? "text-label-tertiary -translate-y-[22px] scale-[0.75]"
+              : "text-label-secondary -translate-y-1/2 scale-100"
+          }`}
+        >
+          {label}
+        </span>
+      </div>
       {error ? (
         <span className="text-[12px] leading-4 text-[var(--accent-critical)]">
           {error}

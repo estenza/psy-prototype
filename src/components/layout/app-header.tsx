@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
 import {
@@ -16,6 +16,7 @@ import { useAuthClient } from "@/features/auth/components/auth-required-provider
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { AuthStatus } from "@/features/auth/components/auth-status";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
+import { LegalInfo } from "@/components/layout/legal-info";
 import type { NavigationItemKey } from "@/types/navigation";
 
 type AppHeaderProps = {
@@ -60,6 +61,9 @@ function SearchField({
 const circularControlClassName =
   "interactive-control group/tooltip relative inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)] transition-colors";
 
+const mobileMenuButtonClassName =
+  "interactive-control relative inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)] transition-colors lg:hidden";
+
 function NotificationButton() {
   return (
     <button
@@ -86,13 +90,15 @@ function MobileMenuButton({
     <button
       type="button"
       aria-expanded={expanded}
-      aria-haspopup="menu"
+      aria-haspopup="dialog"
+      aria-controls="app-mobile-navigation"
       aria-label={expanded ? "Закрыть меню" : "Открыть меню"}
       onClick={onClick}
-      className={`${circularControlClassName} lg:hidden`}
+      className={mobileMenuButtonClassName}
     >
-      <MenuRailIcon />
-      <HoverTooltip label="Меню" />
+      <span className="flex h-5 w-5 flex-none items-center justify-center">
+        <MenuRailIcon />
+      </span>
     </button>
   );
 }
@@ -146,26 +152,11 @@ export function AppHeader({
   const { user } = useAuthClient();
   const { requireAuth } = useAuthRequiredAction();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const activeSection = resolveActiveSection(pathname);
 
   useEffect(() => {
     if (!isMobileMenuOpen) {
       return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (mobileMenuRef.current?.contains(target)) {
-        return;
-      }
-
-      setIsMobileMenuOpen(false);
     }
 
     function handleEscape(event: KeyboardEvent) {
@@ -174,14 +165,45 @@ export function AppHeader({
       }
     }
 
-    document.addEventListener("pointerdown", handlePointerDown, true);
     document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+
+    function handleMediaQueryChange(event: MediaQueryListEvent) {
+      if (event.matches) {
+        setIsMobileMenuOpen(false);
+      }
+    }
+
+    mediaQuery.addEventListener("change", handleMediaQueryChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleMediaQueryChange);
+    };
+  }, []);
 
   async function handleCreateTopicClick(event: React.MouseEvent<HTMLAnchorElement>) {
     await requireAuth(event);
@@ -191,41 +213,10 @@ export function AppHeader({
     <header className="surface-primary border-separator relative z-50 border-b min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0">
       <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] items-center gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[721px]:gap-3 min-[721px]:py-1 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-[var(--app-shell-side-offset)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
-          <div ref={mobileMenuRef} className="relative flex items-center lg:hidden">
-            <MobileMenuButton
-              expanded={isMobileMenuOpen}
-              onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
-            />
-
-            {isMobileMenuOpen ? (
-              <nav
-                className="surface-elevated border-separator absolute left-0 top-[calc(100%+8px)] z-[100] w-[280px] max-w-[calc(100vw-24px)] rounded-[20px] border p-2 shadow-[0_14px_32px_rgba(0,0,0,0.08)]"
-                aria-label="Разделы"
-                role="menu"
-              >
-                {navItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    role="menuitem"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`comment-menu-item flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[15px] ${
-                      item.key === activeSection
-                        ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
-                        : "text-[var(--label-secondary)]"
-                    }`}
-                  >
-                    <span className="flex h-8 w-8 flex-none items-center justify-center">
-                      <NavIcon name={item.key} filled={item.key === activeSection} />
-                    </span>
-                    <span className="flex-1">{item.name}</span>
-                  </Link>
-                ))}
-              </nav>
-            ) : null}
-          </div>
+          <MobileMenuButton
+            expanded={isMobileMenuOpen}
+            onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
+          />
 
           <Link
             href="/"
@@ -264,6 +255,79 @@ export function AppHeader({
             placeholder="Поиск по историям, темам, психологам"
           />
         ) : null}
+      </div>
+
+      <div
+        className={`fixed inset-0 z-[120] lg:hidden ${
+          isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
+        }`}
+        aria-hidden={!isMobileMenuOpen}
+      >
+        <button
+          type="button"
+          aria-label="Закрыть меню"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className={`absolute inset-0 bg-[rgba(10,12,16,0.32)] transition-opacity duration-300 ease-out ${
+            isMobileMenuOpen ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        <aside
+          id="app-mobile-navigation"
+          aria-label="Разделы"
+          className={`surface-primary border-separator relative flex h-full w-[320px] max-w-[86vw] flex-col overflow-y-auto border-r transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex min-h-full flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-[calc(env(safe-area-inset-top)+18px)]">
+            <div className="px-3 pb-5 pt-2">
+              <Link
+                href="/"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="app-brand font-helvetica inline-block text-[30px] font-black leading-none"
+              >
+                внутри.
+              </Link>
+            </div>
+
+            <nav className="flex flex-col gap-1" aria-label="Навигация">
+              {navItems.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`comment-menu-item flex min-h-14 items-center gap-3 rounded-[18px] px-3 py-3 text-left text-[16px] ${
+                    item.key === activeSection
+                      ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
+                      : "text-[var(--label-tertiary)]"
+                  }`}
+                >
+                  <span className="flex h-8 w-8 flex-none items-center justify-center">
+                    <NavIcon name={item.key} filled={item.key === activeSection} />
+                  </span>
+                  <span className="flex-1">{item.name}</span>
+                </Link>
+              ))}
+            </nav>
+
+            <div className="mt-auto px-3 pb-2 pt-5">
+              {showCreateAction ? (
+                <CreateTopicButton
+                  className="interactive-fill h-12 w-full justify-center px-4 text-[15px]"
+                  onClick={async (event) => {
+                    setIsMobileMenuOpen(false);
+                    await handleCreateTopicClick(event);
+                  }}
+                >
+                  Создать обсуждение
+                </CreateTopicButton>
+              ) : null}
+              <LegalInfo className={showCreateAction ? "mt-5 pt-5" : ""} />
+            </div>
+          </div>
+        </aside>
       </div>
     </header>
   );
