@@ -179,7 +179,7 @@ export function DiscussionViewScreen({ postId }: DiscussionViewScreenProps) {
             activeSection={DEFAULT_ACTIVE_SECTION}
           />
 
-          <section className="surface-primary border-separator min-w-0 border-l border-r">
+          <section className="surface-primary border-separator -mx-4 min-w-0 sm:-mx-6 lg:mx-0 lg:border-l lg:border-r">
             <div className="border-separator border-b px-4 py-2 sm:px-5">
               <BackNavigationButton onClick={handleBack} />
             </div>

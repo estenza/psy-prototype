@@ -17,7 +17,14 @@
 html,
 body {
   height: 100%;
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: auto;
+}
+
+@media (min-width: 1024px) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
 }
 
 html {
@@ -66,6 +73,15 @@ textarea,
 select {
   font-family: inherit;
   letter-spacing: inherit;
+}
+
+@media (max-width: 1023px) {
+  .search-field,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 @layer components {

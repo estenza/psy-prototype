@@ -183,16 +183,12 @@ export function AppHeader({
     };
   }, [isMobileMenuOpen]);
 
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
-
   async function handleCreateTopicClick(event: React.MouseEvent<HTMLAnchorElement>) {
     await requireAuth(event);
   }
 
   return (
-    <header className="surface-primary border-separator z-50 border-b min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0">
+    <header className="surface-primary border-separator relative z-50 border-b min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0">
       <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] items-center gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[721px]:gap-3 min-[721px]:py-1 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-[var(--app-shell-side-offset)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <div ref={mobileMenuRef} className="relative flex items-center lg:hidden">
