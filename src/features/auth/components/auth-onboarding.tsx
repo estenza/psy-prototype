@@ -227,7 +227,7 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
                   setFieldErrors({});
                   setFormError(null);
                 }}
-                className={`border-separator rounded-[24px] border px-5 py-4 text-left transition-colors ${
+                className={`border-separator cursor-pointer rounded-[24px] border px-5 py-4 text-left transition-colors ${
                   selectedRole === option.role
                     ? "bg-[color-mix(in_srgb,var(--label-primary)_6%,white)]"
                     : "bg-transparent"

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getAuthPostgresPool, ensureAuthPostgresSchema, isPostgresAuthEnabled } from "@/lib/auth-postgres";
+import { isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
 import type { AdminListedUser, AdminUsersFilters } from "@/features/admin/types";
 import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
@@ -86,8 +86,7 @@ export async function listAdminUsers(filters: AdminUsersFilters) {
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   if (isPostgresAuthEnabled()) {
-    await ensureAuthPostgresSchema();
-    const rows = await getAuthPostgresPool().query<AdminUserRow>(
+    const rows = await queryAuthPostgres<AdminUserRow>(
       `
         SELECT
           ${PG_ADMIN_USER_COLUMNS}

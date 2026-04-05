@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -78,6 +78,26 @@ export function TopicEditor({
   placeholder,
 }: TopicEditorProps) {
   const isEditorEmpty = !hasTopicBodyContent(content);
+  const pendingPasteScrollPositionRef = useRef<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  function restorePasteScrollPosition() {
+    const savedPosition = pendingPasteScrollPositionRef.current;
+
+    if (!savedPosition) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo(savedPosition.x, savedPosition.y);
+        pendingPasteScrollPositionRef.current = null;
+      });
+    });
+  }
+
   const editor = useEditor(
     {
       content,
@@ -85,6 +105,24 @@ export function TopicEditor({
       editorProps: {
         attributes: {
           class: "min-h-[112px] px-5 pb-5 pt-2 text-[16px] leading-6",
+        },
+        handleDOMEvents: {
+          paste: () => {
+            pendingPasteScrollPositionRef.current = {
+              x: window.scrollX,
+              y: window.scrollY,
+            };
+
+            return false;
+          },
+        },
+        handleScrollToSelection: () => {
+          if (!pendingPasteScrollPositionRef.current) {
+            return false;
+          }
+
+          restorePasteScrollPosition();
+          return true;
         },
       },
       extensions: [
@@ -110,6 +148,10 @@ export function TopicEditor({
       },
       onUpdate({ editor: currentEditor }) {
         onChange(currentEditor.getHTML());
+
+        if (pendingPasteScrollPositionRef.current) {
+          restorePasteScrollPosition();
+        }
       },
     },
     [placeholder],

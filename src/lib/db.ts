@@ -20,6 +20,14 @@ function readTableColumns(database: DatabaseSync, tableName: string) {
   }>;
 }
 
+function readForeignKeys(database: DatabaseSync, tableName: string) {
+  return database
+    .prepare(`PRAGMA foreign_key_list(${tableName})`)
+    .all() as Array<{
+    table: string;
+  }>;
+}
+
 function createUsersTable(database: DatabaseSync) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -83,6 +91,41 @@ function createDiscussionsTable(database: DatabaseSync) {
       ON discussions (created_at DESC);
     CREATE INDEX IF NOT EXISTS discussions_author_user_id_idx
       ON discussions (author_user_id);
+  `);
+}
+
+function createSessionsTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id);
+    CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at);
+  `);
+}
+
+function createPasswordResetTokensTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx
+      ON password_reset_tokens (user_id);
+    CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_at_idx
+      ON password_reset_tokens (expires_at);
   `);
 }
 
@@ -151,40 +194,59 @@ function migrateLegacyUsersTable(database: DatabaseSync) {
   `);
 }
 
+function repairLegacySessionsForeignKey(database: DatabaseSync) {
+  const columns = readTableColumns(database, "sessions");
+
+  if (columns.length === 0) {
+    return;
+  }
+
+  const foreignKeys = readForeignKeys(database, "sessions");
+  const referencesLegacyUsers = foreignKeys.some(
+    (foreignKey) => foreignKey.table === "users_legacy_auth",
+  );
+
+  if (!referencesLegacyUsers) {
+    return;
+  }
+
+  database.exec(`
+    PRAGMA foreign_keys = OFF;
+    ALTER TABLE sessions RENAME TO sessions_legacy_fk;
+  `);
+
+  createSessionsTable(database);
+
+  database.exec(`
+    INSERT INTO sessions (
+      id,
+      user_id,
+      token_hash,
+      expires_at,
+      created_at
+    )
+    SELECT
+      id,
+      user_id,
+      token_hash,
+      expires_at,
+      created_at
+    FROM sessions_legacy_fk;
+
+    DROP TABLE sessions_legacy_fk;
+    PRAGMA foreign_keys = ON;
+  `);
+}
+
 function initializeDatabase(database: DatabaseSync) {
   database.exec("PRAGMA foreign_keys = ON;");
   createUsersTable(database);
   migrateLegacyUsersTable(database);
   createUsersTable(database);
   createDiscussionsTable(database);
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      token_hash TEXT NOT NULL UNIQUE,
-      expires_at TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id);
-    CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at);
-
-    CREATE TABLE IF NOT EXISTS password_reset_tokens (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      token_hash TEXT NOT NULL UNIQUE,
-      expires_at TEXT NOT NULL,
-      used_at TEXT,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx
-      ON password_reset_tokens (user_id);
-    CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_at_idx
-      ON password_reset_tokens (expires_at);
-  `);
+  createSessionsTable(database);
+  createPasswordResetTokensTable(database);
+  repairLegacySessionsForeignKey(database);
 }
 
 function assertSafeDeployedDatabaseConfig() {

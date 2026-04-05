@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { getAuthPostgresPool, ensureAuthPostgresSchema, isPostgresAuthEnabled } from "@/lib/auth-postgres";
+import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
 import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
 import type {
@@ -137,8 +137,7 @@ function readPasswordResetTokenRow(result: Record<string, unknown> | undefined |
 }
 
 async function queryPgRows<T extends Record<string, unknown>>(query: string, values: unknown[] = []) {
-  await ensureAuthPostgresSchema();
-  const result = await getAuthPostgresPool().query<T>(query, values);
+  const result = await queryAuthPostgres<T>(query, values);
   return result.rows;
 }
 
@@ -148,8 +147,7 @@ async function queryPgOne<T extends Record<string, unknown>>(query: string, valu
 }
 
 async function execPg(query: string, values: unknown[] = []) {
-  await ensureAuthPostgresSchema();
-  await getAuthPostgresPool().query(query, values);
+  await execAuthPostgres(query, values);
 }
 
 export async function deleteExpiredSessions() {

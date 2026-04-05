@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { getAuthPostgresPool, ensureAuthPostgresSchema, isPostgresAuthEnabled } from "@/lib/auth-postgres";
+import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
 import { isPostIntent, isPostTopic } from "@/constants/post-taxonomy";
 import type { SessionUser } from "@/features/auth/types";
@@ -102,8 +102,7 @@ function readDiscussionRow(result: Record<string, unknown> | undefined | null) {
 }
 
 async function queryPgRows<T extends Record<string, unknown>>(query: string, values: unknown[] = []) {
-  await ensureAuthPostgresSchema();
-  const result = await getAuthPostgresPool().query<T>(query, values);
+  const result = await queryAuthPostgres<T>(query, values);
   return result.rows;
 }
 
@@ -349,8 +348,7 @@ export async function createDiscussion(input: DiscussionMutationInput) {
   const timestamp = new Date().toISOString();
 
   if (isPostgresAuthEnabled()) {
-    await ensureAuthPostgresSchema();
-    await getAuthPostgresPool().query(
+    await execAuthPostgres(
       `INSERT INTO discussions (
         id,
         author_user_id,
@@ -456,8 +454,7 @@ export async function updateDiscussion(postId: string, input: DiscussionMutation
   const updatedAt = new Date().toISOString();
 
   if (isPostgresAuthEnabled()) {
-    await ensureAuthPostgresSchema();
-    await getAuthPostgresPool().query(
+    await execAuthPostgres(
       `UPDATE discussions
       SET
         intent = $1,
