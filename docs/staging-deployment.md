@@ -140,6 +140,39 @@ Recommended runtime secrets for staging parity:
 Routine staging deploys should go through GitHub Actions. The local
 `scripts/deploy-staging.sh` flow is only an emergency fallback.
 
+## Staging Verification Checklist For `ADMIN_ACCESS_KEY`
+
+Pre-checks before enabling key:
+
+1. Confirm admin host is explicitly configured in staging runtime:
+   - `ADMIN_APP_HOST` (preferred) or `ADMIN_APP_URL`
+2. Confirm `ADMIN_ALLOWED_EMAILS` contains at least one real operator email.
+3. Confirm operator account is moderator/admin-capable in app data.
+
+Enable key in staging:
+
+1. Set `ADMIN_ACCESS_KEY` in GitHub `staging` Environment secrets.
+2. Push to `develop` and wait for `Deploy Staging` workflow success.
+
+Verify behavior (replace placeholders with real hosts/emails, never paste key in logs):
+
+1. Admin host sign-in without key -> denied:
+   - `curl -i -X POST "https://<admin-host>/api/auth/sign-in" -H "content-type: application/json" --data '{"email":"<allowlisted-email>","password":"<password>"}'`
+2. Admin host sign-in with wrong key -> denied:
+   - add `-H "x-admin-access-key: wrong-value"` and verify deny.
+3. Admin host sign-in with correct key but non-allowlisted or non-moderator user -> denied.
+4. Admin host sign-in with correct key + allowlisted moderator user -> success.
+   - browser flow: open `https://<admin-host>/sign-in`, enter email/password and access key, then confirm `/admin/users` opens without extra manual headers because the server stores the validated key in a secure cookie.
+5. Admin page/API access without key -> denied:
+   - `curl -i "https://<admin-host>/admin/users"`
+   - `curl -i "https://<admin-host>/api/admin/users"`
+6. Admin API with wrong key -> denied:
+   - add `-H "x-admin-access-key: wrong-value"` to `/api/admin/users`.
+7. Non-admin host still blocks admin paths:
+   - `curl -i "https://<public-host>/admin/users"` -> blocked as before.
+8. Rate limit still works:
+   - repeat failed admin sign-in requests > limit within window and verify `429 Too many requests`.
+
 ## Legacy Branch Cleanup
 
 The active staging branch is now `develop`.

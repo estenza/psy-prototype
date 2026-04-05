@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAppTheme } from "@/components/theme/app-theme-provider";
 import {
-  AdminShieldIcon,
   BookmarkIcon,
   DraftsIcon,
   LogOutIcon,
@@ -123,7 +122,6 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
   const menuWidthClass = compact ? "w-[272px] lg:w-[304px]" : "w-[304px]";
   const profileHandle = getUserHandle(user);
   const adminBadgeLabel = getAdminBadgeLabel(user);
-  const hasAdminAccess = adminBadgeLabel !== null;
   const navigationItems = [
     {
       href: "/settings",
@@ -140,15 +138,6 @@ export function AuthStatus({ compact = false }: AuthStatusProps) {
       label: "Черновики",
       icon: <DraftsIcon />,
     },
-    ...(hasAdminAccess
-      ? [
-          {
-            href: "/admin/users",
-            label: "Админка",
-            icon: <AdminShieldIcon />,
-          },
-        ]
-      : []),
   ] as const;
 
   return (

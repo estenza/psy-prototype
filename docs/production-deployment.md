@@ -102,6 +102,39 @@ Optional but needed for live password reset emails:
 Routine production deploys should go through GitHub Actions. The local
 `scripts/deploy-production.sh` flow is only an emergency fallback.
 
+## Production Rollout Checklist For `ADMIN_ACCESS_KEY`
+
+Only execute after staging verification is complete.
+
+Pre-rollout blockers (must be confirmed first):
+
+1. Known admin host in production (`ADMIN_APP_HOST` or `ADMIN_APP_URL`) is configured.
+2. `ADMIN_ALLOWED_EMAILS` includes at least one operator email that you control.
+3. That operator user has moderator/admin-capable role in production data.
+4. Operator knows how to send `x-admin-access-key` in admin requests.
+
+Enable in production:
+
+1. Add `ADMIN_ACCESS_KEY` to GitHub Environment `production` secrets.
+2. Deploy by merging/pushing to `main`.
+3. Confirm `Deploy Production` workflow succeeded.
+
+Post-deploy verification:
+
+1. Admin host sign-in without key -> denied.
+2. Admin host sign-in with wrong key -> denied.
+3. Admin host sign-in with correct key + non-allowlisted/non-moderator user -> denied.
+4. Admin host sign-in with correct key + allowlisted moderator user -> success.
+   - browser flow: sign in through `https://<admin-host>/sign-in`, provide the access key once, then confirm the browser can open `/admin/users` using the secure cookie set by the server.
+5. Admin page/API access requires key.
+6. Non-admin host still blocks `/admin*` and `/api/admin*`.
+7. Repeated forbidden attempts still hit rate limit (`429`).
+
+Rollback (minimal and reversible):
+
+1. Remove `ADMIN_ACCESS_KEY` from `production` Environment secrets.
+2. Redeploy `main` to restore previous no-key behavior while keeping other admin checks.
+
 ## Auth Storage Safety
 
 Production should not rely on SQLite inside the Docker image anymore.

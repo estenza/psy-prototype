@@ -18,11 +18,19 @@ workflows.
   - GitHub Environment: `staging`
   - required secret: `YC_SA_JSON_CREDENTIALS`
   - required secret: `AUTH_DATABASE_URL`
+  - admin rollout secrets:
+    - `ADMIN_APP_HOST` or `ADMIN_APP_URL`
+    - `ADMIN_ALLOWED_EMAILS`
+    - optional `ADMIN_ACCESS_KEY` (enables extra key gate)
 - Production workflow: `.github/workflows/deploy-production.yml`
   - branch trigger: `main`
   - GitHub Environment: `production`
   - required secret: `YC_SA_JSON_CREDENTIALS`
   - required secret: `AUTH_DATABASE_URL`
+  - admin rollout secrets:
+    - `ADMIN_APP_HOST` or `ADMIN_APP_URL`
+    - `ADMIN_ALLOWED_EMAILS`
+    - optional `ADMIN_ACCESS_KEY` (enables extra key gate)
 
 Production also expects runtime values to come from GitHub Environment secrets
 instead of `.env.local` inside the Docker image.
@@ -57,6 +65,9 @@ GitHub path:
    - `AUTH_SMTP_USERNAME`
    - `AUTH_SMTP_PASSWORD`
    - `AUTH_SMTP_HELO_HOST`
+   - `ADMIN_APP_HOST` (or `ADMIN_APP_URL`)
+   - `ADMIN_ALLOWED_EMAILS`
+   - `ADMIN_ACCESS_KEY` (only when you are ready to enforce key)
 9. Open or create the `production` environment
 10. Open `Secrets and variables` -> `Actions`
 11. Add a secret named `YC_SA_JSON_CREDENTIALS`
@@ -71,6 +82,20 @@ GitHub path:
     - `AUTH_SMTP_USERNAME`
     - `AUTH_SMTP_PASSWORD`
     - `AUTH_SMTP_HELO_HOST`
+    - `ADMIN_APP_HOST` (or `ADMIN_APP_URL`)
+    - `ADMIN_ALLOWED_EMAILS`
+    - `ADMIN_ACCESS_KEY` (enable only after staging verification)
+
+## Safe `ADMIN_ACCESS_KEY` Rollout Order
+
+1. Configure and verify admin access on **staging** first.
+2. Add `ADMIN_ACCESS_KEY` only to GitHub Environment `staging`.
+3. Deploy `develop` and run the staging checklist from
+   [staging-deployment.md](./staging-deployment.md).
+4. Only after staging pass, add the same `ADMIN_ACCESS_KEY` pattern to GitHub
+   Environment `production`.
+5. Deploy `main` and run the production checklist from
+   [production-deployment.md](./production-deployment.md).
 
 ## What Value To Put In The Secret
 
@@ -80,6 +105,10 @@ Use the full Yandex Cloud authorized key JSON for service account:
 
 The JSON should be the full authorized key object, not just a token, not a
 service account ID, and not a path to a file.
+
+For browser access on the admin host, operators enter `ADMIN_ACCESS_KEY` once
+on `/sign-in`; the app stores the validated key in a secure cookie. For CLI/API
+checks, keep using `x-admin-access-key`.
 
 For now, the fastest practical setup is to use the same service account JSON in
 both environments. If you later want stricter separation, you can switch to

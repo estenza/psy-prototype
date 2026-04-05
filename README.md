@@ -60,6 +60,12 @@ AUTH_SMTP_SECURE=false
 AUTH_SMTP_USERNAME=login
 AUTH_SMTP_PASSWORD=secret
 AUTH_SMTP_HELO_HOST=vnutri.live
+ADMIN_APP_HOST=console-secret.vnutri.live
+ADMIN_ALLOWED_EMAILS=moderator@example.com,admin@example.com
+ADMIN_ACCESS_KEY=your-extra-secret-key
+ADMIN_RATE_LIMIT_WINDOW_MS=60000
+ADMIN_SIGN_IN_RATE_LIMIT_MAX=10
+ADMIN_ACCESS_RATE_LIMIT_MAX=30
 ```
 
 Примечания:
@@ -70,6 +76,45 @@ AUTH_SMTP_HELO_HOST=vnutri.live
 - если SMTP не настроен и приложение не в production, reset-password API
   возвращает debug-ссылку вместо реальной отправки письма
 - staging и production задают свои runtime env через GitHub Actions deploy
+
+### Admin security hardening (app-level)
+
+- админ-контур работает только при явной настройке `ADMIN_APP_HOST` (или
+  `ADMIN_APP_URL`), без fallback на предсказуемый домен
+- `ADMIN_ALLOWED_EMAILS` обязателен: если пустой/не задан, доступ в админку
+  запрещён всем
+- регистрация (`/sign-up`) на admin host отключена
+- на non-admin host маршруты `/admin*` и `/api/admin*` недоступны
+- для admin host добавляется `X-Robots-Tag: noindex, nofollow`
+
+Rate limiting:
+
+- применяется только к админ-поверхностям:
+  - admin-host `POST /api/auth/sign-in`
+  - admin-host попытки доступа к `/admin*` и `/api/admin*`
+  - admin-host `POST /api/auth/sign-up` (хотя он и заблокирован)
+- ключ лимита:
+  - sign-in: `IP + email`
+  - admin access: `IP` или `IP + email` (если email доступен)
+- по умолчанию:
+  - окно: `60s` (`ADMIN_RATE_LIMIT_WINDOW_MS`)
+  - sign-in: `10` попыток (`ADMIN_SIGN_IN_RATE_LIMIT_MAX`)
+  - admin access: `30` попыток (`ADMIN_ACCESS_RATE_LIMIT_MAX`)
+
+`ADMIN_ACCESS_KEY` (опционально):
+
+- если `ADMIN_ACCESS_KEY` **не задан**, поведение без дополнительного ключа
+- если `ADMIN_ACCESS_KEY` **задан**, для admin host на чувствительных маршрутах
+  (`/api/auth/sign-in`, `/admin*`, `/api/admin*`) требуется передавать
+  `x-admin-access-key` или сначала ввести ключ на admin-host `/sign-in`, чтобы
+  приложение сохранило его в защищённой cookie для браузерной навигации
+- при отсутствии/ошибке ключа возвращается generic отказ (`Access denied`)
+
+Ограничения текущего rate limit:
+
+- реализация in-memory внутри процесса Next.js
+- лимиты не шарятся между инстансами/репликами
+- при рестарте контейнера счётчики обнуляются
 
 ## Окружения
 

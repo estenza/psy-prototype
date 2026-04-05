@@ -90,6 +90,43 @@ jobs:
             exit 1
           fi
 
+      - name: Validate admin rollout secrets
+        env:
+          ADMIN_APP_HOST: ${{ secrets.ADMIN_APP_HOST }}
+          ADMIN_APP_URL: ${{ secrets.ADMIN_APP_URL }}
+          ADMIN_ALLOWED_EMAILS: ${{ secrets.ADMIN_ALLOWED_EMAILS }}
+          ADMIN_ACCESS_KEY: ${{ secrets.ADMIN_ACCESS_KEY }}
+        run: |
+          has_admin_host=0
+          has_allowlist=0
+          has_admin_key=0
+
+          if [ -n "${ADMIN_APP_HOST//[[:space:]]/}" ] || [ -n "${ADMIN_APP_URL//[[:space:]]/}" ]; then
+            has_admin_host=1
+          fi
+
+          if [ -n "${ADMIN_ALLOWED_EMAILS//[[:space:]]/}" ]; then
+            has_allowlist=1
+          fi
+
+          if [ -n "${ADMIN_ACCESS_KEY//[[:space:]]/}" ]; then
+            has_admin_key=1
+          fi
+
+          if [ "$has_admin_key" -eq 1 ] && [ "$has_admin_host" -eq 0 ]; then
+            echo "::error::ADMIN_ACCESS_KEY is set but ADMIN_APP_HOST/ADMIN_APP_URL is empty in production Environment secrets."
+            exit 1
+          fi
+
+          if [ "$has_admin_key" -eq 1 ] && [ "$has_allowlist" -eq 0 ]; then
+            echo "::error::ADMIN_ACCESS_KEY is set but ADMIN_ALLOWED_EMAILS is empty in production Environment secrets."
+            exit 1
+          fi
+
+          if [ "$has_admin_host" -eq 1 ] && [ "$has_allowlist" -eq 0 ]; then
+            echo "::warning::ADMIN_APP_HOST/ADMIN_APP_URL is set but ADMIN_ALLOWED_EMAILS is empty; admin access will be denied for everyone."
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -129,6 +166,10 @@ jobs:
             APP_ENV=production
             AUTH_APP_URL=https://vnutri.live
             AUTH_DATABASE_URL=${{ secrets.AUTH_DATABASE_URL }}
+            ADMIN_APP_HOST=${{ secrets.ADMIN_APP_HOST }}
+            ADMIN_APP_URL=${{ secrets.ADMIN_APP_URL }}
+            ADMIN_ALLOWED_EMAILS=${{ secrets.ADMIN_ALLOWED_EMAILS }}
+            ADMIN_ACCESS_KEY=${{ secrets.ADMIN_ACCESS_KEY }}
 
       - name: Smoke check production URLs
         run: |

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clearAdminAccessKeyCookie } from "@/features/admin/lib/admin-console";
 import { deleteSessionByToken } from "@/features/auth/lib/auth-service";
 import { clearSessionCookie, readSessionTokenFromCookies } from "@/features/auth/lib/session";
 
@@ -15,6 +16,7 @@ export async function POST() {
     ok: true,
   });
 
+  clearAdminAccessKeyCookie(response);
   clearSessionCookie(response);
 
   return response;

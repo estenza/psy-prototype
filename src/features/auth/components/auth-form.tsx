@@ -9,39 +9,51 @@ import { buildPostAuthRedirectPath } from "@/features/auth/lib/profile";
 import type { AuthErrorResponse, AuthSuccessResponse } from "@/features/auth/types";
 
 type AuthMode = "sign-in" | "sign-up";
+type AuthFormContext = "default" | "admin";
 
 type AuthFormProps = {
+  context?: AuthFormContext;
+  defaultNextPath?: string;
   mode: AuthMode;
 };
 
 type FormState = {
+  adminAccessKey: string;
   email: string;
   password: string;
 };
 
 const INITIAL_FORM_STATE: FormState = {
+  adminAccessKey: "",
   email: "",
   password: "",
 };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({
+  context = "default",
+  defaultNextPath = "/",
+  mode,
+}: AuthFormProps) {
   const searchParams = useSearchParams();
   const [formState, setFormState] = useState(INITIAL_FORM_STATE);
   const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<"email" | "password", string>>
+    Partial<Record<keyof FormState, string>>
   >({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isSignUp = mode === "sign-up";
+  const isAdminContext = context === "admin";
 
   const heading = isSignUp ? "Регистрация" : "Вход";
-  const subheading = isSignUp
-    ? "Зарегистрируйтесь, чтобы продолжить"
-    : "Войдите, чтобы продолжить";
+  const subheading = isAdminContext
+    ? "Войдите, чтобы открыть админку"
+    : isSignUp
+      ? "Зарегистрируйтесь, чтобы продолжить"
+      : "Войдите, чтобы продолжить";
   const submitLabel = isSignUp ? "Зарегистрироваться" : "Войти";
   const submitPath = isSignUp ? "/api/auth/sign-up" : "/api/auth/sign-in";
-  const nextPath = searchParams.get("next")?.trim() || "/";
+  const nextPath = searchParams.get("next")?.trim() || defaultNextPath;
   const alternateAuthHref = isSignUp
     ? `/sign-in?next=${encodeURIComponent(nextPath)}`
     : `/sign-up?next=${encodeURIComponent(nextPath)}`;
@@ -76,6 +88,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 password: formState.password,
               }
             : {
+                adminAccessKey: isAdminContext ? formState.adminAccessKey : undefined,
                 email: formState.email,
                 password: formState.password,
               },
@@ -147,6 +160,21 @@ export function AuthForm({ mode }: AuthFormProps) {
           autoComplete={isSignUp ? "new-password" : "current-password"}
         />
 
+        {isAdminContext && !isSignUp ? (
+          <AuthField
+            name="adminAccessKey"
+            type="password"
+            label="Ключ доступа"
+            value={formState.adminAccessKey}
+            onChange={(value) => {
+              updateField("adminAccessKey", value);
+            }}
+            placeholder="Введите ключ доступа"
+            error={fieldErrors.adminAccessKey}
+            autoComplete="off"
+          />
+        ) : null}
+
         {!isSignUp ? (
           <Link
             href="/forgot-password"
@@ -173,15 +201,17 @@ export function AuthForm({ mode }: AuthFormProps) {
         </Button>
       </form>
 
-      <div className="mt-5 text-[14px] leading-6 text-[var(--label-secondary)]">
-        {isSignUp ? "Уже есть аккаунт?" : "Ещё нет аккаунта?"}{" "}
-        <Link
-          href={alternateAuthHref}
-          className="font-semibold text-[var(--label-primary)] underline decoration-[color-mix(in_srgb,var(--label-primary)_18%,transparent)] underline-offset-4"
-        >
-          {isSignUp ? "Войти" : "Зарегистрироваться"}
-        </Link>
-      </div>
+      {!isAdminContext ? (
+        <div className="mt-5 text-[14px] leading-6 text-[var(--label-secondary)]">
+          {isSignUp ? "Уже есть аккаунт?" : "Ещё нет аккаунта?"}{" "}
+          <Link
+            href={alternateAuthHref}
+            className="font-semibold text-[var(--label-primary)] underline decoration-[color-mix(in_srgb,var(--label-primary)_18%,transparent)] underline-offset-4"
+          >
+            {isSignUp ? "Войти" : "Зарегистрироваться"}
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }
