@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
+import {
+  DEFAULT_ACTIVE_SECTION,
+  isNavigationItemCurrent,
+  navItems,
+} from "@/constants/navigation";
 import {
   MenuRailIcon,
   NavIcon,
@@ -16,6 +20,7 @@ import { useAuthClient } from "@/features/auth/components/auth-required-provider
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { AuthStatus } from "@/features/auth/components/auth-status";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
+import { AppBrand } from "@/components/layout/app-brand";
 import { LegalInfo } from "@/components/layout/legal-info";
 import type { NavigationItemKey } from "@/types/navigation";
 
@@ -129,17 +134,7 @@ function CreateTopicButton({
 }
 
 function resolveActiveSection(pathname: string | null): NavigationItemKey {
-  const matchedItem = navItems.find((item) => {
-    if (item.href === "#") {
-      return false;
-    }
-
-    if (item.href === "/") {
-      return pathname === "/";
-    }
-
-    return pathname === item.href || pathname?.startsWith(`${item.href}/`);
-  });
+  const matchedItem = navItems.find((item) => isNavigationItemCurrent(pathname, item));
 
   return matchedItem?.key ?? DEFAULT_ACTIVE_SECTION;
 }
@@ -149,6 +144,7 @@ export function AppHeader({
   showSearch = true,
 }: AppHeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuthClient();
   const { requireAuth } = useAuthRequiredAction();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -209,10 +205,22 @@ export function AppHeader({
     await requireAuth(event);
   }
 
+  function handleNavigationItemClick(
+    event: React.MouseEvent<HTMLAnchorElement>,
+    item: (typeof navItems)[number],
+  ) {
+    if (!isNavigationItemCurrent(pathname, item)) {
+      return;
+    }
+
+    event.preventDefault();
+    router.refresh();
+  }
+
   return (
     <header className="surface-primary border-separator relative z-50 border-b min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0">
       <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] items-center gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[721px]:gap-3 min-[721px]:py-1 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-[var(--app-shell-side-offset)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:pl-5">
           <MobileMenuButton
             expanded={isMobileMenuOpen}
             onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
@@ -220,9 +228,13 @@ export function AppHeader({
 
           <Link
             href="/"
-            className="app-brand font-helvetica hidden w-fit max-w-full cursor-pointer text-[26px] font-black leading-none min-[361px]:block sm:text-[30px] lg:max-w-[var(--app-shell-side-rail-width)] lg:text-[32px]"
+            aria-label="внутри"
+            className="hidden w-fit max-w-full cursor-pointer min-[361px]:inline-flex lg:max-w-[var(--app-shell-side-rail-width)]"
           >
-            внутри.
+            <AppBrand
+              wordmarkClassName="h-[22px] w-auto shrink-0 sm:h-7 lg:h-8"
+              labelClassName="h-[14px] w-auto shrink-0 sm:h-[18px] lg:h-5"
+            />
           </Link>
         </div>
 
@@ -284,9 +296,10 @@ export function AppHeader({
               <Link
                 href="/"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="app-brand font-helvetica inline-block text-[30px] font-black leading-none"
+                aria-label="внутри"
+                className="inline-flex max-w-full"
               >
-                внутри.
+                <AppBrand />
               </Link>
             </div>
 
@@ -295,8 +308,9 @@ export function AppHeader({
                 <Link
                   key={item.name}
                   href={item.href}
-                  onClick={() => {
+                  onClick={(event) => {
                     setIsMobileMenuOpen(false);
+                    handleNavigationItemClick(event, item);
                   }}
                   className={`comment-menu-item flex min-h-14 items-center gap-3 rounded-[18px] px-3 py-3 text-left text-[16px] ${
                     item.key === activeSection
@@ -305,7 +319,7 @@ export function AppHeader({
                   }`}
                 >
                   <span className="flex h-8 w-8 flex-none items-center justify-center">
-                    <NavIcon name={item.key} filled={item.key === activeSection} />
+                    <NavIcon name={item.key} />
                   </span>
                   <span className="flex-1">{item.name}</span>
                 </Link>

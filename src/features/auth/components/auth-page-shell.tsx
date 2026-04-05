@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AppBrand } from "@/components/layout/app-brand";
 
 export function AuthPageShell({
   children,
@@ -11,9 +12,10 @@ export function AuthPageShell({
       <div className="mb-6 text-center">
         <Link
           href="/"
-          className="app-brand font-helvetica text-[32px] font-black leading-none"
+          aria-label="внутри"
+          className="inline-flex max-w-full"
         >
-          внутри.
+          <AppBrand />
         </Link>
       </div>
       {children}

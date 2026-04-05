@@ -2,9 +2,8 @@
 
 import {
   startTransition,
-  useMemo,
+  useEffect,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
@@ -15,12 +14,8 @@ import { LegalSidebar } from "@/components/layout/legal-sidebar";
 import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
 import { CommentsSection } from "@/features/comments/components/comments-section";
 import { CardPostItem } from "@/features/feed/components/card-post-item";
-import {
-  findStaticDiscussionPostById,
-  getDiscussionBodyText,
-} from "@/features/feed/lib/discussion-detail";
+import { getDiscussionBodyText } from "@/features/feed/lib/discussion-detail";
 import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
-import { findPublishedPostById } from "@/features/feed/lib/published-posts";
 import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
 import type { Post } from "@/features/feed/types";
 import { BackNavigationButton } from "@/features/topic-creation/components/back-navigation-button";
@@ -30,12 +25,8 @@ import {
 } from "@/features/topic-creation/lib/draft-storage";
 
 type DiscussionViewScreenProps = {
-  postId: string;
+  initialPost: Post | null;
 };
-
-function subscribeToClientRender() {
-  return () => {};
-}
 
 function toggleLikeState(post: Post) {
   return {
@@ -61,43 +52,27 @@ function toggleBookmarkState(post: Post) {
   };
 }
 
-export function DiscussionViewScreen({ postId }: DiscussionViewScreenProps) {
+export function DiscussionViewScreen({
+  initialPost,
+}: DiscussionViewScreenProps) {
   const router = useRouter();
   const { user } = useAuthClient();
   const { runIfAuthorized } = useAuthRequiredAction();
-  const isClient = useSyncExternalStore(
-    subscribeToClientRender,
-    () => true,
-    () => false,
-  );
-  const staticPost = useMemo(() => findStaticDiscussionPostById(postId), [postId]);
-  const [post, setPost] = useState<Post | null>(staticPost);
+  const [post, setPost] = useState<Post | null>(initialPost);
 
-  const resolvedPost = useMemo(() => {
-    if (post) {
-      return post;
-    }
+  useEffect(() => {
+    setPost(initialPost);
+  }, [initialPost]);
 
-    if (!isClient) {
-      return staticPost;
-    }
-
-    return findPublishedPostById(postId) ?? staticPost;
-  }, [isClient, post, postId, staticPost]);
-
-  const detailedPost = useMemo(() => {
-    if (!resolvedPost) {
-      return null;
-    }
-
-    return {
-      ...resolvedPost,
-      content: {
-        ...resolvedPost.content,
-        excerpt: getDiscussionBodyText(resolvedPost, user),
-      },
-    };
-  }, [resolvedPost, user]);
+  const detailedPost = post
+    ? {
+        ...post,
+        content: {
+          ...post.content,
+          excerpt: getDiscussionBodyText(post),
+        },
+      }
+    : null;
 
   function handleBack() {
     startTransition(() => {
@@ -111,9 +86,7 @@ export function DiscussionViewScreen({ postId }: DiscussionViewScreenProps) {
         const sourcePost =
           currentPost && currentPost.id === postIdToToggle
             ? currentPost
-            : resolvedPost && resolvedPost.id === postIdToToggle
-              ? resolvedPost
-              : null;
+            : null;
 
         if (!sourcePost) {
           return currentPost;
@@ -128,9 +101,7 @@ export function DiscussionViewScreen({ postId }: DiscussionViewScreenProps) {
     const currentPost =
       post && post.id === postIdToHandle
         ? post
-        : resolvedPost && resolvedPost.id === postIdToHandle
-          ? resolvedPost
-          : null;
+        : null;
 
     if (!currentPost) {
       return;
@@ -200,22 +171,14 @@ export function DiscussionViewScreen({ postId }: DiscussionViewScreenProps) {
               </>
             ) : (
               <div className="px-5 py-5 sm:px-6">
-                {isClient ? (
                 <div className="py-12 text-center">
                   <h1 className="font-helvetica text-label-primary text-[20px] font-semibold leading-6">
                     Обсуждение не найдено
                   </h1>
                   <p className="text-label-secondary mt-3 text-[16px] leading-6">
-                    Возможно, оно было удалено или ещё не загружено локально.
+                    Возможно, оно было удалено или ссылка устарела.
                   </p>
                 </div>
-              ) : (
-                <div className="py-12 text-center">
-                  <p className="text-label-secondary text-[16px] leading-6">
-                    Загружаем обсуждение…
-                  </p>
-                </div>
-                )}
               </div>
             )}
           </section>

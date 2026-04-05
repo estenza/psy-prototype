@@ -79,3 +79,24 @@ export type ApiPostRecord = {
     bookmarked: boolean;
   };
 };
+
+export type DiscussionMutationPayload = {
+  content: string;
+  intent: PostIntent;
+  title: string;
+  topic: PostTopic | null;
+};
+
+export type DiscussionMutationResponse = {
+  ok: true;
+  post: Post;
+};
+
+export type DiscussionRouteErrorResponse = {
+  error: string;
+  fieldErrors?: Partial<Record<"content" | "intent" | "title" | "topic", string>>;
+};
+
+export type DiscussionsResponsePayload = {
+  posts: Post[];
+};

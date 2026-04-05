@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
@@ -11,9 +11,7 @@ import {
 } from "@/features/feed/constants/feed";
 import {
   clearHighlightedPublishedPostId,
-  mergePublishedPosts,
   readHighlightedPublishedPostId,
-  readPublishedPosts,
 } from "@/features/feed/lib/published-posts";
 import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
 import {
@@ -89,8 +87,11 @@ export function useFeed({
       : posts.filter((post) => post.topic === activeTopic);
   const feed = sortFeed(filteredPosts, sortMode);
 
+  useEffect(() => {
+    setPosts(initialPosts);
+  }, [initialPosts]);
+
   useLayoutEffect(() => {
-    const publishedPosts = readPublishedPosts();
     const nextHighlightedPostId = readHighlightedPublishedPostId();
     let cancelled = false;
     let highlightTimer: number | undefined;
@@ -98,10 +99,6 @@ export function useFeed({
     queueMicrotask(() => {
       if (cancelled) {
         return;
-      }
-
-      if (publishedPosts.length > 0) {
-        setPosts(mergePublishedPosts(initialPosts, publishedPosts));
       }
 
       if (!nextHighlightedPostId) {

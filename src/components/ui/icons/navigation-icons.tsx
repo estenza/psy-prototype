@@ -15,21 +15,6 @@ function ForumOutlineIcon() {
   );
 }
 
-function ForumFilledIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className={navIconClassName} fill="none" aria-hidden="true">
-      <path
-        d="M10.7882 18.0981C11.2432 18.3352 11.805 18.4538 12.4735 18.4538H14.7298L17.0557 20.4487C17.2646 20.6301 17.4387 20.7673 17.5779 20.8603C17.7219 20.9533 17.8774 20.9998 18.0445 20.9998C18.2859 20.9998 18.4716 20.9207 18.6016 20.7626C18.7316 20.6045 18.7966 20.3929 18.7966 20.1279V18.4538H18.9428C19.6114 18.4538 20.1708 18.3352 20.6211 18.0981C21.0761 17.8656 21.4196 17.5238 21.6518 17.0727C21.8839 16.617 21.9999 16.059 21.9999 15.3987V11.6251C21.9999 10.9648 21.8839 10.4068 21.6518 9.95105C21.4196 9.49534 21.0761 9.15123 20.6211 8.91872C20.1708 8.68157 19.6114 8.56299 18.9428 8.56299H12.4735C11.805 8.56299 11.2432 8.68157 10.7882 8.91872C10.3379 9.15123 9.9967 9.49534 9.76457 9.95105C9.53244 10.4068 9.41638 10.9648 9.41638 11.6251V15.3987C9.41638 16.059 9.53244 16.617 9.76457 17.0727C9.9967 17.5238 10.3379 17.8656 10.7882 18.0981Z"
-        fill="currentColor"
-      />
-      <path
-        d="M14.1592 3C15.055 3.00006 15.7677 3.21167 16.2969 3.63477C16.8307 4.05792 17.1576 4.65807 17.2783 5.43457V7.31348H12.4727C11.6622 7.31357 10.8889 7.45762 10.21 7.81152C9.52745 8.16524 8.99926 8.69905 8.65039 9.38379C8.30674 10.0587 8.16602 10.8242 8.16602 11.626V15.3994C8.16604 15.6245 8.1786 15.8465 8.20215 16.0645L7.28516 16.8809C7.07638 17.0667 6.89971 17.2037 6.75586 17.292C6.61213 17.3848 6.45471 17.4316 6.2832 17.4316C6.04179 17.4316 5.85338 17.3524 5.71875 17.1943C5.5888 17.0362 5.52344 16.8224 5.52344 16.5527V14.7324H5.18945C4.49772 14.7324 3.91494 14.6088 3.44141 14.3623C2.96797 14.1159 2.60832 13.7555 2.3623 13.2812C2.12096 12.8024 2.00004 12.2237 2 11.5449V6.19434C2.00004 5.51555 2.12093 4.93909 2.3623 4.46484C2.60832 3.98596 2.96798 3.6234 3.44141 3.37695C3.91494 3.12585 4.49772 3 5.18945 3H14.1592Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 function SpecialistsOutlineIcon() {
   return (
     <svg viewBox="0 0 24 24" className={navIconClassName} fill="none" aria-hidden="true">
@@ -65,55 +50,12 @@ function SpecialistsOutlineIcon() {
   );
 }
 
-function SpecialistsFilledIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className={navIconClassName} fill="none" aria-hidden="true">
-      <path
-        d="M17.1523 18.7866V16.7866C17.1523 15.7258 16.7309 14.7083 15.9808 13.9582C15.2306 13.208 14.2132 12.7866 13.1523 12.7866H7.15234C6.09148 12.7866 5.07406 13.208 4.32392 13.9582C3.57377 14.7083 3.15234 15.7258 3.15234 16.7866V18.7866"
-        fill="currentColor"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M10 10C11.6569 10 13 8.65685 13 7C13 5.34315 11.6569 4 10 4C8.34315 4 7 5.34315 7 7C7 8.65685 8.34315 10 10 10Z"
-        fill="currentColor"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M21.0002 18.7869V16.7869C21.0002 15.7261 20.5788 14.7086 19.8286 13.9585"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M15 9.7709C16.0849 9.31916 16.8477 8.24875 16.8477 7.0002C16.8477 5.75164 16.0849 4.68123 15 4.22949"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function NavIcon({
-  name,
-  filled = false,
-}: {
-  name: NavigationItemKey;
-  filled?: boolean;
-}) {
+export function NavIcon({ name }: { name: NavigationItemKey }) {
   if (name === "forum") {
-    return filled ? <ForumFilledIcon /> : <ForumOutlineIcon />;
+    return <ForumOutlineIcon />;
   }
 
-  return filled ? <SpecialistsFilledIcon /> : <SpecialistsOutlineIcon />;
+  return <SpecialistsOutlineIcon />;
 }
 
 export function BellIcon() {

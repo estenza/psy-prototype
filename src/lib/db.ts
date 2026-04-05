@@ -46,6 +46,46 @@ function createUsersTable(database: DatabaseSync) {
   `);
 }
 
+function createDiscussionsTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS discussions (
+      id TEXT PRIMARY KEY,
+      author_user_id TEXT NOT NULL,
+      intent TEXT NOT NULL CHECK (intent IN ('support', 'discussion')),
+      topic TEXT CHECK (
+        topic IS NULL OR topic IN (
+          'relationships',
+          'emotions',
+          'self-esteem',
+          'family',
+          'work-money',
+          'habits-addictions',
+          'crisis-loss',
+          'self-development',
+          'social-situations',
+          'hard-states'
+        )
+      ),
+      title TEXT NOT NULL,
+      body_html TEXT NOT NULL,
+      excerpt TEXT NOT NULL,
+      media_type TEXT CHECK (media_type IS NULL OR media_type IN ('image')),
+      media_url TEXT,
+      media_alt TEXT,
+      comments_count INTEGER NOT NULL DEFAULT 0,
+      likes_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (author_user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS discussions_created_at_idx
+      ON discussions (created_at DESC);
+    CREATE INDEX IF NOT EXISTS discussions_author_user_id_idx
+      ON discussions (author_user_id);
+  `);
+}
+
 function migrateLegacyUsersTable(database: DatabaseSync) {
   const columns = readTableColumns(database, "users");
   const hasModernColumns = columns.some((column) => column.name === "nickname");
@@ -116,6 +156,7 @@ function initializeDatabase(database: DatabaseSync) {
   createUsersTable(database);
   migrateLegacyUsersTable(database);
   createUsersTable(database);
+  createDiscussionsTable(database);
   database.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
@@ -161,6 +202,7 @@ export function getDatabase() {
   const globalCache = globalThis as GlobalDatabaseCache;
 
   if (globalCache.__psyPrototypeDatabase) {
+    initializeDatabase(globalCache.__psyPrototypeDatabase);
     return globalCache.__psyPrototypeDatabase;
   }
 

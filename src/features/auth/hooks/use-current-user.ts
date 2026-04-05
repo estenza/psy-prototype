@@ -18,6 +18,14 @@ const INITIAL_STATE: CurrentUserState = {
   user: null,
 };
 
+function createResolvedInitialState(user: SessionUser | null): CurrentUserState {
+  return {
+    error: null,
+    status: user ? "authenticated" : "unauthenticated",
+    user,
+  };
+}
+
 export function dispatchAuthStateChanged() {
   if (typeof window === "undefined") {
     return;
@@ -26,8 +34,11 @@ export function dispatchAuthStateChanged() {
   window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
 }
 
-export function useCurrentUser() {
-  const [state, setState] = useState<CurrentUserState>(INITIAL_STATE);
+export function useCurrentUser(initialUser?: SessionUser | null) {
+  const hasResolvedInitialState = initialUser !== undefined;
+  const [state, setState] = useState<CurrentUserState>(
+    hasResolvedInitialState ? createResolvedInitialState(initialUser) : INITIAL_STATE,
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -59,8 +70,12 @@ export function useCurrentUser() {
   }, []);
 
   useEffect(() => {
+    if (hasResolvedInitialState) {
+      return;
+    }
+
     void refresh();
-  }, [refresh]);
+  }, [hasResolvedInitialState, refresh]);
 
   useEffect(() => {
     function handleAuthStateChanged() {

@@ -3,12 +3,17 @@ import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
 import { LeftNav } from "@/components/layout/left-nav";
 import { LegalSidebar } from "@/components/layout/legal-sidebar";
 import { FeedSection } from "@/features/feed/components/feed-section";
+import { getCurrentUser } from "@/features/auth/lib/current-user";
+import { listDiscussions } from "@/features/feed/lib/discussions-repository";
 
 // The home route carries environment-specific branding, so we disable
 // prerender caching to avoid stale staging visuals after a fresh deploy.
 export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
+  const currentUser = await getCurrentUser();
+  const posts = await listDiscussions(currentUser);
+
   return (
     <div className="surface-primary text-label-primary min-h-dvh">
       <AppHeader />
@@ -20,7 +25,7 @@ export default function Home() {
             activeSection={DEFAULT_ACTIVE_SECTION}
           />
 
-          <FeedSection />
+          <FeedSection initialPosts={posts} />
 
           <LegalSidebar />
         </main>

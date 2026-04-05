@@ -4,12 +4,13 @@ import Link from "next/link";
 import { FeedToolbar } from "@/features/feed/components/feed-toolbar";
 import { PostFeedItem } from "@/features/feed/components/post-feed-item";
 import { useFeed } from "@/features/feed/hooks/use-feed";
-import { mockPosts } from "@/features/feed/mocks/mock-posts";
 import type { Post } from "@/features/feed/types";
 
-const INITIAL_FEED_POSTS: Post[] = mockPosts;
+type FeedSectionProps = {
+  initialPosts: Post[];
+};
 
-export function FeedSection() {
+export function FeedSection({ initialPosts }: FeedSectionProps) {
   const {
     activeTopic,
     feed,
@@ -21,7 +22,7 @@ export function FeedSection() {
     viewMode,
     setViewMode,
     toggleLike,
-  } = useFeed({ initialPosts: INITIAL_FEED_POSTS });
+  } = useFeed({ initialPosts });
 
   return (
     <section className="surface-primary border-separator -mx-4 min-w-0 sm:-mx-6 lg:mx-0 lg:border-l lg:border-r">

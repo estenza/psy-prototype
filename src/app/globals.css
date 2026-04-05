@@ -43,8 +43,12 @@ body {
   color: var(--label-primary);
 }
 
-html[data-app-env="staging"] .app-brand {
-  color: var(--accent-primary);
+.app-brand-dev-label {
+  display: none;
+}
+
+html[data-app-env="staging"] .app-brand-dev-label {
+  display: block;
 }
 
 @keyframes feed-post-flash {

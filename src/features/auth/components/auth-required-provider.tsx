@@ -34,10 +34,12 @@ function getCurrentLocationHref() {
 
 export function AuthRequiredProvider({
   children,
+  initialUser,
 }: {
   children: React.ReactNode;
+  initialUser?: SessionUser | null;
 }) {
-  const { refresh, status, user } = useCurrentUser();
+  const { refresh, status, user } = useCurrentUser(initialUser);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nextHref, setNextHref] = useState("/");
 

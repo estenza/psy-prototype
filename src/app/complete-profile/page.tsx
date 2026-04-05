@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AppBrand } from "@/components/layout/app-brand";
 import { AuthOnboarding } from "@/features/auth/components/auth-onboarding";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import { buildPostAuthRedirectPath, resolveOnboardingStep } from "@/features/auth/lib/profile";
@@ -28,9 +29,10 @@ export default async function CompleteProfilePage({
       <div className="mb-6 text-center">
         <Link
           href="/"
-          className="app-brand font-helvetica text-[32px] font-black leading-none"
+          aria-label="внутри"
+          className="inline-flex max-w-full"
         >
-          внутри.
+          <AppBrand />
         </Link>
       </div>
       <AuthOnboarding currentUser={currentUser} nextPath={nextPath} />

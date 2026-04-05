@@ -115,6 +115,41 @@ async function initializePostgresSchema() {
       ON password_reset_tokens (user_id);
     CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_at_idx
       ON password_reset_tokens (expires_at);
+
+    CREATE TABLE IF NOT EXISTS discussions (
+      id TEXT PRIMARY KEY,
+      author_user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      intent TEXT NOT NULL CHECK (intent IN ('support', 'discussion')),
+      topic TEXT CHECK (
+        topic IS NULL OR topic IN (
+          'relationships',
+          'emotions',
+          'self-esteem',
+          'family',
+          'work-money',
+          'habits-addictions',
+          'crisis-loss',
+          'self-development',
+          'social-situations',
+          'hard-states'
+        )
+      ),
+      title TEXT NOT NULL,
+      body_html TEXT NOT NULL,
+      excerpt TEXT NOT NULL,
+      media_type TEXT CHECK (media_type IS NULL OR media_type IN ('image')),
+      media_url TEXT,
+      media_alt TEXT,
+      comments_count INTEGER NOT NULL DEFAULT 0,
+      likes_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS discussions_created_at_idx
+      ON discussions (created_at DESC);
+    CREATE INDEX IF NOT EXISTS discussions_author_user_id_idx
+      ON discussions (author_user_id);
   `);
 }
 

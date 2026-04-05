@@ -12,13 +12,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
 import { Button } from "@/components/ui/button";
-import { useAuthClient } from "@/features/auth/components/auth-required-provider";
-import { getUserHandle } from "@/features/auth/lib/profile";
 import {
-  createPublishedPost,
-  findPublishedPostById,
   markPublishedPostForHighlight,
-  savePublishedPost,
 } from "@/features/feed/lib/published-posts";
 import {
   TOPIC_TITLE_MAX_LENGTH,
@@ -42,6 +37,10 @@ import {
   serializeTopicSnapshot,
 } from "@/features/topic-creation/lib/draft-storage";
 import type { TopicDraft } from "@/features/topic-creation/types";
+import type {
+  DiscussionMutationResponse,
+  DiscussionRouteErrorResponse,
+} from "@/features/feed/types";
 import type { PostIntent, PostTopic } from "@/types/post-taxonomy";
 
 function getNextSavedDraftState(
@@ -132,7 +131,6 @@ function TitleProgressIndicator({
 
 export function CreateTopicScreen() {
   const router = useRouter();
-  const { user } = useAuthClient();
   const titleFieldRef = useRef<HTMLTextAreaElement | null>(null);
   const [initialDraft] = useState<TopicDraft>(createEmptyTopicDraft);
 
@@ -257,7 +255,7 @@ export function CreateTopicScreen() {
     setPublishMessage("Черновик восстановлен");
   }
 
-  function handlePublish(event: FormEvent<HTMLFormElement>) {
+  async function handlePublish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitAttempted(true);
 
@@ -266,33 +264,49 @@ export function CreateTopicScreen() {
       return;
     }
 
-    const existingPost = editingPostId
-      ? findPublishedPostById(editingPostId)
-      : null;
-    const postAuthor = existingPost?.author ?? {
-      id: user?.id,
-      name: user?.displayName ?? "Автор",
-      handle: user ? getUserHandle(user) : "@author",
-    };
-    const publishedPost = createPublishedPost({
-      author: postAuthor,
-      content,
-      existingPost,
-      intent,
-      title,
-      topic,
-    });
+    const endpoint = editingPostId ? `/api/discussions/${editingPostId}` : "/api/discussions";
+    const method = editingPostId ? "PATCH" : "POST";
 
-    savePublishedPost(publishedPost);
-    markPublishedPostForHighlight(publishedPost.id);
-    clearTopicDraft();
-    setEditingPostId(null);
-    setLastSavedSnapshot(getInitialTopicSnapshot());
-    setPublishMessage("");
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content,
+          intent,
+          title,
+          topic,
+        }),
+      });
 
-    startTransition(() => {
-      router.push("/");
-    });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as DiscussionRouteErrorResponse | null;
+
+        setPublishMessage(
+          payload?.fieldErrors?.title ??
+            payload?.fieldErrors?.content ??
+            payload?.error ??
+            "Не удалось сохранить обсуждение.",
+        );
+        return;
+      }
+
+      const payload = (await response.json()) as DiscussionMutationResponse;
+
+      markPublishedPostForHighlight(payload.post.id);
+      clearTopicDraft();
+      setEditingPostId(null);
+      setLastSavedSnapshot(getInitialTopicSnapshot());
+      setPublishMessage("");
+
+      startTransition(() => {
+        router.push("/");
+      });
+    } catch {
+      setPublishMessage("Не удалось сохранить обсуждение.");
+    }
   }
 
   useEffect(() => {
