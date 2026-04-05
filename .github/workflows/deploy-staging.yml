@@ -20,6 +20,7 @@ env:
   YC_NETWORK_ID: enpgiiep4cceg1u2j18d
   IMAGE: cr.yandex/crphtumcsi9us93u61ir/psy:staging
   STAGING_URL: https://staging.vnutri.live
+  STAGING_ADMIN_HOST: ctl-7e78cf9d.vnutri.live
 
 jobs:
   deploy:
@@ -91,7 +92,7 @@ jobs:
 
       - name: Validate admin rollout secrets
         env:
-          ADMIN_APP_HOST: ${{ secrets.ADMIN_APP_HOST }}
+          ADMIN_APP_HOST: ${{ env.STAGING_ADMIN_HOST }}
           ADMIN_APP_URL: ${{ secrets.ADMIN_APP_URL }}
           ADMIN_ALLOWED_EMAILS: ${{ secrets.ADMIN_ALLOWED_EMAILS }}
           ADMIN_ACCESS_KEY: ${{ secrets.ADMIN_ACCESS_KEY }}
@@ -167,7 +168,7 @@ jobs:
             AUTH_APP_URL=https://staging.vnutri.live
             AUTH_DATABASE_URL=${{ secrets.AUTH_DATABASE_URL }}
             AUTH_DATABASE_SSL=false
-            ADMIN_APP_HOST=${{ secrets.ADMIN_APP_HOST }}
+            ADMIN_APP_HOST=${{ env.STAGING_ADMIN_HOST }}
             ADMIN_APP_URL=${{ secrets.ADMIN_APP_URL }}
             ADMIN_ALLOWED_EMAILS=${{ secrets.ADMIN_ALLOWED_EMAILS }}
             ADMIN_ACCESS_KEY=${{ secrets.ADMIN_ACCESS_KEY }}
