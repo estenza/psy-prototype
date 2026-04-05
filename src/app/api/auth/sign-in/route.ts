@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     if (adminConsoleRequest) {
       if (getConfiguredAdminAccessKey() && adminAccessKey) {
-        setAdminAccessKeyCookie(response, adminAccessKey);
+        setAdminAccessKeyCookie(response);
       } else {
         clearAdminAccessKeyCookie(response);
       }

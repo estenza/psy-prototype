@@ -18,13 +18,11 @@ type AuthFormProps = {
 };
 
 type FormState = {
-  adminAccessKey: string;
   email: string;
   password: string;
 };
 
 const INITIAL_FORM_STATE: FormState = {
-  adminAccessKey: "",
   email: "",
   password: "",
 };
@@ -88,7 +86,6 @@ export function AuthForm({
                 password: formState.password,
               }
             : {
-                adminAccessKey: isAdminContext ? formState.adminAccessKey : undefined,
                 email: formState.email,
                 password: formState.password,
               },
@@ -159,21 +156,6 @@ export function AuthForm({
           error={fieldErrors.password}
           autoComplete={isSignUp ? "new-password" : "current-password"}
         />
-
-        {isAdminContext && !isSignUp ? (
-          <AuthField
-            name="adminAccessKey"
-            type="password"
-            label="Ключ доступа"
-            value={formState.adminAccessKey}
-            onChange={(value) => {
-              updateField("adminAccessKey", value);
-            }}
-            placeholder="Введите ключ доступа"
-            error={fieldErrors.adminAccessKey}
-            autoComplete="off"
-          />
-        ) : null}
 
         {!isSignUp ? (
           <Link

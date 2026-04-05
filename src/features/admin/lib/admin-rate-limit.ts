@@ -1,6 +1,6 @@
 import "server-only";
 
-type RateLimitBucket = "admin-sign-in" | "admin-access";
+type RateLimitBucket = "admin-sign-in" | "admin-access" | "admin-gate";
 
 type RateLimitState = {
   count: number;
@@ -24,7 +24,7 @@ function getWindowMs() {
 }
 
 function getBucketLimit(bucket: RateLimitBucket) {
-  if (bucket === "admin-sign-in") {
+  if (bucket === "admin-sign-in" || bucket === "admin-gate") {
     return toNumber(process.env.ADMIN_SIGN_IN_RATE_LIMIT_MAX, 10);
   }
 
