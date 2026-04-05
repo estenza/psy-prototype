@@ -1,9 +1,7 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextResponse } from "next/server";
 import type { SessionUser } from "@/features/auth/types";
 
 export const ADMIN_ACCESS_KEY_COOKIE_NAME = "admin-access-key";
-const ADMIN_ACCESS_PROOF_VERSION = "v1";
 const DEFAULT_ADMIN_ACCESS_PROOF_TTL_SECONDS = 60 * 60;
 
 let hasValidatedAdminConfig = false;
@@ -99,71 +97,6 @@ function getAdminAccessKeyCookieConfig(expiresAt?: Date) {
   };
 }
 
-function buildAdminAccessProofPayload(expiresAtSeconds: number) {
-  return `${ADMIN_ACCESS_PROOF_VERSION}:${getAdminConsoleHost() || ""}:${expiresAtSeconds}`;
-}
-
-function signAdminAccessProof(expiresAtSeconds: number) {
-  const configuredKey = getConfiguredAdminAccessKey();
-
-  if (!configuredKey) {
-    return null;
-  }
-
-  return createHmac("sha256", configuredKey)
-    .update(buildAdminAccessProofPayload(expiresAtSeconds))
-    .digest("base64url");
-}
-
-function createAdminAccessProofToken() {
-  const expiresAtSeconds = Math.floor(Date.now() / 1000) + getAdminAccessProofTtlSeconds();
-  const signature = signAdminAccessProof(expiresAtSeconds);
-
-  if (!signature) {
-    return null;
-  }
-
-  return {
-    expiresAt: new Date(expiresAtSeconds * 1000),
-    token: `${ADMIN_ACCESS_PROOF_VERSION}.${expiresAtSeconds}.${signature}`,
-  };
-}
-
-export function isValidAdminAccessProof(value: string | null | undefined) {
-  const normalizedValue = value?.trim();
-
-  if (!normalizedValue) {
-    return false;
-  }
-
-  const [version, expiresAtRaw, signature] = normalizedValue.split(".");
-
-  if (version !== ADMIN_ACCESS_PROOF_VERSION || !expiresAtRaw || !signature) {
-    return false;
-  }
-
-  const expiresAtSeconds = Number(expiresAtRaw);
-
-  if (!Number.isFinite(expiresAtSeconds) || expiresAtSeconds <= Math.floor(Date.now() / 1000)) {
-    return false;
-  }
-
-  const expectedSignature = signAdminAccessProof(expiresAtSeconds);
-
-  if (!expectedSignature) {
-    return false;
-  }
-
-  const providedBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expectedSignature);
-
-  if (providedBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(providedBuffer, expectedBuffer);
-}
-
 export function resolveAdminAccessKey({
   bodyValue,
   cookieValue,
@@ -191,21 +124,23 @@ export function isValidAdminAccessKey(value: string | null | undefined) {
     return false;
   }
 
-  return normalizedValue === configuredKey || isValidAdminAccessProof(normalizedValue);
+  return normalizedValue === configuredKey;
 }
 
-export function setAdminAccessKeyCookie(response: NextResponse) {
-  const proof = createAdminAccessProofToken();
+export function setAdminAccessKeyCookie(response: NextResponse, value: string) {
+  const normalizedValue = value.trim();
 
-  if (!proof) {
+  if (!normalizedValue) {
     clearAdminAccessKeyCookie(response);
     return;
   }
 
+  const expiresAt = new Date(Date.now() + getAdminAccessProofTtlSeconds() * 1000);
+
   response.cookies.set(
     ADMIN_ACCESS_KEY_COOKIE_NAME,
-    proof.token,
-    getAdminAccessKeyCookieConfig(proof.expiresAt),
+    normalizedValue,
+    getAdminAccessKeyCookieConfig(expiresAt),
   );
 }
 

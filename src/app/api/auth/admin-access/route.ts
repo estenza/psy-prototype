@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     ok: true,
   });
 
-  setAdminAccessKeyCookie(response);
+  setAdminAccessKeyCookie(response, input.adminAccessKey?.trim() || "");
 
   return response;
 }
