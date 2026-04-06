@@ -27,6 +27,10 @@ const ADMIN_ALLOWED_EXACT_PATHS = new Set([
   "/favicon.ico",
 ]);
 
+const ADMIN_PROOF_BYPASS_PATH_PREFIXES = [
+  "/_next",
+];
+
 function isAdminRoute(pathname: string) {
   return pathname === "/admin"
     || pathname.startsWith("/admin/")
@@ -50,6 +54,16 @@ function isAdminAccessGatePath(pathname: string) {
 
 function isAdminAccessGateApiPath(pathname: string) {
   return pathname === ADMIN_ACCESS_GATE_API_PATH;
+}
+
+function isAdminProofBypassPath(pathname: string) {
+  if (ADMIN_ALLOWED_EXACT_PATHS.has(pathname)) {
+    return true;
+  }
+
+  return ADMIN_PROOF_BYPASS_PATH_PREFIXES.some((prefix) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 }
 
 function isAdminSensitivePath(pathname: string) {
@@ -115,6 +129,7 @@ export function middleware(request: NextRequest) {
   if (
     isAdminAccessGatePath(request.nextUrl.pathname)
     || isAdminAccessGateApiPath(request.nextUrl.pathname)
+    || isAdminProofBypassPath(request.nextUrl.pathname)
   ) {
     return withAdminNoIndexHeader(NextResponse.next());
   }
