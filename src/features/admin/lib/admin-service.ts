@@ -66,13 +66,16 @@ export function normalizeAdminUsersFilters(input: {
   specialistStatus?: string | null;
   role?: string | null;
 }): AdminUsersFilters {
-  const role = ROLE_FILTER_VALUES.has((input.role ?? "all") as AdminUserRoleFilter)
-    ? (input.role as AdminUserRoleFilter)
+  const nextRole = (input.role ?? "all") as AdminUserRoleFilter;
+  const role = ROLE_FILTER_VALUES.has(nextRole)
+    ? nextRole
     : "all";
+  const nextSpecialistStatus =
+    (input.specialistStatus ?? "all") as AdminSpecialistStatusFilter;
   const specialistStatus = SPECIALIST_STATUS_FILTER_VALUES.has(
-    (input.specialistStatus ?? "all") as AdminSpecialistStatusFilter,
+    nextSpecialistStatus,
   )
-    ? (input.specialistStatus as AdminSpecialistStatusFilter)
+    ? nextSpecialistStatus
     : "all";
 
   return {
