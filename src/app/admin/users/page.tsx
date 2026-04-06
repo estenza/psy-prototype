@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
+import { AdminCreateTestUserForm } from "@/features/admin/components/admin-create-test-user-form";
 import { AdminUserRowActions } from "@/features/admin/components/admin-user-row-actions";
+import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
 import { requireModeratorPageAccess } from "@/features/admin/lib/admin-access";
 import { getAdminUsers, normalizeAdminUsersFilters } from "@/features/admin/lib/admin-service";
 import { getUserHandle } from "@/features/auth/lib/profile";
@@ -51,6 +53,8 @@ export default async function AdminUsersPage({
             На главную
           </Link>
         </div>
+
+        {canAccessAdminConsole(currentUser) ? <AdminCreateTestUserForm /> : null}
 
         <form
           method="get"
@@ -103,7 +107,7 @@ export default async function AdminUsersPage({
         <div className="border-separator overflow-hidden rounded-[24px] border">
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse text-left text-sm">
-              <thead className="bg-[color-mix(in_srgb,var(--label-primary)_4%,white)]">
+              <thead className="bg-background-primary">
                 <tr>
                   <th className="px-4 py-3 font-semibold">displayName</th>
                   <th className="px-4 py-3 font-semibold">handle</th>

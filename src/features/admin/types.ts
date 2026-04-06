@@ -15,6 +15,26 @@ export type AdminUsersResponse = {
   filters: AdminUsersFilters;
 };
 
+export type AdminCreateTestUserPayload = {
+  role?: UserRole;
+  specialistStatus?: SpecialistStatus;
+};
+
+export type AdminCreateTestUserCredentials = {
+  displayName: string;
+  email: string;
+  handle: string | null;
+  password: string;
+  role: UserRole;
+  specialistStatus: SpecialistStatus;
+};
+
+export type AdminCreateTestUserResponse = {
+  ok: true;
+  credentials: AdminCreateTestUserCredentials;
+  user: AdminListedUser;
+};
+
 export type AdminUpdateUserPayload = {
   isModerator?: boolean;
   role?: UserRole;
