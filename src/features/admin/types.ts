@@ -15,23 +15,32 @@ export type AdminUsersResponse = {
   filters: AdminUsersFilters;
 };
 
-export type AdminCreateTestUserPayload = {
+export type AdminManagedUserPayload = {
+  avatarCardUrl?: string | null;
+  avatarSourceUrl?: string | null;
+  avatarUrl?: string | null;
+  displayName?: string;
+  email?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  password?: string;
+  profileDescription?: string | null;
   role?: UserRole;
-  specialistStatus?: SpecialistStatus;
+  specialties?: string[];
 };
 
-export type AdminCreateTestUserCredentials = {
-  displayName: string;
-  email: string;
-  handle: string | null;
-  password: string;
-  role: UserRole;
-  specialistStatus: SpecialistStatus;
+export type AdminCreateManagedUserPayload = Required<
+  Pick<AdminManagedUserPayload, "email" | "password" | "role">
+> & AdminManagedUserPayload;
+
+export type AdminUpdateManagedUserPayload = Omit<AdminManagedUserPayload, "email" | "password">;
+
+export type AdminBanUserPayload = {
+  reason?: string | null;
 };
 
-export type AdminCreateTestUserResponse = {
+export type AdminManagedUserResponse = {
   ok: true;
-  credentials: AdminCreateTestUserCredentials;
   user: AdminListedUser;
 };
 
@@ -39,4 +48,8 @@ export type AdminUpdateUserPayload = {
   isModerator?: boolean;
   role?: UserRole;
   specialistStatus?: SpecialistStatus;
+};
+
+export type AdminDeleteUserResponse = {
+  ok: true;
 };

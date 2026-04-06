@@ -51,6 +51,7 @@ export type ApiPostRecord = {
   topic?: PostTopic;
   author: {
     id?: string;
+    avatar_url?: string | null;
     display_name: string;
     username: string;
   };

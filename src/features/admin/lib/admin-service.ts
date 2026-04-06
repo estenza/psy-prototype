@@ -1,45 +1,39 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
+import { normalizeAdminSpecialties } from "@/features/admin/lib/admin-specialties";
 import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
 import { listAdminUsers } from "@/features/admin/lib/admin-repository";
 import type {
-  AdminCreateTestUserPayload,
+  AdminBanUserPayload,
+  AdminCreateManagedUserPayload,
   AdminSpecialistStatusFilter,
-  AdminUpdateUserPayload,
+  AdminUpdateManagedUserPayload,
   AdminUserRoleFilter,
   AdminUsersFilters,
 } from "@/features/admin/types";
 import {
   countModerators,
   createUser,
-  findUserById,
+  deletePasswordResetTokensByUserId,
+  deleteSessionsByUserId,
+  deleteUserById,
   findUserByEmail,
+  findUserById,
   findUserByNickname,
-  updateUserAdminFields,
+  updateUserAdminManagedFields,
 } from "@/features/auth/lib/auth-repository";
-import { PASSWORD_MIN_LENGTH } from "@/features/auth/constants";
+import {
+  EMAIL_PATTERN,
+  PASSWORD_MIN_LENGTH,
+  PROFILE_NAME_MAX_LENGTH,
+} from "@/features/auth/constants";
 import { hashPassword } from "@/features/auth/lib/password";
-import { buildDisplayName } from "@/features/auth/lib/profile";
-import type { SessionUser, SpecialistStatus, UserRole } from "@/features/auth/types";
+import { buildDisplayName, normalizeNickname, sanitizeProfileText } from "@/features/auth/lib/profile";
+import type { SessionUser, UserRole } from "@/features/auth/types";
 
-const TEST_EMAIL_DOMAIN = process.env.ADMIN_TEST_EMAIL_DOMAIN?.trim() || "vnutri.test";
-const TEST_SPECIALIST_FIRST_NAMES = [
-  "Анна",
-  "Елена",
-  "Мария",
-  "Ирина",
-  "София",
-  "Дарья",
-];
-const TEST_SPECIALIST_LAST_NAMES = [
-  "Лебедева",
-  "Соколова",
-  "Орлова",
-  "Морозова",
-  "Виноградова",
-  "Тихонова",
-];
+const USER_PROFILE_DESCRIPTION_MAX_LENGTH = 250;
+const SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH = 750;
 
 const ROLE_FILTER_VALUES = new Set<AdminUserRoleFilter>([
   "all",
@@ -57,13 +51,6 @@ const SPECIALIST_STATUS_FILTER_VALUES = new Set<AdminSpecialistStatusFilter>([
 ]);
 
 const USER_ROLE_VALUES = new Set<UserRole>(["user", "specialist"]);
-const SPECIALIST_STATUS_VALUES = new Set<SpecialistStatus>([
-  "none",
-  "pending",
-  "verified",
-  "rejected",
-  "suspended",
-]);
 
 export class AdminServiceError extends Error {
   status: number;
@@ -98,168 +85,263 @@ export async function getAdminUsers(filters: AdminUsersFilters) {
   return await listAdminUsers(filters);
 }
 
-function generateTestUserPassword() {
-  const password = `Vnutri!${randomBytes(4).toString("hex")}`;
+function assertAdminActor(actor: SessionUser) {
+  if (!canAccessAdminConsole(actor)) {
+    throw new AdminServiceError("Недостаточно прав для управления аккаунтами.", 403);
+  }
+}
+
+function normalizeEmail(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function normalizeRequiredName(value: string | null | undefined, fieldLabel: string) {
+  const normalizedValue = sanitizeProfileText(value);
+
+  if (!normalizedValue) {
+    throw new AdminServiceError(`Укажите поле «${fieldLabel}».`, 400);
+  }
+
+  if (normalizedValue.length > PROFILE_NAME_MAX_LENGTH) {
+    throw new AdminServiceError(
+      `Поле «${fieldLabel}» должно быть не длиннее ${PROFILE_NAME_MAX_LENGTH} символов.`,
+      400,
+    );
+  }
+
+  return normalizedValue;
+}
+
+function normalizeProfileDescription(
+  value: string | null | undefined,
+  maxLength: number,
+) {
+  const normalizedValue = sanitizeProfileText(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (normalizedValue.length > maxLength) {
+    throw new AdminServiceError(
+      `Описание должно быть не длиннее ${maxLength} символов.`,
+      400,
+    );
+  }
+
+  return normalizedValue;
+}
+
+function normalizeOptionalImage(value: string | null | undefined) {
+  const normalizedValue = (value ?? "").trim();
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (
+    normalizedValue.startsWith("data:image/")
+    || normalizedValue.startsWith("http://")
+    || normalizedValue.startsWith("https://")
+    || normalizedValue.startsWith("/")
+  ) {
+    return normalizedValue;
+  }
+
+  throw new AdminServiceError("Некорректный формат изображения.", 400);
+}
+
+function normalizePassword(value: string | null | undefined) {
+  const password = value ?? "";
 
   if (password.length < PASSWORD_MIN_LENGTH) {
-    throw new AdminServiceError("Не удалось сгенерировать пароль.", 500);
+    throw new AdminServiceError(
+      `Пароль должен быть не короче ${PASSWORD_MIN_LENGTH} символов.`,
+      400,
+    );
   }
 
   return password;
 }
 
-async function generateUniqueTestIdentity(role: UserRole) {
-  const nicknamePrefix = role === "specialist" ? "spec" : "user";
+async function ensureEmailAvailable(email: string, currentUserId?: string) {
+  const existingUser = await findUserByEmail(email);
 
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const suffix = randomBytes(3).toString("hex");
-    const nickname = `${nicknamePrefix}${suffix}`;
-    const email = `${nickname}@${TEST_EMAIL_DOMAIN}`;
+  if (existingUser && existingUser.id !== currentUserId) {
+    throw new AdminServiceError("Пользователь с таким email уже существует.", 409);
+  }
+}
 
-    const [existingUserByEmail, existingUserByNickname] = await Promise.all([
-      findUserByEmail(email),
-      findUserByNickname(nickname),
-    ]);
+async function generateManagedNickname(email: string, currentUserId?: string) {
+  const emailLocalPart = email.split("@")[0] ?? "";
+  const normalizedBase = normalizeNickname(emailLocalPart.replace(/[^A-Za-zА-Яа-яЁё0-9._]+/gu, "."))
+    .replace(/^\.+|\.+$/g, "")
+    .replace(/\.{2,}/g, ".");
 
-    if (!existingUserByEmail && !existingUserByNickname) {
-      return {
-        email,
-        nickname,
-        suffix,
-      };
+  const safeBase = normalizedBase.length >= 3 ? normalizedBase : "user";
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const suffix = attempt === 0 ? "" : `.${randomBytes(2).toString("hex")}`;
+    const candidate = `${safeBase.slice(0, Math.max(3, 20 - suffix.length))}${suffix}`;
+    const existingUser = await findUserByNickname(candidate);
+
+    if (!existingUser || existingUser.id === currentUserId) {
+      return candidate;
     }
   }
 
-  throw new AdminServiceError(
-    "Не удалось сгенерировать уникальные данные тестового пользователя.",
-    500,
-  );
+  throw new AdminServiceError("Не удалось сгенерировать уникальный хэндл аккаунта.", 500);
 }
 
-function pickSpecialistName(suffix: string) {
-  const seed = Number.parseInt(suffix.slice(0, 2), 16);
+function normalizeRole(value: string | null | undefined) {
+  if (!USER_ROLE_VALUES.has((value ?? "") as UserRole)) {
+    throw new AdminServiceError("Недопустимый тип аккаунта.", 400);
+  }
+
+  return value as UserRole;
+}
+
+function normalizeManagedPayload(
+  payload: Pick<
+    AdminCreateManagedUserPayload | AdminUpdateManagedUserPayload,
+    | "avatarCardUrl"
+    | "avatarSourceUrl"
+    | "avatarUrl"
+    | "displayName"
+    | "firstName"
+    | "lastName"
+    | "profileDescription"
+    | "role"
+    | "specialties"
+  >,
+) {
+  const role = normalizeRole(payload.role);
+  const avatarSourceUrl = normalizeOptionalImage(payload.avatarSourceUrl);
+  const avatarUrl = normalizeOptionalImage(payload.avatarUrl);
+  const avatarCardUrl =
+    role === "specialist" ? normalizeOptionalImage(payload.avatarCardUrl) : null;
+
+  if (role === "user") {
+    const displayName = normalizeRequiredName(payload.displayName, "Ник");
+
+    return {
+      avatarCardUrl: null,
+      avatarSourceUrl,
+      avatarUrl,
+      displayName,
+      firstName: null,
+      lastName: null,
+      profileDescription: normalizeProfileDescription(
+        payload.profileDescription,
+        USER_PROFILE_DESCRIPTION_MAX_LENGTH,
+      ),
+      role,
+      specialties: [] as string[],
+      specialistStatus: "none" as const,
+    };
+  }
+
+  const firstName = normalizeRequiredName(payload.firstName, "Имя");
+  const lastName = normalizeRequiredName(payload.lastName, "Фамилия");
 
   return {
-    firstName: TEST_SPECIALIST_FIRST_NAMES[seed % TEST_SPECIALIST_FIRST_NAMES.length],
-    lastName:
-      TEST_SPECIALIST_LAST_NAMES[
-        (seed + 3) % TEST_SPECIALIST_LAST_NAMES.length
-      ],
+    avatarCardUrl,
+    avatarSourceUrl,
+    avatarUrl,
+    displayName: buildDisplayName({
+      firstName,
+      lastName,
+      role,
+    }),
+    firstName,
+    lastName,
+    profileDescription: normalizeProfileDescription(
+      payload.profileDescription,
+      SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH,
+    ),
+    role,
+    specialties: normalizeAdminSpecialties(payload.specialties),
+    specialistStatus: "verified" as const,
   };
 }
 
-export async function createAdminTestUser(
+export async function createAdminManagedUser(
   actor: SessionUser,
-  payload: AdminCreateTestUserPayload,
+  payload: AdminCreateManagedUserPayload,
 ) {
-  if (!canAccessAdminConsole(actor)) {
-    throw new AdminServiceError(
-      "Недостаточно прав для создания тестовых пользователей.",
-      403,
-    );
+  assertAdminActor(actor);
+
+  const email = normalizeEmail(payload.email);
+
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new AdminServiceError("Укажите корректный email.", 400);
   }
 
-  const role = USER_ROLE_VALUES.has((payload.role ?? "user") as UserRole)
-    ? ((payload.role ?? "user") as UserRole)
-    : null;
+  await ensureEmailAvailable(email);
 
-  if (!role) {
-    throw new AdminServiceError("Недопустимая роль.", 400);
-  }
-
-  const specialistStatus =
-    role === "specialist"
-      ? SPECIALIST_STATUS_VALUES.has(
-            (payload.specialistStatus ?? "verified") as SpecialistStatus,
-          )
-        ? ((payload.specialistStatus ?? "verified") as SpecialistStatus)
-        : null
-      : "none";
-
-  if (!specialistStatus) {
-    throw new AdminServiceError("Недопустимый specialist status.", 400);
-  }
-
-  const identity = await generateUniqueTestIdentity(role);
-  const generatedPassword = generateTestUserPassword();
-  const passwordHash = await hashPassword(generatedPassword);
-  const specialistName =
-    role === "specialist" ? pickSpecialistName(identity.suffix) : null;
+  const normalizedPayload = normalizeManagedPayload(payload);
+  const passwordHash = await hashPassword(normalizePassword(payload.password));
+  const nickname = await generateManagedNickname(email);
 
   const user = await createUser({
-    displayName: buildDisplayName({
-      email: identity.email,
-      firstName: specialistName?.firstName ?? null,
-      lastName: specialistName?.lastName ?? null,
-      nickname: identity.nickname,
-      role,
-    }),
-    email: identity.email,
-    firstName: specialistName?.firstName ?? null,
-    lastName: specialistName?.lastName ?? null,
-    nickname: identity.nickname,
+    avatarCardUrl: normalizedPayload.avatarCardUrl,
+    avatarSourceUrl: normalizedPayload.avatarSourceUrl,
+    avatarUrl: normalizedPayload.avatarUrl,
+    displayName: normalizedPayload.displayName,
+    email,
+    firstName: normalizedPayload.firstName,
+    lastName: normalizedPayload.lastName,
+    nickname,
     onboardingStep: "complete",
     passwordHash,
-    role,
-    specialistStatus,
+    profileDescription: normalizedPayload.profileDescription,
+    role: normalizedPayload.role,
+    specialties: normalizedPayload.specialties,
+    specialistStatus: normalizedPayload.specialistStatus,
   });
 
   if (!user) {
-    throw new AdminServiceError(
-      "Не удалось создать тестового пользователя.",
-      500,
-    );
+    throw new AdminServiceError("Не удалось создать аккаунт.", 500);
   }
 
-  return {
-    credentials: {
-      displayName: user.displayName,
-      email: user.email,
-      handle: user.nickname ? `@${user.nickname}` : null,
-      password: generatedPassword,
-      role: user.role,
-      specialistStatus: user.specialistStatus,
-    },
-    user,
-  };
+  return user;
 }
 
-export async function updateAdminUser(
+export async function updateAdminManagedUser(
+  actor: SessionUser,
   userId: string,
-  payload: AdminUpdateUserPayload,
+  payload: AdminUpdateManagedUserPayload,
 ) {
+  assertAdminActor(actor);
+
   const targetUser = await findUserById(userId);
 
   if (!targetUser) {
     throw new AdminServiceError("Пользователь не найден.", 404);
   }
 
-  const nextRole = payload.role ?? targetUser.role;
-  const nextSpecialistStatus =
-    payload.specialistStatus ?? targetUser.specialistStatus;
-  const nextIsModerator = payload.isModerator ?? targetUser.isModerator;
-
-  if (!USER_ROLE_VALUES.has(nextRole)) {
-    throw new AdminServiceError("Недопустимая роль.", 400);
+  if (payload.role && payload.role !== targetUser.role) {
+    throw new AdminServiceError("Смена типа аккаунта через редактирование пока не поддерживается.", 400);
   }
 
-  if (!SPECIALIST_STATUS_VALUES.has(nextSpecialistStatus)) {
-    throw new AdminServiceError("Недопустимый specialist status.", 400);
-  }
+  const normalizedPayload = normalizeManagedPayload({
+    ...payload,
+    role: targetUser.role,
+  });
 
-  const isRemovingModeratorGrant = targetUser.isModerator && !nextIsModerator;
-
-  if (isRemovingModeratorGrant && (await countModerators()) <= 1) {
-    throw new AdminServiceError(
-      "Нельзя снять роль у последнего модератора.",
-      409,
-    );
-  }
-
-  const updatedUser = await updateUserAdminFields({
-    isModerator: nextIsModerator,
-    role: nextRole,
-    specialistStatus: nextSpecialistStatus,
+  const updatedUser = await updateUserAdminManagedFields({
+    avatarCardUrl: normalizedPayload.avatarCardUrl,
+    avatarSourceUrl: normalizedPayload.avatarSourceUrl,
+    avatarUrl: normalizedPayload.avatarUrl,
+    displayName: normalizedPayload.displayName,
+    firstName: normalizedPayload.firstName,
+    lastName: normalizedPayload.lastName,
+    nickname: targetUser.nickname ?? (await generateManagedNickname(targetUser.email, targetUser.id)),
+    onboardingStep: "complete",
+    profileDescription: normalizedPayload.profileDescription,
+    role: normalizedPayload.role,
+    specialties: normalizedPayload.specialties,
+    specialistStatus: normalizedPayload.specialistStatus,
     userId,
   });
 
@@ -268,4 +350,65 @@ export async function updateAdminUser(
   }
 
   return updatedUser;
+}
+
+export async function banAdminManagedUser(
+  actor: SessionUser,
+  userId: string,
+  payload: AdminBanUserPayload,
+) {
+  assertAdminActor(actor);
+
+  if (actor.id === userId) {
+    throw new AdminServiceError("Нельзя заблокировать собственный аккаунт администратора.", 409);
+  }
+
+  const targetUser = await findUserById(userId);
+
+  if (!targetUser) {
+    throw new AdminServiceError("Пользователь не найден.", 404);
+  }
+
+  if (targetUser.isModerator && (await countModerators()) <= 1) {
+    throw new AdminServiceError("Нельзя заблокировать последнего модератора.", 409);
+  }
+
+  const updatedUser = await updateUserAdminManagedFields({
+    banReason: sanitizeProfileText(payload.reason) || null,
+    isBanned: true,
+    userId,
+  });
+
+  await deleteSessionsByUserId(userId);
+
+  if (!updatedUser) {
+    throw new AdminServiceError("Пользователь не найден.", 404);
+  }
+
+  return updatedUser;
+}
+
+export async function deleteAdminManagedUser(
+  actor: SessionUser,
+  userId: string,
+) {
+  assertAdminActor(actor);
+
+  if (actor.id === userId) {
+    throw new AdminServiceError("Нельзя удалить собственный аккаунт администратора.", 409);
+  }
+
+  const targetUser = await findUserById(userId);
+
+  if (!targetUser) {
+    throw new AdminServiceError("Пользователь не найден.", 404);
+  }
+
+  if (targetUser.isModerator && (await countModerators()) <= 1) {
+    throw new AdminServiceError("Нельзя удалить последнего модератора.", 409);
+  }
+
+  await deleteSessionsByUserId(userId);
+  await deletePasswordResetTokensByUserId(userId);
+  await deleteUserById(userId);
 }

@@ -3,7 +3,7 @@ import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
 import { PostMoreMenu } from "@/features/feed/components/post-more-menu";
 import { PostContextBadges } from "@/features/feed/components/post-context-badges";
 import { PostActions } from "@/features/feed/components/post-actions";
-import { getUserAvatarTone } from "@/lib/avatar-tone";
+import { UserAvatar } from "@/features/auth/components/user-avatar";
 import type { Post } from "@/features/feed/types";
 
 type CompactPostItemProps = {
@@ -38,12 +38,11 @@ export function CompactPostItem({
         <div className="flex flex-col gap-2">
           <div className="flex min-h-10 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
-              <button
-                type="button"
-                className={`relative z-10 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-[12px] font-semibold leading-4 ${getUserAvatarTone(post.author.name)}`}
-              >
-                {post.author.name.slice(0, 2).toUpperCase()}
-              </button>
+              <UserAvatar
+                avatarUrl={post.author.avatarUrl ?? null}
+                name={post.author.name}
+                size="comment-md"
+              />
               <div className="text-label-tertiary flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0 text-[14px] leading-5">
                 <span className="relative z-10 inline-flex min-w-0 items-center self-center truncate cursor-pointer">
                   {post.author.handle}

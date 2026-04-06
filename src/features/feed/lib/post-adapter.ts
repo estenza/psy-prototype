@@ -10,6 +10,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
       id: record.author.id,
       name: record.author.display_name,
       handle: record.author.username,
+      avatarUrl: record.author.avatar_url,
     },
     activity: {
       publishedAtLabel: record.timeline.published_at_label,

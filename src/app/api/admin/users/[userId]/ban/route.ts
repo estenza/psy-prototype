@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminAccessError, requireModeratorUser } from "@/features/admin/lib/admin-access";
-import { AdminServiceError, deleteAdminManagedUser, updateAdminManagedUser } from "@/features/admin/lib/admin-service";
-import type { AdminDeleteUserResponse, AdminManagedUserResponse, AdminUpdateManagedUserPayload } from "@/features/admin/types";
+import { AdminServiceError, banAdminManagedUser } from "@/features/admin/lib/admin-service";
+import type { AdminBanUserPayload, AdminManagedUserResponse } from "@/features/admin/types";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,7 @@ function buildAdminMutationErrorResponse(error: unknown) {
     );
   }
 
-  console.error("[api/admin/users/:userId]", error);
+  console.error("[api/admin/users/:userId/ban]", error);
 
   return NextResponse.json(
     {
@@ -29,7 +29,7 @@ function buildAdminMutationErrorResponse(error: unknown) {
   );
 }
 
-export async function PATCH(
+export async function POST(
   request: NextRequest,
   context: {
     params: Promise<{
@@ -39,36 +39,13 @@ export async function PATCH(
 ) {
   try {
     const currentUser = await requireModeratorUser();
-
     const { userId } = await context.params;
-    const payload = (await request.json()) as AdminUpdateManagedUserPayload;
-    const updatedUser = await updateAdminManagedUser(currentUser, userId, payload);
+    const payload = (await request.json()) as AdminBanUserPayload;
+    const user = await banAdminManagedUser(currentUser, userId, payload);
 
     return NextResponse.json<AdminManagedUserResponse>({
       ok: true,
-      user: updatedUser,
-    });
-  } catch (error) {
-    return buildAdminMutationErrorResponse(error);
-  }
-}
-
-export async function DELETE(
-  _request: NextRequest,
-  context: {
-    params: Promise<{
-      userId: string;
-    }>;
-  },
-) {
-  try {
-    const currentUser = await requireModeratorUser();
-    const { userId } = await context.params;
-
-    await deleteAdminManagedUser(currentUser, userId);
-
-    return NextResponse.json<AdminDeleteUserResponse>({
-      ok: true,
+      user,
     });
   } catch (error) {
     return buildAdminMutationErrorResponse(error);

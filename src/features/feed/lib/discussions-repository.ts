@@ -13,6 +13,7 @@ import type { PostIntent, PostTopic } from "@/types/post-taxonomy";
 type DiscussionRow = {
   id: string;
   author_user_id: string;
+  author_avatar_url: string | null;
   intent: PostIntent;
   topic: PostTopic | null;
   title: string;
@@ -53,7 +54,8 @@ const PG_DISCUSSION_COLUMNS = `
   discussions.created_at::text AS created_at,
   discussions.updated_at::text AS updated_at,
   users.display_name AS author_display_name,
-  users.nickname AS author_nickname
+  users.nickname AS author_nickname,
+  users.avatar_url AS author_avatar_url
 `;
 
 const DISCUSSION_SELECT_BASE = `
@@ -181,6 +183,7 @@ function mapDiscussion(row: DiscussionRow, currentUser: SessionUser | null): Pos
     id: row.author_user_id,
     name: row.author_display_name,
     handle: row.author_nickname ? `@${row.author_nickname}` : row.author_display_name,
+    avatarUrl: row.author_avatar_url,
   };
   const isAuthor = Boolean(currentUser && row.author_user_id === currentUser.id);
 

@@ -291,6 +291,17 @@ async function createSessionForUser(userId: string) {
   };
 }
 
+function assertUserNotBanned(user: SessionUser) {
+  if (!user.isBanned) {
+    return;
+  }
+
+  throw new AuthServiceError({
+    message: "Аккаунт заблокирован.",
+    status: 403,
+  });
+}
+
 export async function checkNicknameAvailability(rawNickname: string) {
   const nickname = normalizeNickname(rawNickname);
 
@@ -402,6 +413,7 @@ export async function signIn(input: SignInInput) {
   }
 
   const resolvedUser = await syncBootstrapModeratorGrant(account.user);
+  assertUserNotBanned(resolvedUser);
   const session = await createSessionForUser(resolvedUser.id);
 
   return {
@@ -616,6 +628,11 @@ export async function getCurrentUserBySessionToken(sessionToken: string): Promis
   const session = await findSessionWithUserByTokenHash(hashSessionToken(sessionToken));
 
   if (!session) {
+    return null;
+  }
+
+  if (session.user.isBanned) {
+    await deleteSessionsByUserId(session.user.id);
     return null;
   }
 

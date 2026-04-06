@@ -22,9 +22,15 @@ export type AuthUser = {
   lastName: string | null;
   patronymic: string | null;
   avatarUrl: string | null;
+  avatarSourceUrl: string | null;
+  avatarCardUrl: string | null;
+  profileDescription: string | null;
+  specialties: string[];
   role: UserRole;
   specialistStatus: SpecialistStatus;
   isAdmin: boolean;
+  isBanned: boolean;
+  banReason: string | null;
   isModerator: boolean;
   onboardingStep: OnboardingStep;
   createdAt: string;

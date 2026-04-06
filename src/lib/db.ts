@@ -40,11 +40,17 @@ function createUsersTable(database: DatabaseSync) {
       last_name TEXT,
       patronymic TEXT,
       avatar_url TEXT,
+      avatar_source_url TEXT,
+      avatar_card_url TEXT,
+      profile_description TEXT,
+      specialties_json TEXT NOT NULL DEFAULT '[]',
       role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'specialist')),
       specialist_status TEXT NOT NULL DEFAULT 'none' CHECK (
         specialist_status IN ('none', 'pending', 'verified', 'rejected', 'suspended')
       ),
       is_moderator INTEGER NOT NULL DEFAULT 0 CHECK (is_moderator IN (0, 1)),
+      is_banned INTEGER NOT NULL DEFAULT 0 CHECK (is_banned IN (0, 1)),
+      ban_reason TEXT,
       onboarding_step TEXT NOT NULL DEFAULT 'role' CHECK (
         onboarding_step IN ('role', 'user-profile', 'specialist-profile', 'complete')
       ),
@@ -52,6 +58,34 @@ function createUsersTable(database: DatabaseSync) {
       updated_at TEXT NOT NULL
     );
   `);
+}
+
+function ensureUsersTableColumns(database: DatabaseSync) {
+  const columns = new Set(readTableColumns(database, "users").map((column) => column.name));
+
+  if (!columns.has("avatar_source_url")) {
+    database.exec("ALTER TABLE users ADD COLUMN avatar_source_url TEXT;");
+  }
+
+  if (!columns.has("avatar_card_url")) {
+    database.exec("ALTER TABLE users ADD COLUMN avatar_card_url TEXT;");
+  }
+
+  if (!columns.has("profile_description")) {
+    database.exec("ALTER TABLE users ADD COLUMN profile_description TEXT;");
+  }
+
+  if (!columns.has("specialties_json")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialties_json TEXT NOT NULL DEFAULT '[]';");
+  }
+
+  if (!columns.has("is_banned")) {
+    database.exec("ALTER TABLE users ADD COLUMN is_banned INTEGER NOT NULL DEFAULT 0;");
+  }
+
+  if (!columns.has("ban_reason")) {
+    database.exec("ALTER TABLE users ADD COLUMN ban_reason TEXT;");
+  }
 }
 
 function createDiscussionsTable(database: DatabaseSync) {
@@ -243,6 +277,7 @@ function initializeDatabase(database: DatabaseSync) {
   createUsersTable(database);
   migrateLegacyUsersTable(database);
   createUsersTable(database);
+  ensureUsersTableColumns(database);
   createDiscussionsTable(database);
   createSessionsTable(database);
   createPasswordResetTokensTable(database);

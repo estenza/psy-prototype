@@ -157,11 +157,17 @@ async function initializePostgresSchema() {
       last_name TEXT,
       patronymic TEXT,
       avatar_url TEXT,
+      avatar_source_url TEXT,
+      avatar_card_url TEXT,
+      profile_description TEXT,
+      specialties_json TEXT NOT NULL DEFAULT '[]',
       role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'specialist')),
       specialist_status TEXT NOT NULL DEFAULT 'none' CHECK (
         specialist_status IN ('none', 'pending', 'verified', 'rejected', 'suspended')
       ),
       is_moderator BOOLEAN NOT NULL DEFAULT FALSE,
+      is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+      ban_reason TEXT,
       onboarding_step TEXT NOT NULL DEFAULT 'role' CHECK (
         onboarding_step IN ('role', 'user-profile', 'specialist-profile', 'complete')
       ),
@@ -228,6 +234,13 @@ async function initializePostgresSchema() {
       ON discussions (created_at DESC);
     CREATE INDEX IF NOT EXISTS discussions_author_user_id_idx
       ON discussions (author_user_id);
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_source_url TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_card_url TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_description TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS specialties_json TEXT NOT NULL DEFAULT '[]';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT;
   `, [], {
     skipSchema: true,
   });

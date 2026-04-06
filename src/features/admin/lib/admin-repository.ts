@@ -15,9 +15,15 @@ type AdminUserRow = {
   last_name: string | null;
   patronymic: string | null;
   avatar_url: string | null;
+  avatar_source_url: string | null;
+  avatar_card_url: string | null;
+  profile_description: string | null;
+  specialties_json: string | null;
   role: UserRole;
   specialist_status: SpecialistStatus;
   is_moderator: number | boolean;
+  is_banned: number | boolean;
+  ban_reason: string | null;
   onboarding_step: OnboardingStep;
   created_at: string;
   updated_at: string;
@@ -32,13 +38,37 @@ const PG_ADMIN_USER_COLUMNS = `
   last_name,
   patronymic,
   avatar_url,
+  avatar_source_url,
+  avatar_card_url,
+  profile_description,
+  specialties_json,
   role,
   specialist_status,
   is_moderator,
+  is_banned,
+  ban_reason,
   onboarding_step,
   created_at::text AS created_at,
   updated_at::text AS updated_at
 `;
+
+function parseSpecialties(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return [] as string[];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((item): item is string => typeof item === "string");
+  } catch {
+    return [];
+  }
+}
 
 function mapAdminUser(row: AdminUserRow): AdminListedUser {
   return {
@@ -50,9 +80,15 @@ function mapAdminUser(row: AdminUserRow): AdminListedUser {
     lastName: row.last_name,
     patronymic: row.patronymic,
     avatarUrl: row.avatar_url,
+    avatarSourceUrl: row.avatar_source_url,
+    avatarCardUrl: row.avatar_card_url,
+    profileDescription: row.profile_description,
+    specialties: parseSpecialties(row.specialties_json),
     role: row.role,
     specialistStatus: row.specialist_status,
     isAdmin: isBootstrapAdminEmail(row.email),
+    isBanned: Boolean(row.is_banned),
+    banReason: row.ban_reason,
     isModerator: Boolean(row.is_moderator),
     onboardingStep: row.onboarding_step,
     createdAt: row.created_at,
@@ -111,9 +147,15 @@ export async function listAdminUsers(filters: AdminUsersFilters) {
         last_name,
         patronymic,
         avatar_url,
+        avatar_source_url,
+        avatar_card_url,
+        profile_description,
+        specialties_json,
         role,
         specialist_status,
         is_moderator,
+        is_banned,
+        ban_reason,
         onboarding_step,
         created_at,
         updated_at

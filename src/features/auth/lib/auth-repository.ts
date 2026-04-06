@@ -22,9 +22,15 @@ type UserRow = {
   last_name: string | null;
   patronymic: string | null;
   avatar_url: string | null;
+  avatar_source_url: string | null;
+  avatar_card_url: string | null;
+  profile_description: string | null;
+  specialties_json: string | null;
   role: UserRole;
   specialist_status: SpecialistStatus;
   is_moderator: number | boolean;
+  is_banned: number | boolean;
+  ban_reason: string | null;
   onboarding_step: OnboardingStep;
   created_at: string;
   updated_at: string;
@@ -57,9 +63,15 @@ const PG_USER_COLUMNS = `
   users.last_name,
   users.patronymic,
   users.avatar_url,
+  users.avatar_source_url,
+  users.avatar_card_url,
+  users.profile_description,
+  users.specialties_json,
   users.role,
   users.specialist_status,
   users.is_moderator,
+  users.is_banned,
+  users.ban_reason,
   users.onboarding_step,
   users.created_at::text AS created_at,
   users.updated_at::text AS updated_at
@@ -82,6 +94,24 @@ const PG_PASSWORD_RESET_TOKEN_COLUMNS = `
   created_at::text AS created_at
 `;
 
+function parseSpecialties(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return [] as string[];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((item): item is string => typeof item === "string");
+  } catch {
+    return [];
+  }
+}
+
 function mapUser(row: UserRow): AuthUser {
   return {
     id: row.id,
@@ -92,9 +122,15 @@ function mapUser(row: UserRow): AuthUser {
     lastName: row.last_name,
     patronymic: row.patronymic,
     avatarUrl: row.avatar_url,
+    avatarSourceUrl: row.avatar_source_url,
+    avatarCardUrl: row.avatar_card_url,
+    profileDescription: row.profile_description,
+    specialties: parseSpecialties(row.specialties_json),
     role: row.role,
     specialistStatus: row.specialist_status,
     isAdmin: isBootstrapAdminEmail(row.email),
+    isBanned: Boolean(row.is_banned),
+    banReason: row.ban_reason,
     isModerator: Boolean(row.is_moderator),
     onboardingStep: row.onboarding_step,
     createdAt: row.created_at,
@@ -310,29 +346,39 @@ export async function countModerators() {
 
 export async function createUser({
   avatarUrl = null,
+  avatarSourceUrl = null,
+  avatarCardUrl = null,
   displayName,
   email,
   firstName = null,
   isModerator = false,
+  isBanned = false,
   lastName = null,
   nickname = null,
   onboardingStep = "role",
   passwordHash,
+  profileDescription = null,
   patronymic = null,
   role = "user",
+  specialties = [],
   specialistStatus = "none",
 }: {
   avatarUrl?: string | null;
+  avatarSourceUrl?: string | null;
+  avatarCardUrl?: string | null;
   displayName: string;
   email: string;
   firstName?: string | null;
   isModerator?: boolean;
+  isBanned?: boolean;
   lastName?: string | null;
   nickname?: string | null;
   onboardingStep?: OnboardingStep;
   passwordHash: string;
+  profileDescription?: string | null;
   patronymic?: string | null;
   role?: UserRole;
+  specialties?: string[];
   specialistStatus?: SpecialistStatus;
 }) {
   const now = new Date().toISOString();
@@ -351,13 +397,22 @@ export async function createUser({
           last_name,
           patronymic,
           avatar_url,
+          avatar_source_url,
+          avatar_card_url,
+          profile_description,
+          specialties_json,
           role,
           specialist_status,
           is_moderator,
+          is_banned,
+          ban_reason,
           onboarding_step,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+          $12, $13, $14, $15, $16, $17, NULL, $18, $19, $20
+        )
       `,
       [
         id,
@@ -369,9 +424,14 @@ export async function createUser({
         lastName,
         patronymic,
         avatarUrl,
+        avatarSourceUrl,
+        avatarCardUrl,
+        profileDescription,
+        JSON.stringify(specialties),
         role,
         specialistStatus,
         isModerator,
+        isBanned,
         onboardingStep,
         now,
         now,
@@ -393,13 +453,22 @@ export async function createUser({
         last_name,
         patronymic,
         avatar_url,
+        avatar_source_url,
+        avatar_card_url,
+        profile_description,
+        specialties_json,
         role,
         specialist_status,
         is_moderator,
+        is_banned,
+        ban_reason,
         onboarding_step,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?
+      )
     `)
     .run(
       id,
@@ -411,9 +480,14 @@ export async function createUser({
       lastName,
       patronymic,
       avatarUrl,
+      avatarSourceUrl,
+      avatarCardUrl,
+      profileDescription,
+      JSON.stringify(specialties),
       role,
       specialistStatus,
       isModerator ? 1 : 0,
+      isBanned ? 1 : 0,
       onboardingStep,
       now,
       now,
@@ -598,9 +672,15 @@ export async function findSessionWithUserByTokenHash(tokenHash: string) {
         users.last_name,
         users.patronymic,
         users.avatar_url,
+        users.avatar_source_url,
+        users.avatar_card_url,
+        users.profile_description,
+        users.specialties_json,
         users.role,
         users.specialist_status,
         users.is_moderator,
+        users.is_banned,
+        users.ban_reason,
         users.onboarding_step,
         users.created_at,
         users.updated_at
@@ -704,9 +784,15 @@ export async function findPasswordResetTokenWithUserByTokenHash(tokenHash: strin
         users.last_name,
         users.patronymic,
         users.avatar_url,
+        users.avatar_source_url,
+        users.avatar_card_url,
+        users.profile_description,
+        users.specialties_json,
         users.role,
         users.specialist_status,
         users.is_moderator,
+        users.is_banned,
+        users.ban_reason,
         users.onboarding_step,
         users.created_at,
         users.updated_at
@@ -894,6 +980,147 @@ export async function updateUserAdminFields({
     );
 
   return findUserById(userId);
+}
+
+export async function updateUserAdminManagedFields({
+  avatarCardUrl,
+  avatarSourceUrl,
+  avatarUrl,
+  banReason,
+  displayName,
+  firstName,
+  isBanned,
+  lastName,
+  nickname,
+  onboardingStep,
+  profileDescription,
+  role,
+  specialties,
+  specialistStatus,
+  userId,
+}: {
+  avatarCardUrl?: string | null;
+  avatarSourceUrl?: string | null;
+  avatarUrl?: string | null;
+  banReason?: string | null;
+  displayName?: string;
+  firstName?: string | null;
+  isBanned?: boolean;
+  lastName?: string | null;
+  nickname?: string | null;
+  onboardingStep?: OnboardingStep;
+  profileDescription?: string | null;
+  role?: UserRole;
+  specialties?: string[];
+  specialistStatus?: SpecialistStatus;
+  userId: string;
+}) {
+  const currentUser = await findUserById(userId);
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const nextUpdatedAt = new Date().toISOString();
+  const nextSpecialties = specialties ?? currentUser.specialties;
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `
+        UPDATE users
+        SET
+          display_name = $1,
+          nickname = $2,
+          first_name = $3,
+          last_name = $4,
+          avatar_url = $5,
+          avatar_source_url = $6,
+          avatar_card_url = $7,
+          profile_description = $8,
+          specialties_json = $9,
+          role = $10,
+          specialist_status = $11,
+          is_banned = $12,
+          ban_reason = $13,
+          onboarding_step = $14,
+          updated_at = $15
+        WHERE id = $16
+      `,
+      [
+        displayName ?? currentUser.displayName,
+        nickname === undefined ? currentUser.nickname : nickname,
+        firstName === undefined ? currentUser.firstName : firstName,
+        lastName === undefined ? currentUser.lastName : lastName,
+        avatarUrl === undefined ? currentUser.avatarUrl : avatarUrl,
+        avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
+        avatarCardUrl === undefined ? currentUser.avatarCardUrl : avatarCardUrl,
+        profileDescription === undefined ? currentUser.profileDescription : profileDescription,
+        JSON.stringify(nextSpecialties),
+        role ?? currentUser.role,
+        specialistStatus ?? currentUser.specialistStatus,
+        isBanned === undefined ? currentUser.isBanned : isBanned,
+        banReason === undefined ? currentUser.banReason : banReason,
+        onboardingStep ?? currentUser.onboardingStep,
+        nextUpdatedAt,
+        userId,
+      ],
+    );
+
+    return findUserById(userId);
+  }
+
+  getDatabase()
+    .prepare(`
+      UPDATE users
+      SET
+        display_name = ?,
+        nickname = ?,
+        first_name = ?,
+        last_name = ?,
+        avatar_url = ?,
+        avatar_source_url = ?,
+        avatar_card_url = ?,
+        profile_description = ?,
+        specialties_json = ?,
+        role = ?,
+        specialist_status = ?,
+        is_banned = ?,
+        ban_reason = ?,
+        onboarding_step = ?,
+        updated_at = ?
+      WHERE id = ?
+    `)
+    .run(
+      displayName ?? currentUser.displayName,
+      nickname === undefined ? currentUser.nickname : nickname,
+      firstName === undefined ? currentUser.firstName : firstName,
+      lastName === undefined ? currentUser.lastName : lastName,
+      avatarUrl === undefined ? currentUser.avatarUrl : avatarUrl,
+      avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
+      avatarCardUrl === undefined ? currentUser.avatarCardUrl : avatarCardUrl,
+      profileDescription === undefined ? currentUser.profileDescription : profileDescription,
+      JSON.stringify(nextSpecialties),
+      role ?? currentUser.role,
+      specialistStatus ?? currentUser.specialistStatus,
+      isBanned === undefined ? (currentUser.isBanned ? 1 : 0) : isBanned ? 1 : 0,
+      banReason === undefined ? currentUser.banReason : banReason,
+      onboardingStep ?? currentUser.onboardingStep,
+      nextUpdatedAt,
+      userId,
+    );
+
+  return findUserById(userId);
+}
+
+export async function deleteUserById(userId: string) {
+  if (isPostgresAuthEnabled()) {
+    await execPg("DELETE FROM users WHERE id = $1", [userId]);
+    return;
+  }
+
+  getDatabase()
+    .prepare("DELETE FROM users WHERE id = ?")
+    .run(userId);
 }
 
 export async function updateUserPasswordHash({

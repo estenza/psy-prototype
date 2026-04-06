@@ -1,5 +1,6 @@
 import { BookmarkIcon, ChatIcon } from "@/components/ui/icons";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
+import { UserAvatar } from "@/features/auth/components/user-avatar";
 import { PostContextBadges } from "@/features/feed/components/post-context-badges";
 import type { Post } from "@/features/feed/types";
 
@@ -25,8 +26,15 @@ export function ForumPostItem({
         </h2>
         <div className="text-label-secondary mt-1.5 flex items-center gap-2 text-[14px] leading-5">
           <span>Автор:</span>
-          <span className="font-medium text-[var(--label-secondary)]">
-            {post.author.name}
+          <span className="inline-flex items-center gap-2">
+            <UserAvatar
+              avatarUrl={post.author.avatarUrl ?? null}
+              name={post.author.name}
+              size="comment-sm"
+            />
+            <span className="font-medium text-[var(--label-secondary)]">
+              {post.author.name}
+            </span>
           </span>
         </div>
       </div>

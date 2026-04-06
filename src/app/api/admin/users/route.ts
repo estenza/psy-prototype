@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireModeratorUser, AdminAccessError } from "@/features/admin/lib/admin-access";
 import {
   AdminServiceError,
-  createAdminTestUser,
+  createAdminManagedUser,
   getAdminUsers,
   normalizeAdminUsersFilters,
 } from "@/features/admin/lib/admin-service";
 import type {
-  AdminCreateTestUserPayload,
-  AdminCreateTestUserResponse,
+  AdminCreateManagedUserPayload,
+  AdminManagedUserResponse,
   AdminUsersResponse,
 } from "@/features/admin/types";
 
@@ -59,13 +59,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const currentUser = await requireModeratorUser();
-    const payload = (await request.json()) as AdminCreateTestUserPayload;
-    const result = await createAdminTestUser(currentUser, payload);
+    const payload = (await request.json()) as AdminCreateManagedUserPayload;
+    const user = await createAdminManagedUser(currentUser, payload);
 
-    return NextResponse.json<AdminCreateTestUserResponse>({
+    return NextResponse.json<AdminManagedUserResponse>({
       ok: true,
-      credentials: result.credentials,
-      user: result.user,
+      user,
     });
   } catch (error) {
     return buildAdminAccessResponse(error);
