@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Dropdown } from "@heroui/react";
 import { MoreHorizontalIcon } from "@/components/ui/icons";
 
 type CommentMoreMenuProps = {
@@ -22,29 +22,6 @@ export function CommentMoreMenu({
   onBlock,
   onReport,
 }: CommentMoreMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    function handlePointerDown(event: PointerEvent) {
-      const eventTarget = event.target;
-
-      if (!(eventTarget instanceof Node)) {
-        return;
-      }
-
-      if (!rootRef.current?.contains(eventTarget)) {
-        setIsOpen(false);
-      }
-    }
-
-    window.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, []);
-
   const items =
     isViewerAuthenticated && viewerOwnsComment
       ? [
@@ -73,34 +50,35 @@ export function CommentMoreMenu({
         ];
 
   return (
-    <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        className="comment-icon-button text-label-secondary inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
-        onClick={() => setIsOpen((currentState) => !currentState)}
+    <Dropdown.Root>
+      <Dropdown.Trigger
+        className="interactive-tertiary text-label-secondary inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
         aria-label="Открыть меню действий"
       >
         <MoreHorizontalIcon />
-      </button>
+      </Dropdown.Trigger>
 
-      {isOpen ? (
-        <div className="surface-elevated border-separator absolute right-0 top-[calc(100%+4px)] z-30 min-w-[188px] rounded-[18px] border p-1 shadow-[0_14px_32px_rgba(0,0,0,0.08)]">
+      <Dropdown.Popover placement="bottom end" className="min-w-[188px]">
+        <Dropdown.Menu
+          aria-label="Меню комментария"
+          selectionMode="none"
+          onAction={(key) => {
+            const item = items.find((entry) => entry.label === String(key));
+            item?.onSelect();
+          }}
+        >
           {items.map((item) => (
-            <button
+            <Dropdown.Item
               key={item.label}
-              type="button"
-              className="comment-menu-item w-full justify-start rounded-[14px] px-3 py-2.5 text-left text-[13px] leading-4"
-              disabled={item.disabled}
-              onClick={() => {
-                item.onSelect();
-                setIsOpen(false);
-              }}
+              id={item.label}
+              textValue={item.label}
+              isDisabled={item.disabled}
             >
               {item.label}
-            </button>
+            </Dropdown.Item>
           ))}
-        </div>
-      ) : null}
-    </div>
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown.Root>
   );
 }

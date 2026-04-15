@@ -1,88 +1,75 @@
 :root {
   /* Layout */
-  --app-shell-max-width: 1440px;
-  --app-shell-content-max-width: 720px;
-  --app-shell-side-column-min-width: 264px;
-  --app-shell-side-rail-width: 260px;
-  --app-header-search-width: clamp(360px, calc(360px + (100vw - 1024px) * 0.4807692308), 560px);
-  --app-shell-side-offset: clamp(24px, calc(24px + (100vw - 1280px) * 0.1), 40px);
-  --app-shell-rail-gap: 24px;
+  --app-shell-max-width: calc(var(--spacing) * 360);
+  --app-shell-content-max-width: calc(var(--spacing) * 180);
+  --app-shell-side-column-min-width: calc(var(--spacing) * 66);
+  --app-shell-side-rail-width: calc(var(--spacing) * 65);
+  --app-header-search-width: clamp(
+    calc(var(--spacing) * 90),
+    calc(calc(var(--spacing) * 90) + (100vw - 1024px) * 0.4807692308),
+    calc(var(--spacing) * 140)
+  );
+  --app-shell-side-offset: clamp(
+    calc(var(--spacing) * 6),
+    calc(calc(var(--spacing) * 6) + (100vw - 1280px) * 0.1),
+    calc(var(--spacing) * 10)
+  );
+  --app-shell-rail-gap: calc(var(--spacing) * 6);
 
   /* Accents */
-  --accent-primary: #007aff;
-  --accent-like: #ff3b30;
-  --accent-bookmark: #ffab36;
-  --accent-success: #34c759;
+  --accent-primary: var(--accent);
+  --accent-critical: var(--danger);
+  --accent-like: var(--danger);
+  --accent-bookmark: var(--warning);
+  --accent-success: var(--success);
 
   /* Backgrounds */
-  --background-primary: #ffffff;
-  --background-secondary: #f5f5f7;
-  --background-elevated: #ffffff;
+  --background-primary: var(--background);
+  --background-secondary: var(--surface-secondary);
+  --background-elevated: var(--surface);
 
   /* Fills */
-  --fill-primary: rgba(120, 120, 128, 0.2);
-  --fill-secondary: rgba(120, 120, 128, 0.12);
-  --fill-tertiary: rgba(120, 120, 128, 0.18);
-  --fill-quaternary: rgba(120, 120, 128, 0.08);
-  --fill-card-hover: rgba(0, 0, 0, 0.01);
-  --fill-control-hover: rgba(120, 120, 128, 0.08);
-  --fill-like: rgba(255, 59, 48, 0.14);
-  --fill-like-hover: rgba(255, 59, 48, 0.22);
-  --fill-bookmark: rgba(255, 171, 54, 0.16);
-  --fill-bookmark-hover: rgba(255, 171, 54, 0.24);
+  --fill-primary: var(--surface-tertiary);
+  --fill-secondary: var(--default);
+  --fill-tertiary: var(--default-hover);
+  --fill-quaternary: color-mix(in oklab, var(--default) 52%, transparent);
+  --fill-inverse-primary: rgba(255, 255, 255, 0.16);
+  --fill-inverse-secondary: rgba(255, 255, 255, 0.24);
+  --fill-inverse-tertiary: rgba(255, 255, 255, 0.32);
+  --fill-card-hover: color-mix(in oklab, var(--default) 24%, transparent);
+  --fill-control-hover: var(--default-hover);
+  --fill-like: color-mix(in oklab, var(--danger) 16%, transparent);
+  --fill-like-hover: color-mix(in oklab, var(--danger) 24%, transparent);
+  --fill-bookmark: color-mix(in oklab, var(--warning) 16%, transparent);
+  --fill-bookmark-hover: color-mix(in oklab, var(--warning) 24%, transparent);
+  --interactive-secondary-fill: var(--fill-secondary);
+  --interactive-secondary-hover-fill: var(--fill-tertiary);
+  --interactive-secondary-pressed-fill: var(--fill-primary);
+  --interactive-secondary-disabled-fill: color-mix(in srgb, var(--fill-secondary) 56%, transparent);
+  --interactive-tertiary-fill: transparent;
+  --interactive-tertiary-hover-fill: var(--color-default);
+  --interactive-tertiary-pressed-fill: var(--color-default);
+  --interactive-tertiary-foreground: var(--color-default-foreground);
+  --interactive-fill-inverse-fill: var(--fill-inverse-primary);
+  --interactive-fill-inverse-hover-fill: var(--fill-inverse-secondary);
+  --interactive-fill-inverse-pressed-fill: var(--fill-inverse-tertiary);
+  --interactive-primary-fill: var(--foreground);
+  --interactive-primary-hover-fill: color-mix(in oklab, var(--foreground) 92%, var(--background-primary));
+  --interactive-primary-pressed-fill: color-mix(in oklab, var(--foreground) 84%, var(--background-primary));
+  --interactive-primary-disabled-fill: color-mix(in oklab, var(--foreground) 22%, transparent);
 
   /* Labels */
-  --label-primary: rgba(0, 0, 0, 0.88);
-  --label-secondary: rgb(60, 60, 67);
-  --label-tertiary: rgba(60, 60, 67, 0.64);
-  --label-quaternary: rgba(60, 60, 67, 0.36);
-  --label-inverse: #ffffff;
+  --label-primary: var(--foreground);
+  --label-secondary: color-mix(in oklab, var(--foreground) 76%, var(--background-primary));
+  --label-tertiary: color-mix(in oklab, var(--foreground) 56%, var(--background-primary));
+  --label-quaternary: color-mix(in oklab, var(--foreground) 34%, var(--background-primary));
+  --label-inverse: var(--snow);
 
   /* Separators */
-  --separator-primary: rgba(60, 60, 67, 0.18);
-  --separator-strong: rgba(60, 60, 67, 0.28);
+  --separator-primary: var(--separator);
+  --separator-strong: color-mix(in oklab, var(--separator) 80%, var(--foreground) 20%);
 
   /* Overlays */
-  --tooltip-foreground: #ffffff;
-  --tooltip-background: #939393;
-}
-
-.theme-dark {
-  /* Accents */
-  --accent-primary: #0a84ff;
-  --accent-like: #ff6b5f;
-  --accent-bookmark: #ffbb4d;
-  --accent-success: #30d158;
-
-  /* Backgrounds */
-  --background-primary: #111215;
-  --background-secondary: #17191d;
-  --background-elevated: #1c1f24;
-
-  /* Fills */
-  --fill-primary: rgba(255, 255, 255, 0.18);
-  --fill-secondary: rgba(255, 255, 255, 0.1);
-  --fill-tertiary: rgba(255, 255, 255, 0.14);
-  --fill-quaternary: rgba(255, 255, 255, 0.06);
-  --fill-card-hover: rgba(255, 255, 255, 0.03);
-  --fill-control-hover: rgba(255, 255, 255, 0.08);
-  --fill-like: rgba(255, 107, 95, 0.18);
-  --fill-like-hover: rgba(255, 107, 95, 0.28);
-  --fill-bookmark: rgba(255, 187, 77, 0.18);
-  --fill-bookmark-hover: rgba(255, 187, 77, 0.26);
-
-  /* Labels */
-  --label-primary: rgba(255, 255, 255, 0.92);
-  --label-secondary: rgb(235, 235, 245);
-  --label-tertiary: rgba(235, 235, 245, 0.64);
-  --label-quaternary: rgba(235, 235, 245, 0.26);
-  --label-inverse: #111215;
-
-  /* Separators */
-  --separator-primary: rgba(255, 255, 255, 0.12);
-  --separator-strong: rgba(255, 255, 255, 0.18);
-
-  /* Overlays */
-  --tooltip-foreground: #ffffff;
-  --tooltip-background: #4c515a;
+  --tooltip-foreground: var(--overlay-foreground);
+  --tooltip-background: var(--overlay);
 }

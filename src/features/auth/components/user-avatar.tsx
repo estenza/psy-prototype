@@ -1,5 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
-
+import { Avatar } from "@heroui/react";
 import { getUserAvatarTone } from "@/lib/avatar-tone";
 
 type UserAvatarProps = {
@@ -46,23 +45,25 @@ export function UserAvatar({
   const avatarClassName = avatarSizeClasses[size];
   const statusDotClassName = statusDotClasses[size];
   const initials = fallbackText?.trim() || getUserInitials(name);
+  const fallbackClassName = avatarUrl
+    ? "bg-[var(--surface-secondary)] text-transparent"
+    : `${getUserAvatarTone(name)} inline-flex items-center justify-center`;
 
   return (
     <span className="relative inline-flex flex-none">
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt={name}
-          className={`${avatarClassName} block object-cover`.trim()}
-        />
-      ) : (
-        <span
-          className={`${avatarClassName} ${getUserAvatarTone(name)} inline-flex items-center justify-center`.trim()}
-          aria-hidden="true"
-        >
-          {initials}
-        </span>
-      )}
+      <Avatar.Root className={avatarClassName}>
+        {avatarUrl ? (
+          <Avatar.Image
+            src={avatarUrl}
+            alt={name}
+            className="object-cover"
+            loading="eager"
+          />
+        ) : null}
+        <Avatar.Fallback className={fallbackClassName}>
+          {avatarUrl ? null : initials}
+        </Avatar.Fallback>
+      </Avatar.Root>
 
       {showStatusDot ? (
         <span

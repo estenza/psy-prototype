@@ -16,9 +16,14 @@ export const runtime = "nodejs";
 
 function buildAdminAccessResponse(error: unknown) {
   if (error instanceof AdminAccessError || error instanceof AdminServiceError) {
+    const fieldErrors = error instanceof AdminServiceError
+      ? error.fieldErrors
+      : undefined;
+
     return NextResponse.json(
       {
         error: error.message,
+        fieldErrors,
       },
       {
         status: error.status,

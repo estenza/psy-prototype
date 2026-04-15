@@ -1,62 +1,211 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Checkbox, ErrorMessage, Input, Label, Modal, TextArea, TextField, cn } from "@heroui/react";
+import type { HTMLAttributes, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/text-input";
+import { CloseIcon } from "@/components/ui/icons";
+import { IconButton } from "@/components/ui/icon-button";
+import {
+  ADMIN_ACCOUNT_NAME_MAX_LENGTH,
+  ADMIN_USER_NAME_MAX_LENGTH,
+  getAdminAccountNameError,
+  getAdminUserNameError,
+  normalizeAdminAccountName,
+} from "@/features/admin/lib/admin-user-fields";
 import { ADMIN_SPECIALTY_OPTIONS } from "@/features/admin/lib/admin-specialties";
 import { AdminSpecialtyTags } from "@/features/admin/components/admin-specialty-tags";
 import {
-  AdminImageCropField,
   buildCroppedImageDataUrl,
-  DEFAULT_ADMIN_IMAGE_CROP_SETTINGS,
-  type AdminImageCropSettings,
-} from "@/features/admin/components/admin-image-crop-field";
-import type { AdminListedUser } from "@/features/admin/types";
+  DEFAULT_IMAGE_CROP_VALUE,
+  type ImageCropValue,
+} from "@/features/media/lib/image-upload";
+import { ImageUploadCropField } from "@/features/media/components/image-upload-crop-field";
+import { BackNavigationButton } from "@/features/topic-creation/components/back-navigation-button";
+import type { AdminListedUser, AdminManagedUserFieldErrorName } from "@/features/admin/types";
 import type { UserRole } from "@/features/auth/types";
 
 type AdminUserEditorModalProps = {
+  defaultRole?: UserRole;
+  embedded?: boolean;
   initialUser?: AdminListedUser | null;
   isOpen: boolean;
   onClose: () => void;
+  onBack?: () => void;
 };
 
-const ROLE_OPTIONS: Array<{
-  description: string;
-  label: string;
-  value: UserRole;
-}> = [
-  {
-    description: "Псевдоним, описание профиля и квадратный аватар для продукта.",
-    label: "Пользователь",
-    value: "user",
-  },
-  {
-    description: "Имя, фамилия, направления, описание и два формата фото.",
-    label: "Специалист",
-    value: "specialist",
-  },
-];
+type AdminUserEditorFormErrors = {
+  [Key in AdminManagedUserFieldErrorName]?: string;
+};
 
 const EMPTY_ERROR = "";
+const REQUIRED_FIELD_ERROR = "Это поле обязательно";
 const USER_DESCRIPTION_LIMIT = 250;
 const SPECIALIST_DESCRIPTION_LIMIT = 750;
+const EMPTY_FORM_ERRORS: AdminUserEditorFormErrors = {};
+const GENERATED_EMAIL_DOMAIN = "example.test";
+const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
 
-function buildInitialState(initialUser?: AdminListedUser | null) {
-  const role = initialUser?.role ?? "user";
+function FormTextField({
+  autoCapitalize = "sentences",
+  autoComplete = "on",
+  autoCorrect = "on",
+  counter,
+  disablePasswordManagerHints = false,
+  error,
+  inputMode,
+  label,
+  maxLength,
+  onChange,
+  onBlur,
+  placeholder,
+  prefix,
+  spellCheck = true,
+  type = "text",
+  value,
+}: {
+  autoCapitalize?: "characters" | "none" | "off" | "on" | "sentences" | "words";
+  autoComplete?: string;
+  autoCorrect?: "off" | "on";
+  counter?: ReactNode;
+  disablePasswordManagerHints?: boolean;
+  error?: string;
+  inputMode?: HTMLAttributes<HTMLInputElement>["inputMode"];
+  label: string;
+  maxLength?: number;
+  onChange: (value: string) => void;
+  onBlur?: (value: string) => void;
+  placeholder: string;
+  prefix?: ReactNode;
+  spellCheck?: boolean;
+  type?: "email" | "password" | "text";
+  value: string;
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <TextField isInvalid={Boolean(error)} className="flex flex-col gap-2 text-sm">
+      <Label className="font-medium text-[var(--label-primary)]">{label}</Label>
+      <div className="relative">
+        {counter && isFocused ? (
+          <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 pl-2 text-[12px] font-medium leading-4 text-[var(--label-tertiary)]">
+            {counter}
+          </span>
+        ) : null}
+        {prefix ? (
+          <span className="pointer-events-none absolute left-4 top-1/2 z-10 w-[1ch] -translate-y-1/2 text-center text-[16px] leading-6 text-[var(--label-secondary)]">
+            {prefix}
+          </span>
+        ) : null}
+        <Input
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={(event) => {
+            setIsFocused(false);
+            onBlur?.(event.target.value);
+          }}
+          autoCapitalize={autoCapitalize}
+          autoComplete={disablePasswordManagerHints ? "off" : autoComplete}
+          autoCorrect={autoCorrect}
+          data-1p-ignore={disablePasswordManagerHints ? "true" : undefined}
+          data-bwignore={disablePasswordManagerHints ? "true" : undefined}
+          data-form-type={disablePasswordManagerHints ? "other" : undefined}
+          data-lpignore={disablePasswordManagerHints ? "true" : undefined}
+          inputMode={inputMode}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          spellCheck={spellCheck}
+          className={cn(
+            "min-h-[54px] w-full rounded-[16px] py-4 text-[16px] leading-6",
+            prefix ? "pl-8" : "",
+            counter && isFocused ? "pr-12" : "",
+          )}
+        />
+      </div>
+      {error ? (
+        <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--accent-critical)]">
+          {error}
+        </ErrorMessage>
+      ) : null}
+    </TextField>
+  );
+}
+
+function FormTextareaField({
+  helper,
+  label,
+  maxLength,
+  minHeightClassName,
+  onChange,
+  placeholder,
+  value,
+}: {
+  helper?: ReactNode;
+  label: string;
+  maxLength?: number;
+  minHeightClassName: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  value: string;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "0px";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <TextField className="grid gap-2 text-sm">
+      <span className="flex items-center justify-between gap-3">
+        <Label className="font-medium text-[var(--label-primary)]">{label}</Label>
+        {helper}
+      </span>
+      <TextArea
+        ref={textareaRef}
+        rows={1}
+        maxLength={maxLength}
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+          event.currentTarget.style.height = "0px";
+          event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+        }}
+        placeholder={placeholder}
+        className={`w-full resize-none overflow-hidden rounded-[16px] py-4 text-[16px] leading-6 ${minHeightClassName}`.trim()}
+      />
+    </TextField>
+  );
+}
+
+function buildInitialState(
+  initialUser?: AdminListedUser | null,
+  defaultRole: UserRole = "user",
+) {
+  const role = initialUser?.role ?? defaultRole;
 
   return {
-    avatarCardCrop: DEFAULT_ADMIN_IMAGE_CROP_SETTINGS,
+    avatarCardCrop: DEFAULT_IMAGE_CROP_VALUE,
     avatarSourceUrl:
       initialUser?.avatarSourceUrl
       ?? initialUser?.avatarCardUrl
       ?? initialUser?.avatarUrl
       ?? null,
-    avatarSquareCrop: DEFAULT_ADMIN_IMAGE_CROP_SETTINGS,
+    avatarSquareCrop: DEFAULT_IMAGE_CROP_VALUE,
     displayName: initialUser?.role === "user" ? initialUser.displayName : "",
     email: initialUser?.email ?? "",
     firstName: initialUser?.firstName ?? "",
     lastName: initialUser?.lastName ?? "",
+    nickname: initialUser?.nickname ?? "",
     password: "",
     profileDescription: initialUser?.profileDescription ?? "",
     role,
@@ -64,38 +213,68 @@ function buildInitialState(initialUser?: AdminListedUser | null) {
   };
 }
 
+function generateRandomToken(length: number) {
+  const randomValues = crypto.getRandomValues(new Uint32Array(length));
+
+  return Array.from(randomValues, (value) =>
+    PASSWORD_ALPHABET[value % PASSWORD_ALPHABET.length])
+    .join("");
+}
+
+function generateRandomEmail(role: UserRole) {
+  return `${role}.${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}@${GENERATED_EMAIL_DOMAIN}`;
+}
+
 export function AdminUserEditorModal({
+  defaultRole = "user",
+  embedded = false,
   initialUser = null,
   isOpen,
   onClose,
+  onBack,
 }: AdminUserEditorModalProps) {
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(embedded);
   const [role, setRole] = useState<UserRole>("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [nickname, setNickname] = useState("");
   const [profileDescription, setProfileDescription] = useState("");
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [avatarSourceUrl, setAvatarSourceUrl] = useState<string | null>(null);
-  const [avatarSquareCrop, setAvatarSquareCrop] = useState<AdminImageCropSettings>(
-    DEFAULT_ADMIN_IMAGE_CROP_SETTINGS,
+  const [avatarSquareCrop, setAvatarSquareCrop] = useState<ImageCropValue>(
+    DEFAULT_IMAGE_CROP_VALUE,
   );
-  const [avatarCardCrop, setAvatarCardCrop] = useState<AdminImageCropSettings>(
-    DEFAULT_ADMIN_IMAGE_CROP_SETTINGS,
+  const [avatarCardCrop, setAvatarCardCrop] = useState<ImageCropValue>(
+    DEFAULT_IMAGE_CROP_VALUE,
   );
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState(EMPTY_ERROR);
-
+  const [formErrors, setFormErrors] = useState<AdminUserEditorFormErrors>(
+    EMPTY_FORM_ERRORS,
+  );
+  const [requiredFieldWasFilled, setRequiredFieldWasFilled] = useState<
+    Partial<Record<AdminManagedUserFieldErrorName, boolean>>
+  >({});
   const isEditing = Boolean(initialUser);
+
+  useEffect(() => {
+    setIsMounted(true);
+
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const initialState = buildInitialState(initialUser);
+    const initialState = buildInitialState(initialUser, defaultRole);
     setAvatarCardCrop(initialState.avatarCardCrop);
     setAvatarSourceUrl(initialState.avatarSourceUrl);
     setAvatarSquareCrop(initialState.avatarSquareCrop);
@@ -103,16 +282,21 @@ export function AdminUserEditorModal({
     setEmail(initialState.email);
     setFirstName(initialState.firstName);
     setLastName(initialState.lastName);
+    setNickname(initialState.nickname);
     setPassword(initialState.password);
     setProfileDescription(initialState.profileDescription);
     setRole(initialState.role);
     setSpecialties(initialState.specialties);
     setErrorMessage(EMPTY_ERROR);
+    setFormErrors(EMPTY_FORM_ERRORS);
     setIsSaving(false);
-  }, [initialUser, isOpen]);
+    setRequiredFieldWasFilled({});
+  }, [defaultRole, initialUser, isOpen]);
 
+  // In embedded mode there is no Modal wrapper to handle keyboard events,
+  // so we need to intercept Escape manually.
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !embedded) {
       return;
     }
 
@@ -127,16 +311,17 @@ export function AdminUserEditorModal({
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, isSaving, onClose]);
+  }, [embedded, isOpen, isSaving, onClose]);
 
-  const selectedRoleMeta = useMemo(
-    () => ROLE_OPTIONS.find((option) => option.value === role) ?? ROLE_OPTIONS[0],
-    [role],
-  );
-
-  if (!isOpen) {
+  if (!isOpen || (!embedded && !isMounted)) {
     return null;
   }
+
+  const title = isEditing
+    ? "Редактировать аккаунт"
+    : defaultRole === "specialist"
+      ? "Добавить специалиста"
+      : "Добавить пользователя";
 
   function toggleSpecialty(nextValue: string) {
     setSpecialties((currentValues) =>
@@ -144,6 +329,119 @@ export function AdminUserEditorModal({
         ? currentValues.filter((value) => value !== nextValue)
         : [...currentValues, nextValue],
     );
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      specialties: undefined,
+    }));
+  }
+
+  function handleGenerateCredentials() {
+    setEmail(generateRandomEmail(role));
+    setPassword(generateRandomToken(16));
+    setRequiredFieldWasFilled((currentState) => ({
+      ...currentState,
+      email: true,
+      password: true,
+    }));
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      email: undefined,
+      password: undefined,
+    }));
+  }
+
+  function validateForm() {
+    const nextErrors: AdminUserEditorFormErrors = {};
+
+    if (!isEditing) {
+      if (!email.trim()) {
+        nextErrors.email = REQUIRED_FIELD_ERROR;
+      }
+
+      if (!password) {
+        nextErrors.password = REQUIRED_FIELD_ERROR;
+      }
+    }
+
+    if (role === "user") {
+      const normalizedNickname = normalizeAdminAccountName(nickname);
+      const displayNameError = !displayName.trim()
+        ? REQUIRED_FIELD_ERROR
+        : getAdminUserNameError(displayName);
+      const nicknameError = !normalizedNickname
+        ? REQUIRED_FIELD_ERROR
+        : getAdminAccountNameError(normalizedNickname);
+
+      if (displayNameError) {
+        nextErrors.displayName = displayNameError;
+      }
+
+      if (nicknameError) {
+        nextErrors.nickname = nicknameError;
+      }
+    } else {
+      if (!firstName.trim()) {
+        nextErrors.firstName = "Введите имя";
+      }
+
+      if (!lastName.trim()) {
+        nextErrors.lastName = "Введите фамилию";
+      }
+
+      if (specialties.length === 0) {
+        nextErrors.specialties = "Выберите хотя бы один подход";
+      }
+    }
+
+    setFormErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  function setRequiredFieldError(fieldName: AdminManagedUserFieldErrorName, value: string) {
+    if (!value.trim() && !requiredFieldWasFilled[fieldName]) {
+      setFormErrors((currentErrors) => ({
+        ...currentErrors,
+        [fieldName]: undefined,
+      }));
+      return;
+    }
+
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      [fieldName]: value.trim() ? undefined : REQUIRED_FIELD_ERROR,
+    }));
+  }
+
+  function handleUserAccountNameChange(value: string) {
+    const normalizedValue = normalizeAdminAccountName(value);
+    const nextError = normalizedValue
+      ? getAdminAccountNameError(normalizedValue)
+      : undefined;
+
+    setNickname(normalizedValue);
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      nickname: nextError ?? undefined,
+    }));
+  }
+
+  function mapRequestErrorMessage(message: string) {
+    const normalizedMessage = message.trim().toLowerCase();
+
+    if (!normalizedMessage) {
+      return "Не удалось сохранить";
+    }
+
+    if (normalizedMessage.includes("access denied")) {
+      return "Доступ закрыт";
+    }
+
+    if (normalizedMessage.includes("failed to fetch")) {
+      return "Нет соединения";
+    }
+
+    return message;
   }
 
   async function buildAvatarPayload() {
@@ -156,17 +454,17 @@ export function AdminUserEditorModal({
     }
 
     const avatarUrl = await buildCroppedImageDataUrl({
+      crop: avatarSquareCrop,
       outputHeight: 512,
       outputWidth: 512,
-      settings: avatarSquareCrop,
       sourceImage: avatarSourceUrl,
     });
 
     const avatarCardUrl = role === "specialist"
       ? await buildCroppedImageDataUrl({
+          crop: avatarCardCrop,
           outputHeight: 720,
           outputWidth: 960,
-          settings: avatarCardCrop,
           sourceImage: avatarSourceUrl,
         })
       : null;
@@ -180,16 +478,22 @@ export function AdminUserEditorModal({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSaving(true);
     setErrorMessage(EMPTY_ERROR);
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
       const avatarPayload = await buildAvatarPayload();
       const basePayload = {
         ...avatarPayload,
-        displayName: role === "user" ? displayName : undefined,
+        displayName: role === "user" ? displayName.trim() : undefined,
         firstName: role === "specialist" ? firstName : undefined,
         lastName: role === "specialist" ? lastName : undefined,
+        nickname: role === "user" ? normalizeAdminAccountName(nickname) : undefined,
         profileDescription,
         role,
         specialties: role === "specialist" ? specialties : [],
@@ -215,9 +519,16 @@ export function AdminUserEditorModal({
       );
       const payload = (await response.json()) as {
         error?: string;
+        fieldErrors?: AdminUserEditorFormErrors;
       };
 
       if (!response.ok) {
+        if (payload.fieldErrors) {
+          setFormErrors(payload.fieldErrors);
+          setErrorMessage(EMPTY_ERROR);
+          return;
+        }
+
         throw new Error(payload.error ?? "Не удалось сохранить аккаунт.");
       }
 
@@ -225,200 +536,307 @@ export function AdminUserEditorModal({
       onClose();
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Не удалось сохранить аккаунт.",
+        error instanceof Error
+          ? mapRequestErrorMessage(error.message)
+          : "Не удалось сохранить",
       );
     } finally {
       setIsSaving(false);
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-[220] flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="admin-user-editor-title"
-    >
-      <button
-        type="button"
-        className="absolute inset-0 bg-[rgba(15,23,42,0.46)] backdrop-blur-[3px]"
-        aria-label="Закрыть модалку"
-        onClick={() => {
-          if (!isSaving) {
-            onClose();
-          }
-        }}
-      />
-
-      <div className="surface-primary border-separator relative z-10 max-h-[90dvh] w-full max-w-[920px] overflow-y-auto rounded-[30px] border p-5 shadow-[0_30px_90px_rgba(15,23,42,0.24)] sm:p-6">
-        <button
-          type="button"
-          className="interactive-control absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full text-lg"
-          aria-label="Закрыть"
+  const innerContent = (
+    <>
+      {!embedded ? (
+        <IconButton
+          className="absolute right-3 top-3 text-[var(--label-primary)]"
+          label="Закрыть"
           onClick={() => {
             if (!isSaving) {
               onClose();
             }
           }}
-        >
-          x
-        </button>
+          icon={<CloseIcon />}
+        />
+      ) : null}
 
-        <div className="pr-10">
-          <p className="text-[12px] uppercase tracking-[0.08em] text-[var(--label-secondary)]">
-            Admin
-          </p>
+      {embedded ? (
+        <div className="flex items-center gap-3 pr-10">
+          <BackNavigationButton
+            onClick={() => {
+              if (!isSaving) {
+                onBack?.();
+              }
+            }}
+          />
           <h2
             id="admin-user-editor-title"
-            className="font-helvetica mt-2 text-[30px] font-bold leading-none"
+            className="font-helvetica text-[28px] font-bold leading-none"
           >
-            {isEditing ? "Редактировать аккаунт" : "Добавить пользователя"}
+            {title}
           </h2>
-          <p className="mt-3 text-[14px] leading-6 text-[var(--label-secondary)]">
-            {selectedRoleMeta.description}
-          </p>
         </div>
+      ) : (
+        <div className="pr-10">
+          <h2
+            id="admin-user-editor-title"
+            className="font-helvetica text-[30px] font-bold leading-none"
+          >
+            {title}
+          </h2>
+        </div>
+      )}
 
-        <form className="mt-6 grid gap-6" onSubmit={handleSubmit}>
-          <section className="space-y-4">
-            <div className="inline-flex rounded-[16px] bg-[var(--fill-control-hover)] p-1">
-              {ROLE_OPTIONS.map((option) => {
-                const isActive = option.value === role;
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    disabled={isEditing}
-                    onClick={() => {
-                      if (!isEditing) {
-                        setRole(option.value);
-                      }
-                    }}
-                    className={`rounded-[12px] px-5 py-3 text-left text-[14px] font-bold leading-5 transition-colors ${
-                      isActive
-                        ? "surface-elevated text-[var(--accent-primary)]"
-                        : "text-label-tertiary"
-                    } ${isEditing ? "cursor-default opacity-70" : "cursor-pointer"}`.trim()}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {isEditing ? (
-              <p className="text-[12px] leading-5 text-[var(--label-tertiary)]">
-                Тип аккаунта в текущей версии не меняется через редактирование.
-              </p>
-            ) : null}
-          </section>
-
+      <form className="mt-6 grid gap-6" onSubmit={handleSubmit}>
           {!isEditing ? (
-            <section className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium text-[var(--label-primary)]">Email</span>
-                <TextInput
+            <section className="grid gap-3">
+              <div className="grid gap-4 min-[1280px]:grid-cols-2">
+                <FormTextField
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  disablePasswordManagerHints
+                  error={formErrors.email}
+                  inputMode="email"
+                  label="Email"
+                  onBlur={(value) => setRequiredFieldError("email", value)}
+                  spellCheck={false}
                   type="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(value) => {
+                    const hasValue = value.trim().length > 0;
+                    setRequiredFieldWasFilled((currentState) => (
+                      hasValue
+                        ? {
+                            ...currentState,
+                            email: true,
+                          }
+                        : currentState
+                    ));
+                    setEmail(value);
+                    setFormErrors((currentErrors) => ({
+                      ...currentErrors,
+                      email:
+                        !hasValue && requiredFieldWasFilled.email
+                          ? REQUIRED_FIELD_ERROR
+                          : undefined,
+                    }));
+                  }}
                   placeholder="name@example.com"
                 />
-              </label>
 
-              <label className="grid gap-2 text-sm">
-                <span className="font-medium text-[var(--label-primary)]">Пароль</span>
-                <TextInput
+                <FormTextField
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  disablePasswordManagerHints
+                  error={formErrors.password}
+                  label="Пароль"
+                  onBlur={(value) => setRequiredFieldError("password", value)}
+                  spellCheck={false}
                   type="password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(value) => {
+                    const hasValue = value.trim().length > 0;
+                    setRequiredFieldWasFilled((currentState) => (
+                      hasValue
+                        ? {
+                            ...currentState,
+                            password: true,
+                          }
+                        : currentState
+                    ));
+                    setPassword(value);
+                    setFormErrors((currentErrors) => ({
+                      ...currentErrors,
+                      password:
+                        !hasValue && requiredFieldWasFilled.password
+                          ? REQUIRED_FIELD_ERROR
+                          : undefined,
+                    }));
+                  }}
                   placeholder="Минимум 8 символов"
                 />
-              </label>
-            </section>
-          ) : (
-            <div className="grid gap-2 text-sm">
-              <span className="font-medium text-[var(--label-primary)]">Email</span>
-              <div className="border-separator bg-background-primary rounded-[22px] border px-5 py-4 text-[var(--label-secondary)]">
-                {initialUser?.email}
               </div>
-            </div>
-          )}
+
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={handleGenerateCredentials}
+                  className="cursor-pointer text-sm font-medium text-[var(--accent-primary)] transition-none hover:text-[color-mix(in_srgb,var(--accent-primary)_82%,white)]"
+                >
+                  Сгенерировать
+                </button>
+              </div>
+            </section>
+          ) : null}
 
           {role === "user" ? (
             <section className="grid gap-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm sm:col-span-2">
-                  <span className="font-medium text-[var(--label-primary)]">Ник</span>
-                  <TextInput
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="Как показывать пользователя в продукте"
-                  />
-                </label>
+              <div className="grid gap-4 min-[1280px]:grid-cols-2 min-[1280px]:items-start">
+                <FormTextField
+                  counter={`${displayName.length}/${ADMIN_USER_NAME_MAX_LENGTH}`}
+                  error={formErrors.displayName}
+                  label="Имя"
+                  maxLength={ADMIN_USER_NAME_MAX_LENGTH}
+                  onBlur={(value) => setRequiredFieldError("displayName", value)}
+                  value={displayName}
+                  onChange={(value) => {
+                    const hasValue = value.trim().length > 0;
+                    setRequiredFieldWasFilled((currentState) => (
+                      hasValue
+                        ? {
+                            ...currentState,
+                            displayName: true,
+                          }
+                        : currentState
+                    ));
+                    setDisplayName(value);
+                    setFormErrors((currentErrors) => ({
+                      ...currentErrors,
+                      displayName:
+                        !hasValue && requiredFieldWasFilled.displayName
+                          ? REQUIRED_FIELD_ERROR
+                          : undefined,
+                    }));
+                  }}
+                  placeholder="Имя пользователя"
+                />
 
-                <label className="grid gap-2 text-sm sm:col-span-2">
-                  <span className="flex items-center justify-between gap-3 font-medium text-[var(--label-primary)]">
-                    <span>Описание профиля</span>
-                    <span className="text-[12px] font-medium text-[var(--label-tertiary)]">
-                      {profileDescription.length}/{USER_DESCRIPTION_LIMIT}
-                    </span>
-                  </span>
-                  <textarea
-                    value={profileDescription}
-                    maxLength={USER_DESCRIPTION_LIMIT}
-                    onChange={(event) => setProfileDescription(event.target.value)}
-                    placeholder="Короткое описание пользователя"
-                    className="field-shell min-h-[132px] rounded-[24px] px-5 py-4 text-[15px] outline-none placeholder:text-[var(--label-tertiary)]"
-                  />
-                </label>
+                <FormTextField
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  counter={`${nickname.length}/${ADMIN_ACCOUNT_NAME_MAX_LENGTH}`}
+                  error={formErrors.nickname}
+                  inputMode="text"
+                  label="Имя аккаунта"
+                  maxLength={ADMIN_ACCOUNT_NAME_MAX_LENGTH}
+                  onBlur={(value) => {
+                    if (!value.trim()) {
+                      if (!requiredFieldWasFilled.nickname) {
+                        setFormErrors((currentErrors) => ({
+                          ...currentErrors,
+                          nickname: undefined,
+                        }));
+                        return;
+                      }
+
+                      setFormErrors((currentErrors) => ({
+                        ...currentErrors,
+                        nickname: REQUIRED_FIELD_ERROR,
+                      }));
+                      return;
+                    }
+
+                    setFormErrors((currentErrors) => ({
+                      ...currentErrors,
+                      nickname: getAdminAccountNameError(value) ?? undefined,
+                    }));
+                  }}
+                  prefix="@"
+                  spellCheck={false}
+                  value={nickname}
+                  onChange={(value) => {
+                    const normalizedValue = normalizeAdminAccountName(value);
+                    const hasValue = normalizedValue.length > 0;
+                    setRequiredFieldWasFilled((currentState) => (
+                      hasValue
+                        ? {
+                            ...currentState,
+                            nickname: true,
+                          }
+                        : currentState
+                    ));
+
+                    if (!hasValue && requiredFieldWasFilled.nickname) {
+                      setNickname(normalizedValue);
+                      setFormErrors((currentErrors) => ({
+                        ...currentErrors,
+                        nickname: REQUIRED_FIELD_ERROR,
+                      }));
+                      return;
+                    }
+
+                    handleUserAccountNameChange(value);
+                  }}
+                  placeholder="username"
+                />
               </div>
 
-              <AdminImageCropField
+              <FormTextareaField
+                label="Описание профиля"
+                helper={(
+                  <span className="text-[12px] font-medium text-[var(--label-tertiary)]">
+                    {profileDescription.length}/{USER_DESCRIPTION_LIMIT}
+                  </span>
+                )}
+                maxLength={USER_DESCRIPTION_LIMIT}
+                minHeightClassName="min-h-[132px]"
+                value={profileDescription}
+                onChange={setProfileDescription}
+                placeholder="Короткое описание пользователя"
+              />
+
+              <ImageUploadCropField
                 aspectRatio="1:1"
                 label="Аватар"
-                helperText="Квадратный аватар используется в ленте, комментариях и в меню профиля."
+                helperText=""
                 sourceImage={avatarSourceUrl}
-                settings={avatarSquareCrop}
-                onSelectFile={(nextImage) => {
+                previewVariant="avatar"
+                value={avatarSquareCrop}
+                outputHeight={512}
+                outputWidth={512}
+                onSourceImageChange={(nextImage) => {
                   setAvatarSourceUrl(nextImage);
-                  setAvatarSquareCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
+                  setAvatarSquareCrop(DEFAULT_IMAGE_CROP_VALUE);
                 }}
-                onSettingsChange={setAvatarSquareCrop}
+                onValueChange={setAvatarSquareCrop}
                 onClear={() => {
                   setAvatarSourceUrl(null);
-                  setAvatarSquareCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
+                  setAvatarSquareCrop(DEFAULT_IMAGE_CROP_VALUE);
                 }}
               />
             </section>
           ) : (
             <section className="grid gap-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium text-[var(--label-primary)]">Имя</span>
-                  <TextInput
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    placeholder="Имя специалиста"
-                  />
-                </label>
+              <div className="grid gap-4 min-[1280px]:grid-cols-2">
+                <FormTextField
+                  error={formErrors.firstName}
+                  label="Имя"
+                  value={firstName}
+                  onChange={(value) => {
+                    setFirstName(value);
+                    setFormErrors((currentErrors) => ({
+                      ...currentErrors,
+                      firstName: undefined,
+                    }));
+                  }}
+                  placeholder="Имя специалиста"
+                />
 
-                <label className="grid gap-2 text-sm">
-                  <span className="font-medium text-[var(--label-primary)]">Фамилия</span>
-                  <TextInput
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    placeholder="Фамилия специалиста"
-                  />
-                </label>
+                <FormTextField
+                  error={formErrors.lastName}
+                  label="Фамилия"
+                  value={lastName}
+                  onChange={(value) => {
+                    setLastName(value);
+                    setFormErrors((currentErrors) => ({
+                      ...currentErrors,
+                      lastName: undefined,
+                    }));
+                  }}
+                  placeholder="Фамилия специалиста"
+                />
               </div>
 
-              <section className="border-separator rounded-[24px] border p-4">
+              <section className="border-separator rounded-[16px] border p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-[var(--label-primary)]">Направления</p>
+                    <p className="text-sm font-semibold text-[var(--label-primary)]">
+                      Психотерапевтические подходы
+                    </p>
                     <p className="mt-1 text-[13px] leading-5 text-[var(--label-secondary)]">
-                      Выбранные направления показываются тегами в таблице и доступны для редактирования.
+                      Выбранные подходы показываются тегами в таблице и доступны для редактирования.
                     </p>
                   </div>
                 </div>
@@ -427,83 +845,89 @@ export function AdminUserEditorModal({
                   <AdminSpecialtyTags specialties={specialties} />
                 </div>
 
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {formErrors.specialties ? (
+                  <p className="mt-3 text-[13px] text-[var(--accent-critical)]">
+                    {formErrors.specialties}
+                  </p>
+                ) : null}
+
+                <div className="mt-4 grid gap-2 min-[1280px]:grid-cols-2">
                   {ADMIN_SPECIALTY_OPTIONS.map((specialty) => {
                     const isSelected = specialties.includes(specialty);
 
                     return (
-                      <label
+                      <Checkbox
                         key={specialty}
-                        className={`border-separator flex cursor-pointer items-center gap-3 rounded-[18px] border px-4 py-3 text-sm transition-colors ${
-                          isSelected ? "surface-elevated" : "bg-background-primary"
-                        }`}
+                        isSelected={isSelected}
+                        onChange={() => toggleSpecialty(specialty)}
+                        className={cn(
+                          "border-separator rounded-[12px] border px-4 py-3 text-sm transition-colors",
+                          isSelected ? "surface-elevated" : "bg-[var(--background-primary)]",
+                        )}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSpecialty(specialty)}
-                        />
-                        <span>{specialty}</span>
-                      </label>
+                        {specialty}
+                      </Checkbox>
                     );
                   })}
                 </div>
               </section>
 
-              <label className="grid gap-2 text-sm">
-                <span className="flex items-center justify-between gap-3 font-medium text-[var(--label-primary)]">
-                  <span>Описание</span>
+              <FormTextareaField
+                label="Описание"
+                helper={(
                   <span className="text-[12px] font-medium text-[var(--label-tertiary)]">
                     {profileDescription.length}/{SPECIALIST_DESCRIPTION_LIMIT}
                   </span>
-                </span>
-                <textarea
-                  value={profileDescription}
-                  maxLength={SPECIALIST_DESCRIPTION_LIMIT}
-                  onChange={(event) => setProfileDescription(event.target.value)}
-                  placeholder="Краткое описание специалиста"
-                  className="field-shell min-h-[150px] rounded-[24px] px-5 py-4 text-[15px] outline-none placeholder:text-[var(--label-tertiary)]"
-                />
-              </label>
+                )}
+                maxLength={SPECIALIST_DESCRIPTION_LIMIT}
+                minHeightClassName="min-h-[150px]"
+                value={profileDescription}
+                onChange={setProfileDescription}
+                placeholder="Краткое описание специалиста"
+              />
 
-              <div className="grid gap-4 xl:grid-cols-2">
-                <AdminImageCropField
+              <div className="grid gap-4 min-[1280px]:grid-cols-2">
+                <ImageUploadCropField
                   aspectRatio="1:1"
                   label="Фото 1:1"
                   helperText="Квадратный вариант для ленты, комментариев и компактных элементов интерфейса."
                   sourceImage={avatarSourceUrl}
-                  settings={avatarSquareCrop}
+                  value={avatarSquareCrop}
+                  outputHeight={512}
+                  outputWidth={512}
                   uploadLabel="Выбрать исходное фото"
-                  onSelectFile={(nextImage) => {
+                  onSourceImageChange={(nextImage) => {
                     setAvatarSourceUrl(nextImage);
-                    setAvatarSquareCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
-                    setAvatarCardCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
+                    setAvatarSquareCrop(DEFAULT_IMAGE_CROP_VALUE);
+                    setAvatarCardCrop(DEFAULT_IMAGE_CROP_VALUE);
                   }}
-                  onSettingsChange={setAvatarSquareCrop}
+                  onValueChange={setAvatarSquareCrop}
                   onClear={() => {
                     setAvatarSourceUrl(null);
-                    setAvatarSquareCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
-                    setAvatarCardCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
+                    setAvatarSquareCrop(DEFAULT_IMAGE_CROP_VALUE);
+                    setAvatarCardCrop(DEFAULT_IMAGE_CROP_VALUE);
                   }}
                 />
 
-                <AdminImageCropField
+                <ImageUploadCropField
                   aspectRatio="4:3"
                   label="Фото 4:3"
                   helperText="Более крупный вариант сохраняется для карточки специалиста и future-friendly поверхностей."
                   sourceImage={avatarSourceUrl}
-                  settings={avatarCardCrop}
+                  value={avatarCardCrop}
+                  outputHeight={720}
+                  outputWidth={960}
                   uploadLabel="Использовать то же исходное фото"
-                  onSelectFile={(nextImage) => {
+                  onSourceImageChange={(nextImage) => {
                     setAvatarSourceUrl(nextImage);
-                    setAvatarSquareCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
-                    setAvatarCardCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
+                    setAvatarSquareCrop(DEFAULT_IMAGE_CROP_VALUE);
+                    setAvatarCardCrop(DEFAULT_IMAGE_CROP_VALUE);
                   }}
-                  onSettingsChange={setAvatarCardCrop}
+                  onValueChange={setAvatarCardCrop}
                   onClear={() => {
                     setAvatarSourceUrl(null);
-                    setAvatarSquareCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
-                    setAvatarCardCrop(DEFAULT_ADMIN_IMAGE_CROP_SETTINGS);
+                    setAvatarSquareCrop(DEFAULT_IMAGE_CROP_VALUE);
+                    setAvatarCardCrop(DEFAULT_IMAGE_CROP_VALUE);
                   }}
                 />
               </div>
@@ -516,15 +940,6 @@ export function AdminUserEditorModal({
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button
-              type="button"
-              variant="ghost"
-              className="!rounded-full !px-5"
-              disabled={isSaving}
-              onClick={onClose}
-            >
-              Отмена
-            </Button>
-            <Button
               type="submit"
               variant="primary"
               className="!rounded-full !px-5"
@@ -533,8 +948,31 @@ export function AdminUserEditorModal({
               {isSaving ? "Сохраняем..." : isEditing ? "Сохранить изменения" : "Создать аккаунт"}
             </Button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="w-full">{innerContent}</div>;
+  }
+
+  return (
+    <Modal.Backdrop
+      isOpen={isOpen}
+      isDismissable={!isSaving}
+      onOpenChange={(open) => {
+        if (!open && !isSaving) onClose();
+      }}
+      className="fixed inset-0 z-[220] bg-[rgba(15,23,42,0.56)]"
+    >
+      <Modal.Container scroll="outside" className="!p-4">
+        <Modal.Dialog
+          aria-label={title}
+          className="modal-surface relative w-full max-w-[720px] p-6"
+        >
+          {innerContent}
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

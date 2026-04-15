@@ -22,7 +22,6 @@ const HYVOR_TALK_FOCUS_RESET_CSS = `
   [tabindex]:focus-visible,
   [tabindex]:focus-within {
     outline: none !important;
-    box-shadow: none !important;
   }
 `;
 

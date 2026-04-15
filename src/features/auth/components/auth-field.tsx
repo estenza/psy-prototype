@@ -1,16 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { ErrorMessage, Input, Label, TextField } from "@heroui/react";
+import type { CSSProperties } from "react";
 
 type AuthFieldProps = {
   autoCapitalize?: string;
   autoComplete?: string;
+  autoCorrect?: "off" | "on";
+  disablePasswordManagerHints?: boolean;
   error?: string;
+  maskedText?: boolean;
   label: string;
   maxLength?: number;
   name: string;
   onChange: (value: string) => void;
   placeholder: string;
+  spellCheck?: boolean;
   type?: "email" | "password" | "text";
   value: string;
 };
@@ -18,59 +23,62 @@ type AuthFieldProps = {
 export function AuthField({
   autoCapitalize = "none",
   autoComplete,
+  autoCorrect = "off",
+  disablePasswordManagerHints = false,
   error,
+  maskedText = false,
   label,
   maxLength,
   name,
   onChange,
+  placeholder,
   type = "text",
   value,
+  spellCheck = false,
 }: AuthFieldProps) {
   const id = `auth-field-${name}`;
-  const [isFocused, setIsFocused] = useState(false);
-  const isFloating = isFocused || value.trim().length > 0;
+  const maskedTextStyle = maskedText
+    ? ({ WebkitTextSecurity: "disc" } as CSSProperties)
+    : undefined;
 
   return (
-    <label
-      htmlFor={id}
+    <TextField
+      isInvalid={Boolean(error)}
       className="flex w-full flex-col gap-2"
     >
-      <div className="relative w-full">
-        <input
-          id={id}
-          name={name}
-          type={type}
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          autoCapitalize={autoCapitalize}
-          autoComplete={autoComplete}
-          maxLength={maxLength}
-          aria-label={label}
-          className={`bg-background-primary text-label-primary w-full rounded-2xl border px-4 pb-3 pt-6 text-[16px] leading-5 outline-none transition-colors ${
-            error
-              ? "border-[var(--accent-critical)] focus:border-[var(--accent-critical)]"
-              : "border-separator focus:border-[var(--label-primary)]"
-          }`}
-        />
-        <span
-          className={`pointer-events-none absolute left-4 right-4 top-1/2 origin-left text-[16px] leading-5 transform-gpu will-change-transform transition-[transform,color] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${
-            isFloating
-              ? "text-label-tertiary -translate-y-[22px] scale-[0.75]"
-              : "text-label-secondary -translate-y-1/2 scale-100"
-          }`}
-        >
-          {label}
-        </span>
-      </div>
+      <Label
+        htmlFor={id}
+        className="text-[14px] font-medium text-[var(--label-primary)]"
+      >
+        {label}
+      </Label>
+      <Input
+        id={id}
+        name={name}
+        type={type}
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+        autoCapitalize={autoCapitalize}
+        autoComplete={disablePasswordManagerHints ? "off" : autoComplete}
+        autoCorrect={autoCorrect}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        spellCheck={spellCheck}
+        aria-label={label}
+        data-1p-ignore={disablePasswordManagerHints ? "true" : undefined}
+        data-bwignore={disablePasswordManagerHints ? "true" : undefined}
+        data-form-type={disablePasswordManagerHints ? "other" : undefined}
+        data-lpignore={disablePasswordManagerHints ? "true" : undefined}
+        style={maskedTextStyle}
+        className="w-full rounded-2xl px-4 py-3 text-[16px] leading-5"
+      />
       {error ? (
-        <span className="text-[12px] leading-4 text-[var(--accent-critical)]">
+        <ErrorMessage className="text-[12px] leading-4 text-[var(--accent-critical)]">
           {error}
-        </span>
+        </ErrorMessage>
       ) : null}
-    </label>
+    </TextField>
   );
 }

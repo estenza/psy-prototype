@@ -53,29 +53,30 @@ export function ForumPostItem({
         <span>{post.stats.comments}</span>
       </div>
 
-      <button
-        type="button"
-        aria-label={
+      <HoverTooltip
+        label={
           post.viewer.bookmarked ? "Убрать из закладок" : "Закладка"
         }
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onToggleBookmark(post.id);
-        }}
-        className={`group/tooltip relative z-10 inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full ${
-          post.viewer.bookmarked
-            ? "interactive-accent-bookmark"
-            : "interactive-toggle-bookmark-plain"
-        }`}
       >
-        <BookmarkIcon filled={post.viewer.bookmarked} />
-        <HoverTooltip
-          label={
+        <button
+          type="button"
+          aria-label={
             post.viewer.bookmarked ? "Убрать из закладок" : "Закладка"
           }
-        />
-      </button>
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggleBookmark(post.id);
+          }}
+          className={`z-10 inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full ${
+            post.viewer.bookmarked
+              ? "interactive-accent-bookmark"
+              : "interactive-toggle-bookmark-plain"
+          }`}
+        >
+          <BookmarkIcon filled={post.viewer.bookmarked} />
+        </button>
+      </HoverTooltip>
     </div>
   );
 }

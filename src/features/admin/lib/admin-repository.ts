@@ -2,6 +2,7 @@ import "server-only";
 
 import { isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
+import { normalizeAdminSpecialties } from "@/features/admin/lib/admin-specialties";
 import type { AdminListedUser, AdminUsersFilters } from "@/features/admin/types";
 import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
 import type { OnboardingStep, SpecialistStatus, UserRole } from "@/features/auth/types";
@@ -64,7 +65,9 @@ function parseSpecialties(value: string | null | undefined) {
       return [];
     }
 
-    return parsed.filter((item): item is string => typeof item === "string");
+    return normalizeAdminSpecialties(
+      parsed.filter((item): item is string => typeof item === "string"),
+    );
   } catch {
     return [];
   }

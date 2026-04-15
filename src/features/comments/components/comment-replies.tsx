@@ -43,7 +43,7 @@ export function CommentReplies({
             <div className="flex min-w-0 flex-1 flex-col justify-center pt-3">
               <button
                 type="button"
-                className="comment-thread-toggle text-label-primary inline-flex h-9 items-center rounded-full px-4 text-[14px] font-medium leading-9"
+                className="interactive-tertiary text-label-primary inline-flex h-9 items-center rounded-full px-4 text-[14px] font-medium leading-9"
                 onClick={onToggle}
               >
                 Скрыть ответы
@@ -63,7 +63,7 @@ export function CommentReplies({
           <div className="flex min-w-0 flex-1 flex-col justify-center pt-3">
             <button
               type="button"
-              className="comment-thread-toggle text-label-primary inline-flex h-9 items-center rounded-full px-4 text-[14px] font-medium leading-9"
+              className="interactive-tertiary text-label-primary inline-flex h-9 items-center rounded-full px-4 text-[14px] font-medium leading-9"
               onClick={onToggle}
             >
               Показать ответы ({replyCount})

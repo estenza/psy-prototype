@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppToastProvider } from "@/components/feedback/app-toast-provider";
 import { EnvironmentAttributes } from "@/components/layout/environment-attributes";
 import { AppThemeProvider } from "@/components/theme/app-theme-provider";
 import { AuthRequiredProvider } from "@/features/auth/components/auth-required-provider";
@@ -20,10 +21,14 @@ const themeInitializationScript = `
         savedTheme === "dark" || savedTheme === "light"
           ? savedTheme
           : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(theme);
       document.documentElement.classList.toggle("theme-dark", theme === "dark");
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
     } catch (error) {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
       document.documentElement.dataset.theme = "light";
       document.documentElement.style.colorScheme = "light";
     }
@@ -39,7 +44,13 @@ export default async function RootLayout({
   const currentUser = await getCurrentUser();
 
   return (
-    <html lang="ru" data-app-env={appEnvironment} suppressHydrationWarning>
+    <html
+      lang="ru"
+      data-app-env={appEnvironment}
+      data-theme="light"
+      className="light"
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -53,6 +64,7 @@ export default async function RootLayout({
           <AuthRequiredProvider initialUser={currentUser}>
             {children}
           </AuthRequiredProvider>
+          <AppToastProvider />
         </AppThemeProvider>
       </body>
     </html>

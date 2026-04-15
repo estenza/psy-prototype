@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
+import { normalizeAdminSpecialties } from "@/features/admin/lib/admin-specialties";
 import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
 import type {
   AuthSession,
@@ -106,7 +107,9 @@ function parseSpecialties(value: string | null | undefined) {
       return [];
     }
 
-    return parsed.filter((item): item is string => typeof item === "string");
+    return normalizeAdminSpecialties(
+      parsed.filter((item): item is string => typeof item === "string"),
+    );
   } catch {
     return [];
   }

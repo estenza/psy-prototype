@@ -2,24 +2,29 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircleIcon } from "@/components/ui/icons";
 import { AdminUserEditorModal } from "@/features/admin/components/admin-user-editor-modal";
 
-export function AdminUserEditorLauncher() {
+export function AdminUserEditorLauncher({
+  defaultRole = "user",
+  label,
+}: {
+  defaultRole?: "specialist" | "user";
+  label?: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
       <Button
         variant="primary"
-        className="!rounded-full !px-5"
-        icon={<PlusCircleIcon />}
+        className="!min-w-[132px] !cursor-pointer !justify-center !rounded-full !px-5"
         onClick={() => setIsOpen(true)}
       >
-        Добавить пользователя
+        {label ?? "Создать"}
       </Button>
 
       <AdminUserEditorModal
+        defaultRole={defaultRole}
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
       />

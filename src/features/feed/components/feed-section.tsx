@@ -75,7 +75,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
                   ? "Пока нет опубликованных обсуждений"
                   : "Пока нет тем по этому фильтру"}
               </h2>
-              <p className="text-label-secondary mt-3 text-[16px] leading-7">
+              <p className="text-label-tertiary mt-3 text-[16px] leading-7">
                 {activeTopic === "all"
                   ? "Создайте первое обсуждение, и оно сразу появится здесь в ленте."
                   : "Попробуйте выбрать другую тему или вернитесь к общей ленте. Все публикации остаются в одном потоке, а темы работают как фильтр и метаданные."}

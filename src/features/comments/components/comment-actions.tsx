@@ -21,7 +21,7 @@ export function CommentActions({
     <div className="flex min-h-9 w-full items-center gap-0 pt-1">
       <button
         type="button"
-        className="comment-icon-button text-label-secondary inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full"
+        className="interactive-tertiary text-label-secondary inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full"
         onClick={onLike}
         disabled={!canLike}
         aria-label="Поставить лайк"
@@ -35,7 +35,7 @@ export function CommentActions({
 
       <button
         type="button"
-        className="comment-text-button text-label-primary inline-flex h-8 cursor-pointer items-center rounded-full px-3 text-[12px] font-medium leading-8"
+        className="interactive-tertiary text-label-primary inline-flex h-8 cursor-pointer items-center rounded-full px-3 text-[12px] font-medium leading-8"
         onClick={onReply}
         disabled={!canReply}
       >

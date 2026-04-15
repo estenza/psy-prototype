@@ -1,7 +1,11 @@
 "use client";
 
+import { Modal } from "@heroui/react";
 import Link from "next/link";
 import { useEffect } from "react";
+import { buttonClassName } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { CloseIcon } from "@/components/ui/icons";
 
 type AuthRequiredModalProps = {
   isOpen: boolean;
@@ -40,28 +44,22 @@ export function AuthRequiredModal({
   const signUpHref = `/sign-up?next=${encodeURIComponent(nextHref)}`;
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="auth-required-modal-title"
+    <Modal.Backdrop
+      className="fixed inset-0 z-[200] bg-[rgba(15,23,42,0.56)]"
+      isDismissable
+      onClick={onClose}
     >
-      <button
-        type="button"
-        aria-label="Закрыть"
-        onClick={onClose}
-        className="absolute inset-0 bg-[rgba(15,23,42,0.4)] backdrop-blur-[2px]"
-      />
-
-      <div className="surface-primary border-separator relative z-10 w-full max-w-[420px] rounded-[28px] border px-5 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.16)] sm:px-6">
-        <button
-          type="button"
-          aria-label="Закрыть модалку авторизации"
-          onClick={onClose}
-          className="interactive-control absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full text-lg leading-none"
+      <Modal.Container className="flex min-h-dvh items-center justify-center p-4">
+        <Modal.Dialog
+          aria-labelledby="auth-required-modal-title"
+          className="modal-surface relative w-full max-w-[420px] px-5 py-6 sm:px-6"
         >
-          x
-        </button>
+        <IconButton
+          className="absolute right-3 top-3 text-[var(--label-primary)]"
+          label="Закрыть модалку авторизации"
+          onClick={onClose}
+          icon={<CloseIcon />}
+        />
 
         <div className="pr-8">
           <h2
@@ -79,19 +77,26 @@ export function AuthRequiredModal({
           <Link
             href={signInHref}
             onClick={onClose}
-            className="interactive-fill inline-flex min-h-11 items-center justify-center rounded-full px-4 py-3 text-sm font-semibold"
+            className={buttonClassName({
+              className: "min-h-11 rounded-full",
+              variant: "primary",
+            })}
           >
             Войти
           </Link>
           <Link
             href={signUpHref}
             onClick={onClose}
-            className="interactive-control inline-flex min-h-11 items-center justify-center rounded-full px-4 py-3 text-sm font-semibold"
+            className={buttonClassName({
+              className: "min-h-11 rounded-full",
+              variant: "tertiary",
+            })}
           >
             Регистрация
           </Link>
         </div>
-      </div>
-    </div>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

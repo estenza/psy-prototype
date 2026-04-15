@@ -117,7 +117,7 @@ export function AuthForm({
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:px-7">
+    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
       <div className="flex flex-col gap-2">
         <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
           {heading}
@@ -157,7 +157,7 @@ export function AuthForm({
           autoComplete={isSignUp ? "new-password" : "current-password"}
         />
 
-        {!isSignUp ? (
+        {!isSignUp && !isAdminContext ? (
           <Link
             href="/forgot-password"
             className="-mt-2 self-start text-[13px] font-medium text-[var(--label-secondary)] underline decoration-[color-mix(in_srgb,var(--label-secondary)_20%,transparent)] underline-offset-4"
@@ -167,7 +167,7 @@ export function AuthForm({
         ) : null}
 
         {formError ? (
-          <div className="rounded-2xl bg-[color-mix(in_srgb,var(--accent-critical)_10%,white)] px-4 py-3 text-[13px] leading-5 text-[var(--accent-critical)]">
+          <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
             {formError}
           </div>
         ) : null}

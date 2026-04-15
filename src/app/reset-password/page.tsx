@@ -16,7 +16,7 @@ export default async function ResetPasswordPage({
   const tokenValid = await isPasswordResetTokenValid(token);
 
   return (
-    <AuthPageShell homeHref={adminConsoleRequest ? "/sign-in" : "/"}>
+    <AuthPageShell homeHref={adminConsoleRequest ? "/sign-in" : "/"} showAdminLabel={adminConsoleRequest}>
       <PasswordResetConfirmForm
         token={token}
         tokenValid={tokenValid}

@@ -1,7 +1,11 @@
 import "server-only";
 
 import { notFound, redirect } from "next/navigation";
-import { canAccessAdminConsole, isValidAdminAccessKey } from "@/features/admin/lib/admin-console";
+import {
+  canAccessAdminConsole,
+  getConfiguredAdminAccessKey,
+  isValidAdminAccessKey,
+} from "@/features/admin/lib/admin-console";
 import { logAdminAccessAttempt } from "@/features/admin/lib/admin-audit";
 import { buildAdminRateLimitKey, consumeAdminRateLimit } from "@/features/admin/lib/admin-rate-limit";
 import {
@@ -114,6 +118,7 @@ export async function requireModeratorPageAccess() {
   const userAgent = await getRequestUserAgent();
   const adminAccessKey = await getAdminAccessKey();
   const adminConsoleRequest = await isAdminConsoleRequest();
+  const configuredAdminAccessKey = getConfiguredAdminAccessKey();
 
   if (!currentUser) {
     if (adminConsoleRequest) {
@@ -129,6 +134,10 @@ export async function requireModeratorPageAccess() {
         userAgent,
         result: "forbidden",
       });
+      if (configuredAdminAccessKey) {
+        redirect("/access?next=%2Fadmin%2Fusers");
+      }
+
       redirect("/sign-in");
     }
 

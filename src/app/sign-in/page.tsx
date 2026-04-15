@@ -1,6 +1,15 @@
 import { redirect } from "next/navigation";
-import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
-import { isAdminConsoleRequest } from "@/features/admin/lib/admin-console-request";
+import { AdminBrowserRedirect } from "@/features/admin/components/admin-browser-redirect";
+import {
+  canAccessAdminConsole,
+  getConfiguredAdminAccessKey,
+  isValidAdminAccessKey,
+  normalizeAdminNextPath,
+} from "@/features/admin/lib/admin-console";
+import {
+  getAdminAccessKey,
+  isAdminConsoleRequest,
+} from "@/features/admin/lib/admin-console-request";
 import { AuthPageShell } from "@/features/auth/components/auth-page-shell";
 import { AuthForm } from "@/features/auth/components/auth-form";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
@@ -15,14 +24,16 @@ export default async function SignInPage({
 }) {
   const adminConsoleRequest = await isAdminConsoleRequest();
   const currentUser = await getCurrentUser();
+  const adminAccessKey = await getAdminAccessKey();
   const resolvedSearchParams = await searchParams;
-  const nextPath =
-    resolvedSearchParams.next?.trim() || (adminConsoleRequest ? "/admin/users" : "/");
+  const nextPath = adminConsoleRequest
+    ? normalizeAdminNextPath(resolvedSearchParams.next)
+    : resolvedSearchParams.next?.trim() || "/";
 
   if (currentUser) {
     if (adminConsoleRequest && !canAccessAdminConsole(currentUser)) {
       return (
-        <AuthPageShell homeHref="/sign-in">
+        <AuthPageShell homeHref="/sign-in" showAdminLabel>
           <AuthForm
             mode="sign-in"
             context="admin"
@@ -39,8 +50,16 @@ export default async function SignInPage({
     );
   }
 
+  if (
+    adminConsoleRequest
+    && getConfiguredAdminAccessKey()
+    && !isValidAdminAccessKey(adminAccessKey)
+  ) {
+    return <AdminBrowserRedirect href={`/access?next=${encodeURIComponent(nextPath)}`} />;
+  }
+
   return (
-    <AuthPageShell homeHref={adminConsoleRequest ? "/sign-in" : "/"}>
+    <AuthPageShell homeHref={adminConsoleRequest ? "/sign-in" : "/"} showAdminLabel={adminConsoleRequest}>
       <AuthForm
         mode="sign-in"
         context={adminConsoleRequest ? "admin" : "default"}

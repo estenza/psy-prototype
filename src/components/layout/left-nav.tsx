@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import { NavIcon } from "@/components/ui/icons";
+import { buttonClassName } from "@/components/ui/button";
 import { isNavigationItemCurrent } from "@/constants/navigation";
 import type { NavigationItem, NavigationItemKey } from "@/types/navigation";
 
@@ -32,18 +33,22 @@ export function LeftNav({ items, activeSection }: LeftNavProps) {
     <aside className="surface-primary hidden lg:block lg:pl-[var(--app-shell-side-offset)] lg:pr-[var(--app-shell-rail-gap)]">
       <nav
         aria-label="Основная навигация"
-        className="sticky top-[var(--app-header-height)] flex h-[calc(100dvh-var(--app-header-height))] w-full flex-col gap-1 overflow-y-auto py-4"
+        className="sticky top-[var(--app-header-height)] flex h-[calc(100dvh-var(--app-header-height))] w-full flex-col gap-1 overflow-y-auto pb-4 pt-8"
       >
         {items.map((item) => (
           <Link
             key={item.name}
             href={item.href}
             onClick={(event) => handleItemClick(event, item)}
-            className={`flex w-full items-center gap-4 rounded-full py-3 pl-4 pr-8 text-[20px] transition ${
-              item.key === activeSection
-                ? "font-semibold text-[var(--label-primary)] hover:bg-[var(--fill-control-hover)]"
-                : "font-normal text-[var(--label-tertiary)] hover:bg-[var(--fill-control-hover)]"
-            }`}
+            className={buttonClassName({
+              className: `h-auto w-full justify-start gap-4 py-3 pl-4 pr-8 text-[20px] ${
+                item.key === activeSection
+                  ? "font-semibold text-[var(--label-primary)]"
+                  : "font-normal text-[var(--label-tertiary)]"
+              }`,
+              size: "lg",
+              variant: "tertiary",
+            })}
           >
             <span className="flex h-8 w-8 items-center justify-center">
               <NavIcon name={item.key} />

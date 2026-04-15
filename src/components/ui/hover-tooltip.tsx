@@ -1,7 +1,25 @@
-export function HoverTooltip({ label }: { label: string }) {
+"use client";
+
+import { Tooltip } from "@heroui/react";
+import type { ReactNode } from "react";
+
+type HoverTooltipProps = {
+  children: ReactNode;
+  delay?: number;
+  label: string;
+  showArrow?: boolean;
+};
+
+export function HoverTooltip({
+  children,
+  delay = 500,
+  label,
+  showArrow = false,
+}: HoverTooltipProps) {
   return (
-    <span className="tooltip-surface pointer-events-none invisible absolute left-1/2 top-full z-[70] mt-1 -translate-x-1/2 whitespace-nowrap rounded-[6px] px-2 py-1 text-[12px] font-medium leading-none opacity-0 group-hover/tooltip:visible group-hover/tooltip:opacity-100 group-hover/tooltip:delay-500 group-focus-visible/tooltip:visible group-focus-visible/tooltip:opacity-100 group-focus-visible/tooltip:delay-500">
-      {label}
-    </span>
+    <Tooltip.Root delay={delay} closeDelay={80}>
+      <Tooltip.Trigger>{children}</Tooltip.Trigger>
+      <Tooltip.Content showArrow={showArrow}>{label}</Tooltip.Content>
+    </Tooltip.Root>
   );
 }

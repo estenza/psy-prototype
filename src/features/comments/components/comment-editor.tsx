@@ -1,5 +1,6 @@
 "use client";
 
+import { TextArea, TextField } from "@heroui/react";
 import { useEffect, useRef } from "react";
 
 type CommentEditorProps = {
@@ -33,10 +34,8 @@ export function CommentEditor({
   }, [value]);
 
   return (
-    <div
-      className={`comment-editor-shell surface-primary border-separator-strong w-full rounded-[16px] border px-[13px] ${compact ? "py-3" : "py-[13px]"}`.trim()}
-    >
-      <textarea
+    <TextField className="w-full">
+      <TextArea
         ref={textareaRef}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -44,8 +43,8 @@ export function CommentEditor({
         disabled={disabled}
         autoFocus={autoFocus}
         rows={compact ? 1 : 2}
-        className={`text-label-primary placeholder:text-label-quaternary w-full resize-none overflow-hidden bg-transparent text-[14px] leading-5 outline-none ${compact ? "min-h-5" : "min-h-[40px]"}`.trim()}
+        className={`comment-editor-shell surface-primary border-separator-strong w-full resize-none overflow-hidden rounded-[16px] px-[13px] text-[14px] leading-5 ${compact ? "min-h-5 py-3" : "min-h-[40px] py-[13px]"}`.trim()}
       />
-    </div>
+    </TextField>
   );
 }

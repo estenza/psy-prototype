@@ -4,8 +4,10 @@ import {
   ADMIN_ACCESS_KEY_COOKIE_NAME,
   isAdminConsoleHost,
   isValidAdminAccessKey,
+  normalizeAdminNextPath,
   resolveAdminAccessKey,
 } from "@/features/admin/lib/admin-console";
+import { SESSION_COOKIE_NAME } from "@/features/auth/constants";
 import { buildAdminRateLimitKey, consumeAdminRateLimit } from "@/features/admin/lib/admin-rate-limit";
 
 const ADMIN_ALLOWED_PATH_PREFIXES = [
@@ -72,13 +74,20 @@ function isAdminSensitivePath(pathname: string) {
     || pathname === "/api/auth/sign-up";
 }
 
+function isAdminPagePath(pathname: string) {
+  return isAdminRoute(pathname) || pathname === "/sign-in";
+}
+
 function isApiPath(pathname: string) {
   return pathname === "/api" || pathname.startsWith("/api/");
 }
 
 function buildAccessGateUrl(request: NextRequest) {
   const redirectUrl = new URL(ADMIN_ACCESS_GATE_PATH, request.url);
-  const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const rawNextPath = request.nextUrl.pathname === "/sign-in"
+    ? request.nextUrl.searchParams.get("next")
+    : `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const nextPath = normalizeAdminNextPath(rawNextPath);
 
   if (nextPath !== ADMIN_ACCESS_GATE_PATH) {
     redirectUrl.searchParams.set("next", nextPath);
@@ -138,8 +147,25 @@ export function middleware(request: NextRequest) {
     cookieValue: request.cookies.get(ADMIN_ACCESS_KEY_COOKIE_NAME)?.value ?? null,
     headerValue: request.headers.get("x-admin-access-key"),
   });
+  const hasSessionCookie = Boolean(
+    request.cookies.get(SESSION_COOKIE_NAME)?.value?.trim(),
+  );
+  const hasValidAdminProof = isValidAdminAccessKey(adminAccessKey);
 
-  if (!isValidAdminAccessKey(adminAccessKey)) {
+  if (isAdminPagePath(request.nextUrl.pathname) && !hasSessionCookie && !hasValidAdminProof) {
+    console.info("[admin-access]", {
+      timestamp: new Date().toISOString(),
+      email: null,
+      host: requestHost,
+      ip: requestIp,
+      userAgent,
+      result: "forbidden",
+    });
+
+    return withAdminNoIndexHeader(NextResponse.redirect(buildAccessGateUrl(request)));
+  }
+
+  if (!hasValidAdminProof) {
     if (isApiPath(request.nextUrl.pathname)) {
       const rateLimitState = consumeAdminRateLimit(
         "admin-gate",

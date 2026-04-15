@@ -53,32 +53,22 @@ export function AdminAccessGateForm({
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:px-7">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
-          Доступ
-        </h1>
-        <p className="text-label-tertiary text-[14px] leading-6">
-          Подтвердите доступ, чтобы продолжить.
-        </p>
-      </div>
-
-      <form
-        className="mt-6 flex flex-col gap-4"
-        onSubmit={handleSubmit}
-      >
+    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-7 py-6">
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <AuthField
           name="adminAccessKey"
-          type="password"
+          type="text"
           label="Ключ доступа"
           value={adminAccessKey}
           onChange={setAdminAccessKey}
           placeholder="Введите ключ доступа"
           autoComplete="off"
+          disablePasswordManagerHints
+          maskedText
         />
 
         {formError ? (
-          <div className="rounded-2xl bg-[color-mix(in_srgb,var(--accent-critical)_10%,white)] px-4 py-3 text-[13px] leading-5 text-[var(--accent-critical)]">
+          <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
             {formError}
           </div>
         ) : null}

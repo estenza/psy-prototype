@@ -1,5 +1,6 @@
 "use client";
 
+import { Description, ErrorMessage, Input, Label, TextField } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -47,26 +48,26 @@ function OnboardingField({
   const id = `onboarding-field-${label}`;
 
   return (
-    <label htmlFor={id} className="flex flex-col gap-2">
-      <span className="text-[14px] font-medium text-[var(--label-primary)]">
+    <TextField isInvalid={Boolean(error)} className="flex flex-col gap-2">
+      <Label htmlFor={id} className="text-[14px] font-medium text-[var(--label-primary)]">
         {label}
-      </span>
-      <span className="text-[13px] leading-5 text-[var(--label-secondary)]">
+      </Label>
+      <Description className="text-[13px] leading-5 text-[var(--label-secondary)]">
         {description}
-      </span>
-      <input
+      </Description>
+      <Input
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="border-separator bg-background-primary text-label-primary focus-visible:ring-accent-primary rounded-2xl border px-4 py-3 text-sm outline-none transition-shadow focus-visible:ring-2"
+        className="rounded-2xl px-4 py-3 text-sm"
       />
       {error ? (
-        <span className="text-[12px] leading-4 text-[var(--accent-critical)]">
+        <ErrorMessage className="text-[12px] leading-4 text-[var(--accent-critical)]">
           {error}
-        </span>
+        </ErrorMessage>
       ) : null}
-    </label>
+    </TextField>
   );
 }
 
@@ -194,7 +195,7 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[520px] rounded-[28px] border px-5 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:px-7">
+    <div className="surface-primary border-separator w-full max-w-[520px] rounded-[28px] border px-5 py-6 sm:px-7">
       {currentStep === "role" ? (
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-3">
@@ -229,7 +230,7 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
                 }}
                 className={`border-separator cursor-pointer rounded-[24px] border px-5 py-4 text-left transition-colors ${
                   selectedRole === option.role
-                    ? "bg-[color-mix(in_srgb,var(--label-primary)_6%,white)]"
+                    ? "bg-[color-mix(in_srgb,var(--label-primary)_6%,var(--background-primary))]"
                     : "bg-transparent"
                 }`}
               >

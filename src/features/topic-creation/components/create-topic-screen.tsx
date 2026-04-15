@@ -1,5 +1,6 @@
 "use client";
 
+import { FieldError, TextArea, TextField } from "@heroui/react";
 import {
   startTransition,
   useCallback,
@@ -103,7 +104,7 @@ function TitleProgressIndicator({
               r={TITLE_PROGRESS_RADIUS}
               fill="none"
               stroke="var(--fill-secondary)"
-              strokeWidth="2"
+              strokeWidth="4"
             />
             <circle
               cx="18"
@@ -111,7 +112,7 @@ function TitleProgressIndicator({
               r={TITLE_PROGRESS_RADIUS}
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="4"
               strokeLinecap="round"
               strokeDasharray={TITLE_PROGRESS_CIRCUMFERENCE}
               strokeDashoffset={strokeDashoffset}
@@ -374,10 +375,10 @@ export function CreateTopicScreen() {
                 </div>
 
                 <Button
-                  variant="ghost"
+                  variant="tertiary"
                   size="sm"
                   onClick={handleRestoreDraft}
-                  className="h-11 cursor-pointer rounded-full px-4 py-2 text-[14px] font-bold leading-5 text-[var(--label-primary)] transition-none hover:bg-[var(--fill-control-hover)] active:bg-[var(--fill-secondary)]"
+                  className="h-11 px-4 py-2 text-[14px] leading-5 text-[var(--label-primary)]"
                 >
                   Черновики
                 </Button>
@@ -394,10 +395,9 @@ export function CreateTopicScreen() {
               </div>
 
               <div className="pt-8">
-                <label
-                  className="field-shell grid min-h-[54px] grid-cols-[minmax(0,1fr)_auto] gap-4 rounded-[16px] px-5"
-                >
-                  <textarea
+                <TextField className="w-full" isInvalid={titleError}>
+                  <div className="relative">
+                    <TextArea
                     ref={titleFieldRef}
                     id="topic-title"
                     rows={1}
@@ -426,24 +426,25 @@ export function CreateTopicScreen() {
                       event.currentTarget.style.height = "0px";
                       event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
                     }}
-                    className="text-label-primary min-h-[54px] w-full min-w-0 resize-none overflow-hidden bg-transparent py-4 text-[16px] leading-6 outline-none placeholder:text-[var(--label-quaternary)]"
+                    className="min-h-[54px] w-full resize-none overflow-hidden rounded-[16px] py-4 pl-5 pr-12 text-[16px] leading-6"
                   />
-                  <TitleProgressIndicator
-                    currentLength={titleLength}
-                    maxLength={TOPIC_TITLE_MAX_LENGTH}
-                  />
-                </label>
-
-                {titleError ? (
-                  <p className="mt-3 text-[14px] leading-5 text-[var(--accent-like)]">
+                    <div className="pointer-events-none absolute inset-y-0 right-5 flex items-start">
+                      <TitleProgressIndicator
+                        currentLength={titleLength}
+                        maxLength={TOPIC_TITLE_MAX_LENGTH}
+                      />
+                    </div>
+                  </div>
+                  <FieldError>
                     Заголовок обязателен. Он поможет людям быстрее понять тему.
-                  </p>
-                ) : null}
+                  </FieldError>
+                </TextField>
               </div>
 
               <div className="pt-6">
                 <TopicEditor
                   content={content}
+                  errorMessage="Добавьте текст темы, чтобы людям было на что откликнуться."
                   invalid={contentError}
                   placeholder="Опишите подробнее"
                   onChange={(nextContent) => {
@@ -488,10 +489,10 @@ export function CreateTopicScreen() {
 
               <div className="flex flex-col gap-3 pb-20 pt-10 sm:flex-row sm:items-center sm:justify-end">
                 <Button
-                  variant="ghost"
+                  variant="tertiary"
                   size="lg"
                   onClick={() => saveCurrentDraft()}
-                  className="cursor-pointer rounded-[24px] px-5 py-3 text-[14px] font-bold leading-5 text-[var(--label-primary)] hover:bg-[var(--fill-control-hover)]"
+                  className="cursor-pointer rounded-[24px] px-5 py-3 text-[14px] leading-5 text-[var(--label-primary)]"
                 >
                   Сохранить черновик
                 </Button>
@@ -500,7 +501,7 @@ export function CreateTopicScreen() {
                   variant="primary"
                   size="lg"
                   disabled={!canPublish}
-                  className="rounded-[24px] px-5 py-3 text-[14px] font-bold leading-5"
+                  className="rounded-[24px] px-5 py-3 text-[14px] leading-5"
                 >
                   Опубликовать
                 </Button>

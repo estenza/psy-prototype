@@ -46,7 +46,7 @@ export default async function ProfilePage() {
       title="Мой профиль"
       description="Основные данные аккаунта и текущий статус оформления профиля."
     >
-      <section className="surface-elevated border-separator rounded-[28px] border p-6 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+      <section className="surface-elevated border-separator rounded-[28px] border p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <UserAvatar
             avatarUrl={currentUser.avatarUrl}
@@ -88,7 +88,7 @@ export default async function ProfilePage() {
       </section>
 
       {currentStep !== "complete" ? (
-        <section className="surface-elevated border-separator rounded-[28px] border p-6 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+        <section className="surface-elevated border-separator rounded-[28px] border p-6">
           <h2 className="text-[18px] font-semibold text-[var(--label-primary)]">
             Профиль ещё не завершён
           </h2>

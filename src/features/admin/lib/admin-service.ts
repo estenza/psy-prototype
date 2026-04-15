@@ -1,12 +1,21 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
+import {
+  ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE,
+  ADMIN_ACCOUNT_NAME_PATTERN,
+  ADMIN_ACCOUNT_NAME_MAX_LENGTH,
+  ADMIN_ACCOUNT_NAME_MIN_LENGTH,
+  ADMIN_USER_NAME_MAX_LENGTH,
+  normalizeAdminAccountName,
+} from "@/features/admin/lib/admin-user-fields";
 import { normalizeAdminSpecialties } from "@/features/admin/lib/admin-specialties";
 import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
 import { listAdminUsers } from "@/features/admin/lib/admin-repository";
 import type {
   AdminBanUserPayload,
   AdminCreateManagedUserPayload,
+  AdminManagedUserFieldErrorName,
   AdminSpecialistStatusFilter,
   AdminUpdateManagedUserPayload,
   AdminUserRoleFilter,
@@ -39,6 +48,7 @@ const ROLE_FILTER_VALUES = new Set<AdminUserRoleFilter>([
   "all",
   "moderator",
   "specialist",
+  "user",
 ]);
 
 const SPECIALIST_STATUS_FILTER_VALUES = new Set<AdminSpecialistStatusFilter>([
@@ -53,11 +63,17 @@ const SPECIALIST_STATUS_FILTER_VALUES = new Set<AdminSpecialistStatusFilter>([
 const USER_ROLE_VALUES = new Set<UserRole>(["user", "specialist"]);
 
 export class AdminServiceError extends Error {
+  fieldErrors?: Partial<Record<AdminManagedUserFieldErrorName, string>>;
   status: number;
 
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    fieldErrors?: Partial<Record<AdminManagedUserFieldErrorName, string>>,
+  ) {
     super(message);
     this.name = "AdminServiceError";
+    this.fieldErrors = fieldErrors;
     this.status = status;
   }
 }
@@ -167,11 +183,65 @@ function normalizePassword(value: string | null | undefined) {
   return password;
 }
 
+function normalizeUserProfileName(value: string | null | undefined) {
+  const normalizedValue = sanitizeProfileText(value);
+
+  if (!normalizedValue) {
+    throw new AdminServiceError("Введите имя.", 400, {
+      displayName: "Введите имя.",
+    });
+  }
+
+  if (normalizedValue.length > ADMIN_USER_NAME_MAX_LENGTH) {
+    throw new AdminServiceError(
+      `Имя должно быть не длиннее ${ADMIN_USER_NAME_MAX_LENGTH} символов.`,
+      400,
+      {
+        displayName: `Имя должно быть не длиннее ${ADMIN_USER_NAME_MAX_LENGTH} символов.`,
+      },
+    );
+  }
+
+  return normalizedValue;
+}
+
+function normalizeUserAccountName(value: string | null | undefined) {
+  const normalizedValue = normalizeAdminAccountName(value);
+
+  if (!normalizedValue) {
+    throw new AdminServiceError("Введите имя аккаунта.", 400, {
+      nickname: "Введите имя аккаунта.",
+    });
+  }
+
+  if (
+    normalizedValue.length < ADMIN_ACCOUNT_NAME_MIN_LENGTH
+    || normalizedValue.length > ADMIN_ACCOUNT_NAME_MAX_LENGTH
+    || !ADMIN_ACCOUNT_NAME_PATTERN.test(normalizedValue)
+  ) {
+    throw new AdminServiceError(ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE, 400, {
+      nickname: ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE,
+    });
+  }
+
+  return normalizedValue;
+}
+
 async function ensureEmailAvailable(email: string, currentUserId?: string) {
   const existingUser = await findUserByEmail(email);
 
   if (existingUser && existingUser.id !== currentUserId) {
     throw new AdminServiceError("Пользователь с таким email уже существует.", 409);
+  }
+}
+
+async function ensureNicknameAvailable(nickname: string, currentUserId?: string) {
+  const existingUser = await findUserByNickname(nickname);
+
+  if (existingUser && existingUser.id !== currentUserId) {
+    throw new AdminServiceError("Имя аккаунта уже занято.", 409, {
+      nickname: "Имя аккаунта уже занято.",
+    });
   }
 }
 
@@ -213,6 +283,7 @@ function normalizeManagedPayload(
     | "displayName"
     | "firstName"
     | "lastName"
+    | "nickname"
     | "profileDescription"
     | "role"
     | "specialties"
@@ -225,7 +296,8 @@ function normalizeManagedPayload(
     role === "specialist" ? normalizeOptionalImage(payload.avatarCardUrl) : null;
 
   if (role === "user") {
-    const displayName = normalizeRequiredName(payload.displayName, "Ник");
+    const displayName = normalizeUserProfileName(payload.displayName);
+    const nickname = normalizeUserAccountName(payload.nickname);
 
     return {
       avatarCardUrl: null,
@@ -234,6 +306,7 @@ function normalizeManagedPayload(
       displayName,
       firstName: null,
       lastName: null,
+      nickname,
       profileDescription: normalizeProfileDescription(
         payload.profileDescription,
         USER_PROFILE_DESCRIPTION_MAX_LENGTH,
@@ -258,6 +331,7 @@ function normalizeManagedPayload(
     }),
     firstName,
     lastName,
+    nickname: undefined,
     profileDescription: normalizeProfileDescription(
       payload.profileDescription,
       SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH,
@@ -284,7 +358,13 @@ export async function createAdminManagedUser(
 
   const normalizedPayload = normalizeManagedPayload(payload);
   const passwordHash = await hashPassword(normalizePassword(payload.password));
-  const nickname = await generateManagedNickname(email);
+  const nickname = normalizedPayload.role === "user"
+    ? normalizedPayload.nickname
+    : await generateManagedNickname(email);
+
+  if (normalizedPayload.role === "user") {
+    await ensureNicknameAvailable(nickname);
+  }
 
   const user = await createUser({
     avatarCardUrl: normalizedPayload.avatarCardUrl,
@@ -331,6 +411,13 @@ export async function updateAdminManagedUser(
     ...payload,
     role: targetUser.role,
   });
+  const nextNickname = normalizedPayload.role === "user"
+    ? normalizedPayload.nickname
+    : targetUser.nickname ?? (await generateManagedNickname(targetUser.email, targetUser.id));
+
+  if (normalizedPayload.role === "user") {
+    await ensureNicknameAvailable(nextNickname, targetUser.id);
+  }
 
   const updatedUser = await updateUserAdminManagedFields({
     avatarCardUrl: normalizedPayload.avatarCardUrl,
@@ -339,7 +426,7 @@ export async function updateAdminManagedUser(
     displayName: normalizedPayload.displayName,
     firstName: normalizedPayload.firstName,
     lastName: normalizedPayload.lastName,
-    nickname: targetUser.nickname ?? (await generateManagedNickname(targetUser.email, targetUser.id)),
+    nickname: nextNickname,
     onboardingStep: "complete",
     profileDescription: normalizedPayload.profileDescription,
     role: normalizedPayload.role,

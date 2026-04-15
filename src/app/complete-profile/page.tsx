@@ -44,7 +44,7 @@ export default async function CompleteProfilePage({
           aria-label="внутри"
           className="inline-flex max-w-full"
         >
-          <AppBrand />
+          <AppBrand showAdminLabel={adminConsoleRequest} />
         </Link>
       </div>
       <AuthOnboarding currentUser={currentUser} nextPath={nextPath} />

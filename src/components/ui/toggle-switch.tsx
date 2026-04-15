@@ -1,24 +1,25 @@
 "use client";
 
+import { switchVariants } from "@heroui/react";
+
 export function ToggleSwitch({
   checked,
 }: {
   checked: boolean;
 }) {
+  const slots = switchVariants({
+    size: "md",
+  });
+
   return (
     <span
       aria-hidden="true"
-      className={`relative inline-flex h-7 w-12 flex-none items-center rounded-full p-1 transition-colors duration-200 ${
-        checked
-          ? "bg-[var(--accent-success)]"
-          : "bg-[color-mix(in_srgb,var(--label-primary)_14%,transparent)]"
-      }`}
+      data-selected={checked ? "true" : undefined}
+      className={slots.base()}
     >
-      <span
-        className={`h-5 w-5 rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.16)] transition-transform duration-200 ${
-          checked ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
+      <span className={slots.control()}>
+        <span className={slots.thumb()} />
+      </span>
     </span>
   );
 }

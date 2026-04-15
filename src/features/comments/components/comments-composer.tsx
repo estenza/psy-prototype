@@ -108,9 +108,9 @@ export function CommentsComposer({
         {isActive || trimmedDraft.length > 0 ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="sm"
-              className="!rounded-full !px-4 !py-2 text-[13px] font-semibold"
+              className="!rounded-full !px-4 !py-2 text-[13px]"
               onClick={handleCancel}
               disabled={submitting}
             >

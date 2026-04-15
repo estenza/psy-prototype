@@ -26,7 +26,7 @@ function resolveDocumentTheme(): AppTheme {
     return "light";
   }
 
-  return document.documentElement.classList.contains("theme-dark") ? "dark" : "light";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
 function applyTheme(theme: AppTheme) {
@@ -34,6 +34,8 @@ function applyTheme(theme: AppTheme) {
     return;
   }
 
+  document.documentElement.classList.remove("light", "dark");
+  document.documentElement.classList.add(theme);
   document.documentElement.classList.toggle("theme-dark", theme === "dark");
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;

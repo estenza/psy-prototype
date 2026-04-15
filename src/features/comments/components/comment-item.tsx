@@ -86,7 +86,7 @@ export function CommentItem({
             {shouldClamp ? (
               <button
                 type="button"
-                className="comment-inline-link text-label-secondary mt-[3px] inline-flex rounded-[3px] text-[14px] font-medium leading-5"
+                className="interactive-tertiary text-label-secondary mt-[3px] inline-flex rounded-[3px] text-[14px] font-medium leading-5"
                 onClick={() => setIsExpanded((currentState) => !currentState)}
               >
                 {isExpanded ? "Свернуть" : "Читать дальше"}

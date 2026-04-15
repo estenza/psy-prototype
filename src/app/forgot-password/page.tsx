@@ -13,7 +13,7 @@ export default async function ForgotPasswordPage({
   const resolvedSearchParams = await searchParams;
 
   return (
-    <AuthPageShell homeHref={adminConsoleRequest ? "/sign-in" : "/"}>
+    <AuthPageShell homeHref={adminConsoleRequest ? "/sign-in" : "/"} showAdminLabel={adminConsoleRequest}>
       <PasswordResetRequestForm initialEmail={resolvedSearchParams.email?.trim() || ""} />
     </AuthPageShell>
   );

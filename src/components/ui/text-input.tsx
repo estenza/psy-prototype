@@ -1,3 +1,4 @@
+import { Input } from "@heroui/react";
 import { forwardRef } from "react";
 import type { InputHTMLAttributes } from "react";
 
@@ -12,16 +13,14 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
     ref,
   ) {
     return (
-      <label
-        className={`field-shell flex items-center rounded-[22px] px-5 py-4 ${shellClassName}`.trim()}
-        data-invalid={invalid ? "true" : undefined}
-      >
-        <input
+      <div className={shellClassName}>
+        <Input
           ref={ref}
-          className={`text-label-primary w-full min-w-0 bg-transparent outline-none placeholder:text-[var(--label-tertiary)] ${className}`.trim()}
+          data-invalid={invalid ? "true" : undefined}
+          className={`w-full rounded-[22px] px-5 py-4 ${className}`.trim()}
           {...props}
         />
-      </label>
+      </div>
     );
   },
 );

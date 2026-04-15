@@ -183,3 +183,43 @@ export function canAccessAdminConsole(
 ) {
   return Boolean(user?.isModerator && isAdminConsoleEmail(user.email));
 }
+
+const DEFAULT_ADMIN_NEXT_PATH = "/admin/users";
+const ADMIN_AUTH_PATHS = new Set([
+  "/access",
+  "/sign-in",
+]);
+
+function normalizeAdminNextCandidate(value: string | null | undefined) {
+  const normalizedValue = value?.trim();
+
+  if (!normalizedValue?.startsWith("/")) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+export function normalizeAdminNextPath(
+  value: string | null | undefined,
+  fallback = DEFAULT_ADMIN_NEXT_PATH,
+) {
+  const normalizedValue = normalizeAdminNextCandidate(value);
+
+  if (!normalizedValue) {
+    return fallback;
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedValue, "http://admin.local");
+    const pathname = parsedUrl.pathname;
+
+    if (!ADMIN_AUTH_PATHS.has(pathname)) {
+      return `${pathname}${parsedUrl.search}`;
+    }
+
+    return normalizeAdminNextPath(parsedUrl.searchParams.get("next"), fallback);
+  } catch {
+    return fallback;
+  }
+}

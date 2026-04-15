@@ -1,43 +1,74 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { Button as HeroButton, buttonVariants, cn } from "@heroui/react";
+import type { ButtonProps as HeroButtonProps } from "@heroui/react";
+import type { ReactNode } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
-type ButtonSize = "sm" | "md" | "lg";
+export type ButtonVariant = "primary" | "secondary" | "tertiary";
+export type ButtonSize = "sm" | "md" | "lg";
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type HeroVariant = NonNullable<HeroButtonProps["variant"]>;
+
+type ButtonProps = Omit<HeroButtonProps, "children" | "isDisabled" | "size" | "variant"> & {
+  children?: ReactNode;
+  disabled?: boolean;
   icon?: ReactNode;
+  isDisabled?: boolean;
   variant?: ButtonVariant;
   size?: ButtonSize;
 };
 
-const variantClasses: Record<ButtonVariant, string> = {
-  primary: "interactive-solid text-[var(--label-inverse)]",
-  secondary: "interactive-secondary",
-  ghost: "interactive-control bg-transparent",
+const variantMap: Record<ButtonVariant, HeroVariant> = {
+  primary: "primary",
+  secondary: "secondary",
+  tertiary: "ghost",
 };
 
-const sizeClasses: Record<ButtonSize, string> = {
-  sm: "gap-2 rounded-xl px-3 py-2 text-[14px] font-medium",
-  md: "gap-2 rounded-2xl px-4 py-3 text-sm font-semibold",
-  lg: "gap-2 rounded-[18px] px-5 py-3.5 text-sm font-semibold",
+const sizeMap: Record<ButtonSize, "sm" | "md" | "lg"> = {
+  sm: "sm",
+  md: "md",
+  lg: "lg",
 };
+
+export function buttonClassName({
+  className = "",
+  size = "md",
+  variant = "secondary",
+}: {
+  className?: string;
+  size?: ButtonSize;
+  variant?: ButtonVariant;
+}) {
+  return cn(
+    buttonVariants({
+      size: sizeMap[size],
+      variant: variantMap[variant],
+    }),
+    "rounded-full",
+    className,
+  );
+}
 
 export function Button({
   children,
   className = "",
+  disabled,
   icon,
+  isDisabled,
   size = "md",
   type = "button",
   variant = "secondary",
   ...props
 }: ButtonProps) {
   return (
-    <button
+    <HeroButton
       type={type}
-      className={`inline-flex cursor-pointer items-center justify-center transition-colors ${variantClasses[variant]} ${sizeClasses[size]} ${className}`.trim()}
+      isDisabled={isDisabled ?? disabled}
+      size={sizeMap[size]}
+      variant={variantMap[variant]}
+      className={cn("rounded-full", className)}
       {...props}
     >
       {icon ? <span className="inline-flex items-center justify-center">{icon}</span> : null}
       {children}
-    </button>
+    </HeroButton>
   );
 }

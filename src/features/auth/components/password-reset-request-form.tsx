@@ -59,7 +59,7 @@ export function PasswordResetRequestForm({
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:px-7">
+    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
       <div className="flex flex-col gap-3">
         <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
           Восстановление пароля
@@ -90,13 +90,13 @@ export function PasswordResetRequestForm({
         />
 
         {formError ? (
-          <div className="rounded-2xl bg-[color-mix(in_srgb,var(--accent-critical)_10%,white)] px-4 py-3 text-[13px] leading-5 text-[var(--accent-critical)]">
+          <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
             {formError}
           </div>
         ) : null}
 
         {successMessage ? (
-          <div className="rounded-2xl bg-[color-mix(in_srgb,var(--accent-primary)_10%,white)] px-4 py-3 text-[13px] leading-6 text-[var(--label-primary)]">
+          <div className="feedback-primary-surface rounded-2xl px-4 py-3 text-[13px] leading-6">
             <p>{successMessage}</p>
             {debugResetUrl ? (
               <p className="mt-2">

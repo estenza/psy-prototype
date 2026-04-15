@@ -9,13 +9,13 @@ export function ThemePreferenceCard() {
   const nextThemeLabel = theme === "dark" ? "Включена тёмная тема" : "Включена светлая тема";
 
   return (
-    <section className="surface-elevated border-separator rounded-[28px] border p-2 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+    <section className="surface-elevated border-separator rounded-[28px] border p-2">
       <button
         type="button"
         role="switch"
         aria-checked={theme === "dark"}
         onClick={toggleTheme}
-        className="comment-menu-item flex w-full cursor-pointer items-center justify-between gap-4 rounded-[22px] px-4 py-4 text-left"
+        className="interactive-tertiary flex w-full cursor-pointer items-center justify-between gap-4 rounded-[22px] px-4 py-4 text-left text-[var(--label-primary)]"
       >
         <div className="min-w-0">
           <h2 className="text-[16px] font-semibold text-[var(--label-primary)]">

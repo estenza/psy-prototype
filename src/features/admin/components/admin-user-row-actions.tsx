@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Dropdown, Modal, toast } from "@heroui/react";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontalIcon } from "@/components/ui/icons";
 import { AdminUserEditorModal } from "@/features/admin/components/admin-user-editor-modal";
@@ -13,198 +14,282 @@ type AdminUserRowActionsProps = {
 
 function ConfirmDialog({
   actionLabel,
-  children,
-  danger = false,
+  errorMessage,
   isLoading,
   onClose,
   onConfirm,
   title,
 }: {
   actionLabel: string;
-  children: React.ReactNode;
-  danger?: boolean;
+  errorMessage?: string | null;
   isLoading: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title: string;
 }) {
   return (
-    <div className="fixed inset-0 z-[230] flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-[rgba(15,23,42,0.46)] backdrop-blur-[3px]"
-        aria-label="Закрыть диалог"
-        onClick={onClose}
-      />
+    <Modal.Backdrop
+      isOpen
+      isDismissable={!isLoading}
+      onOpenChange={(open) => {
+        if (!open && !isLoading) onClose();
+      }}
+      className="fixed inset-0 z-[320] bg-[rgba(15,23,42,0.56)]"
+    >
+      <Modal.Container scroll="outside" className="!p-4">
+        <Modal.Dialog
+          aria-label={title}
+          className="modal-surface w-full max-w-[420px] p-5"
+        >
+          <Modal.Body className="p-0">
+            <h3 className="font-helvetica text-[24px] font-bold leading-8 text-[var(--label-primary)]">
+              {title}
+            </h3>
+            {errorMessage ? (
+              <p className="mt-3 text-sm text-[var(--accent-critical)]">{errorMessage}</p>
+            ) : null}
 
-      <div className="surface-primary border-separator relative z-10 w-full max-w-[420px] rounded-[28px] border p-5 shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
-        <h3 className="font-helvetica text-[24px] font-bold leading-none">{title}</h3>
-        <div className="mt-3 text-[14px] leading-6 text-[var(--label-secondary)]">{children}</div>
-
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className="!rounded-full !px-5"
-            disabled={isLoading}
-            onClick={onClose}
-          >
-            Отмена
-          </Button>
-          <Button
-            type="button"
-            variant={danger ? "primary" : "secondary"}
-            className="!rounded-full !px-5"
-            disabled={isLoading}
-            onClick={onConfirm}
-          >
-            {isLoading ? "Подождите..." : actionLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="tertiary"
+                className="!min-w-[120px] !justify-center !rounded-full !px-5"
+                disabled={isLoading}
+                onClick={onClose}
+              >
+                Отменить
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                className="!min-w-[120px] !justify-center !rounded-full !px-5"
+                disabled={isLoading}
+                onClick={onConfirm}
+              >
+                {isLoading ? "Подождите..." : actionLabel}
+              </Button>
+            </div>
+          </Modal.Body>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
 
 export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
   const router = useRouter();
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [banReason, setBanReason] = useState(user.banReason ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const pendingActionTimeoutsRef = useRef<Map<string, number>>(new Map());
+  const accountName = user.nickname
+    ? `@${user.nickname}`
+    : [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.displayName || user.email;
 
   useEffect(() => {
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (!rootRef.current?.contains(target)) {
-        setIsMenuOpen(false);
-      }
-    }
-
-    window.addEventListener("pointerdown", handlePointerDown);
+    const pendingActionTimeouts = pendingActionTimeoutsRef.current;
 
     return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
+      pendingActionTimeouts.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      pendingActionTimeouts.clear();
     };
   }, []);
 
-  async function handleBan() {
-    setIsSubmitting(true);
-    setFeedbackMessage(null);
+  async function banUser() {
+    const response = await fetch(`/api/admin/users/${user.id}/ban`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        reason: null,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+    };
 
-    try {
-      const response = await fetch(`/api/admin/users/${user.id}/ban`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reason: banReason,
-        }),
-      });
-      const payload = (await response.json()) as {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Не удалось заблокировать аккаунт.");
-      }
-
-      setIsBanDialogOpen(false);
-      router.refresh();
-    } catch (error) {
-      setFeedbackMessage(
-        error instanceof Error ? error.message : "Не удалось заблокировать аккаунт.",
-      );
-    } finally {
-      setIsSubmitting(false);
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Не удалось заблокировать аккаунт.");
     }
   }
 
-  async function handleDelete() {
-    setIsSubmitting(true);
+  async function deleteUser() {
+    const response = await fetch(`/api/admin/users/${user.id}`, {
+      method: "DELETE",
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Не удалось удалить аккаунт.");
+    }
+  }
+
+  function scheduleUndoableAction({
+    actionKey,
+    commit,
+    description,
+    errorMessage,
+    pendingMessage,
+    successMessage,
+    toastVariant,
+    undoMessage,
+  }: {
+    actionKey: string;
+    commit: () => Promise<void>;
+    description: string;
+    errorMessage: string;
+    pendingMessage: string;
+    successMessage: string;
+    toastVariant: "danger" | "warning";
+    undoMessage: string;
+  }) {
+    const existingTimeoutId = pendingActionTimeoutsRef.current.get(actionKey);
+
+    if (existingTimeoutId) {
+      window.clearTimeout(existingTimeoutId);
+      pendingActionTimeoutsRef.current.delete(actionKey);
+    }
+
+    const toastId = toast(pendingMessage, {
+      variant: toastVariant,
+      description,
+      timeout: 5000,
+      actionProps: {
+        children: "Отменить",
+        onPress: () => {
+          const timeoutId = pendingActionTimeoutsRef.current.get(actionKey);
+
+          if (timeoutId) {
+            window.clearTimeout(timeoutId);
+            pendingActionTimeoutsRef.current.delete(actionKey);
+          }
+
+          toast.close(toastId);
+          toast.info(undoMessage);
+        },
+      },
+    });
+
+    const timeoutId = window.setTimeout(async () => {
+      pendingActionTimeoutsRef.current.delete(actionKey);
+
+      setIsSubmitting(true);
+      setFeedbackMessage(null);
+
+      try {
+        await commit();
+        router.refresh();
+        toast.success(successMessage);
+      } catch (error) {
+        const resolvedErrorMessage =
+          error instanceof Error ? error.message : errorMessage;
+
+        setFeedbackMessage(resolvedErrorMessage);
+        toast.danger(resolvedErrorMessage);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }, 5000);
+
+    pendingActionTimeoutsRef.current.set(actionKey, timeoutId);
+  }
+
+  function handleBan() {
+    setIsBanDialogOpen(false);
     setFeedbackMessage(null);
 
-    try {
-      const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: "DELETE",
-      });
-      const payload = (await response.json()) as {
-        error?: string;
-      };
+    scheduleUndoableAction({
+      actionKey: `ban:${user.id}`,
+      commit: banUser,
+      description: `Действие будет выполнено через 5 секунд для ${accountName}.`,
+      errorMessage: "Не удалось заблокировать аккаунт.",
+      pendingMessage: "Пользователь будет забанен",
+      successMessage: "Пользователь забанен.",
+      toastVariant: "warning",
+      undoMessage: "Бан отменен.",
+    });
+  }
 
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Не удалось удалить аккаунт.");
-      }
+  function handleDelete() {
+    setIsDeleteDialogOpen(false);
+    setFeedbackMessage(null);
 
-      setIsDeleteDialogOpen(false);
-      router.refresh();
-    } catch (error) {
-      setFeedbackMessage(
-        error instanceof Error ? error.message : "Не удалось удалить аккаунт.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    scheduleUndoableAction({
+      actionKey: `delete:${user.id}`,
+      commit: deleteUser,
+      description: `Действие будет выполнено через 5 секунд для ${accountName}.`,
+      errorMessage: "Не удалось удалить аккаунт.",
+      pendingMessage: "Аккаунт будет удален",
+      successMessage: "Аккаунт удален.",
+      toastVariant: "danger",
+      undoMessage: "Удаление отменено.",
+    });
   }
 
   return (
     <>
-      <div ref={rootRef} className="relative">
-        <button
-          type="button"
-          className="interactive-control inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
-          aria-label="Открыть меню действий"
-          onClick={() => setIsMenuOpen((currentState) => !currentState)}
-        >
-          <MoreHorizontalIcon />
-        </button>
+      <div
+        data-admin-row-action="true"
+        className="relative"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <Dropdown.Root>
+          <Dropdown.Trigger
+            aria-label="Открыть меню действий"
+            className="interactive-tertiary inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)]"
+          >
+            <MoreHorizontalIcon />
+          </Dropdown.Trigger>
 
-        {isMenuOpen ? (
-          <div className="surface-elevated border-separator absolute right-0 top-[calc(100%+4px)] z-30 min-w-[220px] rounded-[18px] border p-1 shadow-[0_14px_32px_rgba(0,0,0,0.08)]">
-            <button
-              type="button"
-              className="comment-menu-item w-full justify-start rounded-[14px] px-3 py-2.5 text-left text-[13px] leading-4"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setIsEditorOpen(true);
+          <Dropdown.Popover placement="bottom end" className="min-w-[220px]">
+            <Dropdown.Menu
+              aria-label="Действия с аккаунтом"
+              selectionMode="none"
+              onAction={(key) => {
+                const action = String(key);
+
+                if (action === "edit") {
+                  setIsEditorOpen(true);
+                  return;
+                }
+
+                if (action === "ban") {
+                  setIsBanDialogOpen(true);
+                  setFeedbackMessage(null);
+                  return;
+                }
+
+                if (action === "delete") {
+                  setIsDeleteDialogOpen(true);
+                  setFeedbackMessage(null);
+                }
               }}
             >
-              Редактировать
-            </button>
-
-            <button
-              type="button"
-              className="comment-menu-item w-full justify-start rounded-[14px] px-3 py-2.5 text-left text-[13px] leading-4"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setIsBanDialogOpen(true);
-              }}
-            >
-              {user.isBanned ? "Обновить бан" : "Забанить"}
-            </button>
-
-            <button
-              type="button"
-              className="comment-menu-item w-full justify-start rounded-[14px] px-3 py-2.5 text-left text-[13px] leading-4 text-[var(--accent-critical)]"
-              onClick={() => {
-                setIsMenuOpen(false);
-                setIsDeleteDialogOpen(true);
-              }}
-            >
-              Удалить аккаунт
-            </button>
-          </div>
-        ) : null}
+              <Dropdown.Item key="edit" id="edit" textValue="Редактировать">
+                Редактировать
+              </Dropdown.Item>
+              <Dropdown.Item key="ban" id="ban" textValue="Забанить">
+                Забанить
+              </Dropdown.Item>
+              <Dropdown.Item
+                key="delete"
+                id="delete"
+                textValue="Удалить аккаунт"
+                className="text-[var(--accent-critical)]"
+              >
+                Удалить аккаунт
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
       </div>
 
       <AdminUserEditorModal
@@ -215,9 +300,9 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
 
       {isBanDialogOpen ? (
         <ConfirmDialog
-          title={user.isBanned ? "Обновить причину бана" : "Забанить аккаунт"}
-          actionLabel={user.isBanned ? "Сохранить причину" : "Забанить"}
-          danger
+          title={`Вы уверены, что хотите забанить пользователя ${accountName}?`}
+          actionLabel="Забанить"
+          errorMessage={feedbackMessage}
           isLoading={isSubmitting}
           onClose={() => {
             if (!isSubmitting) {
@@ -226,32 +311,16 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
             }
           }}
           onConfirm={() => {
-            void handleBan();
+            handleBan();
           }}
-        >
-          <div className="grid gap-3">
-            <p>
-              Бан можно сохранить и без причины. Если причина есть, она будет видна в админке как
-              secondary-информация.
-            </p>
-            <textarea
-              value={banReason}
-              onChange={(event) => setBanReason(event.target.value)}
-              placeholder="Причина бана (необязательно)"
-              className="field-shell min-h-[120px] rounded-[24px] px-5 py-4 text-[15px] outline-none placeholder:text-[var(--label-tertiary)]"
-            />
-            {feedbackMessage ? (
-              <p className="text-sm text-[var(--accent-critical)]">{feedbackMessage}</p>
-            ) : null}
-          </div>
-        </ConfirmDialog>
+        />
       ) : null}
 
       {isDeleteDialogOpen ? (
         <ConfirmDialog
-          title="Удалить аккаунт"
+          title={`Вы уверены, что хотите удалить пользователя ${accountName}?`}
           actionLabel="Удалить"
-          danger
+          errorMessage={feedbackMessage}
           isLoading={isSubmitting}
           onClose={() => {
             if (!isSubmitting) {
@@ -260,19 +329,9 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
             }
           }}
           onConfirm={() => {
-            void handleDelete();
+            handleDelete();
           }}
-        >
-          <div className="grid gap-3">
-            <p>
-              Аккаунт, его сессии и связанные записи в локальном auth-storage будут удалены. Это
-              действие нельзя откатить.
-            </p>
-            {feedbackMessage ? (
-              <p className="text-sm text-[var(--accent-critical)]">{feedbackMessage}</p>
-            ) : null}
-          </div>
-        </ConfirmDialog>
+        />
       ) : null}
     </>
   );

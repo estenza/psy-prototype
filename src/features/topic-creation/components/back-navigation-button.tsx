@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { TopicBackIcon } from "@/features/topic-creation/components/topic-creation-icons";
 
 type BackNavigationButtonProps = {
@@ -13,17 +13,11 @@ export function BackNavigationButton({
   onClick,
 }: BackNavigationButtonProps) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
+    <IconButton
       onClick={onClick}
-      aria-label={label ?? "Назад"}
+      label={label ?? "Назад"}
       icon={<TopicBackIcon />}
-      className={`h-9 min-w-[52px] flex-none cursor-pointer !rounded-[24px] !px-4 !py-2 hover:bg-[var(--fill-control-hover)] active:bg-[var(--fill-secondary)] ${
-        label ? "gap-2" : "gap-0"
-      } ${className}`.trim()}
-    >
-      {label ? <span className="text-[14px] font-medium leading-5">{label}</span> : null}
-    </Button>
+      className={className}
+    />
   );
 }

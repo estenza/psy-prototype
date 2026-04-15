@@ -18,7 +18,7 @@ export default async function SettingsPage() {
     >
       <ThemePreferenceCard />
 
-      <section className="surface-elevated border-separator rounded-[28px] border p-6 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+      <section className="surface-elevated border-separator rounded-[28px] border p-6">
         <h2 className="text-[18px] font-semibold text-[var(--label-primary)]">
           Аккаунт
         </h2>

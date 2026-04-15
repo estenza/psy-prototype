@@ -5,12 +5,19 @@
   "packageManager": "yarn@4.13.0",
   "scripts": {
     "dev": "next dev",
+    "dev:admin-local": "node scripts/dev-admin-local.mjs",
     "build": "next build",
+    "check:icons": "node scripts/check-icon-exports.mjs",
     "migrate:auth:postgres": "node scripts/migrate-auth-sqlite-to-postgres.mjs",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
-    "lint": "eslint"
+    "lint": "eslint && yarn check:icons"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
+    "@heroui/react": "^3.0.2",
+    "@heroui/styles": "^3.0.2",
+    "@radix-ui/react-popover": "^1.1.15",
     "@tiptap/core": "3.22.1",
     "@tiptap/extension-image": "3.22.1",
     "@tiptap/extension-link": "3.22.1",
@@ -19,10 +26,13 @@
     "@tiptap/pm": "3.22.1",
     "@tiptap/react": "3.22.1",
     "@tiptap/starter-kit": "3.22.1",
+    "emoji-mart": "^5.6.0",
     "next": "16.1.7",
     "pg": "^8.16.3",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-dropzone": "^15.0.0",
+    "react-easy-crop": "^5.5.7"
   },
   "resolutions": {
     "@tiptap/core": "3.22.1",

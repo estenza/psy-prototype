@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge, SearchField as HeroSearchField } from "@heroui/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,8 +15,8 @@ import {
   NavIcon,
   NotificationIcon,
   PlusCircleIcon,
-  SearchIcon,
 } from "@/components/ui/icons";
+import { buttonClassName } from "@/components/ui/button";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { AuthStatus } from "@/features/auth/components/auth-status";
@@ -25,62 +26,41 @@ import { LegalInfo } from "@/components/layout/legal-info";
 import type { NavigationItemKey } from "@/types/navigation";
 
 type AppHeaderProps = {
+  adminMode?: boolean;
   showCreateAction?: boolean;
   showSearch?: boolean;
 };
 
-type SearchFieldProps = {
-  autoFocus?: boolean;
-  className: string;
-  inputClassName?: string;
-  placeholder: string;
-};
-
-function SearchField({
-  autoFocus = false,
-  className,
-  inputClassName = "w-full",
-  placeholder,
-}: SearchFieldProps) {
-  return (
-    <label className={`search-field items-center gap-3 rounded-full text-sm ${className}`}>
-      <span className="text-label-tertiary">
-        <SearchIcon />
-      </span>
-      <div className="relative min-w-0 flex-1 overflow-hidden">
-        <input
-          aria-label={placeholder}
-          autoFocus={autoFocus}
-          type="search"
-          placeholder={placeholder}
-          className={`search-field-input text-label-primary block min-w-0 bg-transparent text-sm font-medium leading-5 outline-none placeholder:text-transparent ${inputClassName}`}
-        />
-        <span className="search-field-placeholder" aria-hidden="true">
-          <span className="search-field-placeholder-text">{placeholder}</span>
-        </span>
-      </div>
-    </label>
-  );
-}
-
 const circularControlClassName =
-  "interactive-control group/tooltip relative inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)] transition-colors";
+  buttonClassName({
+    className:
+      "button--icon-only relative h-11 w-11 flex-none px-0 text-[var(--label-primary)]",
+    size: "lg",
+    variant: "tertiary",
+  });
 
 const mobileMenuButtonClassName =
-  "interactive-control relative inline-flex h-11 w-11 flex-none cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)] transition-colors lg:hidden";
+  `${buttonClassName({
+    className:
+      "button--icon-only relative h-11 w-11 flex-none px-0 text-[var(--label-primary)]",
+    size: "lg",
+    variant: "tertiary",
+  })} lg:hidden`;
 
 function NotificationButton() {
   return (
-    <button
-      aria-label="Уведомления"
-      className={circularControlClassName}
-    >
-      <NotificationIcon />
-      <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent-like)] px-1 text-[10px] font-semibold text-[var(--label-inverse)]">
-        3
-      </span>
-      <HoverTooltip label="Уведомления" />
-    </button>
+    <Badge.Anchor>
+      <HoverTooltip label="Уведомления">
+        <button
+          type="button"
+          aria-label="Уведомления"
+          className={circularControlClassName}
+        >
+          <NotificationIcon />
+        </button>
+      </HoverTooltip>
+      <Badge color="danger" size="sm" variant="primary">3</Badge>
+    </Badge.Anchor>
   );
 }
 
@@ -123,7 +103,10 @@ function CreateTopicButton({
     <Link
       href="/create-topic"
       onClick={onClick}
-      className={`interactive-control inline-flex flex-none cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold text-[var(--label-primary)] transition-colors ${className}`}
+      className={buttonClassName({
+        className: `flex-none gap-2 whitespace-nowrap ${className}`.trim(),
+        variant: "tertiary",
+      })}
     >
       <span className="flex-none">
         <PlusCircleIcon />
@@ -140,6 +123,7 @@ function resolveActiveSection(pathname: string | null): NavigationItemKey {
 }
 
 export function AppHeader({
+  adminMode = false,
   showCreateAction = true,
   showSearch = true,
 }: AppHeaderProps) {
@@ -149,6 +133,9 @@ export function AppHeader({
   const { requireAuth } = useAuthRequiredAction();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeSection = resolveActiveSection(pathname);
+  const isAdminHeader = adminMode;
+  const shouldShowSearch = showSearch && !isAdminHeader;
+  const shouldShowNotification = Boolean(user) && !isAdminHeader;
 
   useEffect(() => {
     if (!isMobileMenuOpen) {
@@ -218,34 +205,62 @@ export function AppHeader({
   }
 
   return (
-    <header className="surface-primary border-separator relative z-50 border-b min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0">
-      <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] items-center gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[721px]:gap-3 min-[721px]:py-1 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-[var(--app-shell-side-offset)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="flex min-w-0 items-center gap-1 sm:gap-2 lg:pl-5">
-          <MobileMenuButton
-            expanded={isMobileMenuOpen}
-            onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
-          />
+    <header className={`surface-primary border-separator relative z-50 border-b ${
+      isAdminHeader
+        ? "fixed inset-x-0 top-0"
+        : "min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0"
+    }`.trim()}>
+      <div className={`relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] items-center ${
+        isAdminHeader
+          ? "min-h-16 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-3 px-4 py-3 min-[1280px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[1280px]:px-[var(--app-shell-side-offset)]"
+          : "gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:gap-3 min-[721px]:py-1 lg:px-[var(--app-shell-side-offset)] min-[721px]:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]"
+      }`}>
+        <div className={`flex min-w-0 items-center ${
+          isAdminHeader ? "gap-2" : "gap-1 sm:gap-2 lg:pl-5"
+        }`.trim()}>
+          {!isAdminHeader ? (
+            <MobileMenuButton
+              expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
+            />
+          ) : null}
 
           <Link
             href="/"
             aria-label="внутри"
-            className="hidden w-fit max-w-full cursor-pointer min-[361px]:inline-flex lg:max-w-[var(--app-shell-side-rail-width)]"
+            className={`w-fit max-w-full cursor-pointer ${
+              isAdminHeader ? "inline-flex" : "min-[361px]:inline-flex hidden lg:max-w-[var(--app-shell-side-rail-width)]"
+            }`}
           >
             <AppBrand
-              wordmarkClassName="h-[22px] w-auto shrink-0 sm:h-7 lg:h-8"
-              labelClassName="h-[14px] w-auto shrink-0 sm:h-[18px] lg:h-5"
+              showAdminLabel={isAdminHeader}
+              wordmarkClassName={isAdminHeader ? "h-7 w-auto shrink-0" : "h-[22px] w-auto shrink-0 sm:h-7 lg:h-8"}
+              labelClassName={isAdminHeader ? "h-[18px] w-auto shrink-0" : "h-[14px] w-auto shrink-0 sm:h-[18px] lg:h-5"}
             />
           </Link>
+
         </div>
 
-        {showSearch ? (
-          <SearchField
-            className="hidden w-full min-w-0 justify-self-center px-4 py-3 min-[721px]:flex sm:justify-self-auto lg:px-5"
-            placeholder="Поиск по историям, темам, психологам"
-          />
+        {shouldShowSearch ? (
+          <HeroSearchField
+            aria-label="Поиск по историям, темам, психологам"
+            className="hidden min-w-0 w-full justify-self-center overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:block"
+            fullWidth
+          >
+            <HeroSearchField.Group className="w-full">
+              <HeroSearchField.SearchIcon />
+              <HeroSearchField.Input
+                aria-label="Поиск по историям, темам, психологам"
+                placeholder="Поиск по историям, темам, психологам"
+              />
+              <HeroSearchField.ClearButton aria-label="Очистить поиск" />
+            </HeroSearchField.Group>
+          </HeroSearchField>
         ) : null}
 
-        <div className="flex w-fit max-w-full min-w-0 items-center justify-end justify-self-end gap-1 sm:gap-2 lg:justify-start">
+        <div className={`flex w-fit max-w-full min-w-0 items-center justify-end justify-self-end ${
+          isAdminHeader ? "gap-2" : "gap-1 sm:gap-2 lg:justify-start"
+        }`.trim()}>
           {showCreateAction ? (
             <CreateTopicButton
               className="h-10 px-3 text-[13px] min-[721px]:h-11 min-[721px]:px-4 min-[721px]:text-sm"
@@ -257,15 +272,25 @@ export function AppHeader({
               </>
             </CreateTopicButton>
           ) : null}
-          {user ? <NotificationButton /> : null}
-          <AuthStatus compact />
+          {shouldShowNotification ? <NotificationButton /> : null}
+          <AuthStatus compact hideNavigationItems={isAdminHeader} />
         </div>
 
-        {showSearch ? (
-          <SearchField
-            className="col-span-2 flex w-full px-4 py-3 min-[721px]:hidden"
-            placeholder="Поиск по историям, темам, психологам"
-          />
+        {shouldShowSearch ? (
+          <HeroSearchField
+            aria-label="Поиск по историям, темам, психологам"
+            className="col-span-2 w-full overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:hidden"
+            fullWidth
+          >
+            <HeroSearchField.Group className="w-full">
+              <HeroSearchField.SearchIcon />
+              <HeroSearchField.Input
+                aria-label="Поиск по историям, темам, психологам"
+                placeholder="Поиск по историям, темам, психологам"
+              />
+              <HeroSearchField.ClearButton aria-label="Очистить поиск" />
+            </HeroSearchField.Group>
+          </HeroSearchField>
         ) : null}
       </div>
 
@@ -299,7 +324,7 @@ export function AppHeader({
                 aria-label="внутри"
                 className="inline-flex max-w-full"
               >
-                <AppBrand />
+                <AppBrand showAdminLabel={isAdminHeader} />
               </Link>
             </div>
 
@@ -312,11 +337,15 @@ export function AppHeader({
                     setIsMobileMenuOpen(false);
                     handleNavigationItemClick(event, item);
                   }}
-                  className={`comment-menu-item flex min-h-14 items-center gap-3 rounded-[18px] px-3 py-3 text-left text-[16px] ${
-                    item.key === activeSection
-                      ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
-                      : "text-[var(--label-tertiary)]"
-                  }`}
+                  className={buttonClassName({
+                    className: `min-h-14 h-auto justify-start gap-3 rounded-[18px] px-3 py-3 text-left text-[16px] ${
+                      item.key === activeSection
+                        ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
+                        : "text-[var(--label-tertiary)]"
+                    }`,
+                    size: "lg",
+                    variant: "tertiary",
+                  })}
                 >
                   <span className="flex h-8 w-8 flex-none items-center justify-center">
                     <NavIcon name={item.key} />
@@ -329,7 +358,7 @@ export function AppHeader({
             <div className="mt-auto px-3 pb-2 pt-5">
               {showCreateAction ? (
                 <CreateTopicButton
-                  className="interactive-fill h-12 w-full justify-center px-4 text-[15px]"
+                  className="h-12 w-full justify-center px-4 text-[15px]"
                   onClick={async (event) => {
                     setIsMobileMenuOpen(false);
                     await handleCreateTopicClick(event);

@@ -88,7 +88,7 @@ export function PasswordResetConfirmForm({
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:px-7">
+    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
       <div className="flex flex-col gap-3">
         <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
           Новый пароль
@@ -100,7 +100,7 @@ export function PasswordResetConfirmForm({
       </div>
 
       {!tokenValid ? (
-        <div className="mt-6 rounded-2xl bg-[color-mix(in_srgb,var(--accent-critical)_10%,white)] px-4 py-4 text-[14px] leading-6 text-[var(--label-primary)]">
+        <div className="feedback-critical-surface mt-6 rounded-2xl px-4 py-4 text-[14px] leading-6">
           <p>Ссылка для восстановления недействительна или уже истекла.</p>
           <p className="mt-2">
             <Link
@@ -114,7 +114,7 @@ export function PasswordResetConfirmForm({
       ) : null}
 
       {successMessage ? (
-        <div className="mt-6 rounded-2xl bg-[color-mix(in_srgb,var(--accent-primary)_10%,white)] px-4 py-4 text-[14px] leading-6 text-[var(--label-primary)]">
+        <div className="feedback-primary-surface mt-6 rounded-2xl px-4 py-4 text-[14px] leading-6">
           <p>{successMessage}</p>
           <p className="mt-2">
             <Link
@@ -159,13 +159,13 @@ export function PasswordResetConfirmForm({
           />
 
           {fieldErrors.token ? (
-            <div className="rounded-2xl bg-[color-mix(in_srgb,var(--accent-critical)_10%,white)] px-4 py-3 text-[13px] leading-5 text-[var(--accent-critical)]">
+            <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
               {fieldErrors.token}
             </div>
           ) : null}
 
           {formError ? (
-            <div className="rounded-2xl bg-[color-mix(in_srgb,var(--accent-critical)_10%,white)] px-4 py-3 text-[13px] leading-5 text-[var(--accent-critical)]">
+            <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
               {formError}
             </div>
           ) : null}

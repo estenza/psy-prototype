@@ -1,3 +1,4 @@
+import { Description, Tabs } from "@heroui/react";
 import type { PostIntent } from "@/types/post-taxonomy";
 
 type TopicFormatSwitchProps = {
@@ -26,33 +27,32 @@ export function TopicFormatSwitch({
   value,
 }: TopicFormatSwitchProps) {
   return (
-    <section className="space-y-4">
-      <div className="inline-flex rounded-[16px] bg-[var(--fill-control-hover)] p-1">
-        {(Object.keys(TOPIC_FORMAT_OPTIONS) as PostIntent[]).map(
-          (mode) => {
-            const isActive = mode === value;
+    <Tabs
+      selectedKey={value}
+      onSelectionChange={(key) => onChange(String(key) as PostIntent)}
+    >
+      <Tabs.ListContainer>
+        <Tabs.List aria-label="Формат публикации">
+          {(Object.keys(TOPIC_FORMAT_OPTIONS) as PostIntent[]).map((mode, index) => (
+            <Tabs.Tab
+              key={mode}
+              id={mode}
+            >
+              {index > 0 ? <Tabs.Separator /> : null}
+              {TOPIC_FORMAT_OPTIONS[mode].label}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+      </Tabs.ListContainer>
 
-            return (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => onChange(mode)}
-                className={`cursor-pointer rounded-[12px] px-6 py-3 text-left text-[14px] font-bold leading-5 transition-colors ${
-                  isActive
-                    ? "surface-elevated text-[var(--accent-primary)]"
-                    : "text-label-tertiary"
-                }`}
-              >
-                <span className="block">{TOPIC_FORMAT_OPTIONS[mode].label}</span>
-              </button>
-            );
-          },
-        )}
-      </div>
-
-      <p className="text-label-tertiary text-[14px] leading-5">
-        {TOPIC_FORMAT_OPTIONS[value].description}
-      </p>
-    </section>
+      {(Object.keys(TOPIC_FORMAT_OPTIONS) as PostIntent[]).map((mode) => (
+        <Tabs.Panel className="pt-4" key={mode} id={mode}>
+          <Description className="text-[14px]">
+            {TOPIC_FORMAT_OPTIONS[mode].description}
+          </Description>
+        </Tabs.Panel>
+      ))}
+    </Tabs>
   );
 }

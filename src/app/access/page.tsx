@@ -1,6 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { AdminAccessGateForm } from "@/features/admin/components/admin-access-gate-form";
-import { canAccessAdminConsole, getConfiguredAdminAccessKey, isValidAdminAccessKey } from "@/features/admin/lib/admin-console";
+import {
+  canAccessAdminConsole,
+  getConfiguredAdminAccessKey,
+  isValidAdminAccessKey,
+  normalizeAdminNextPath,
+} from "@/features/admin/lib/admin-console";
 import { getAdminAccessKey, isAdminConsoleRequest } from "@/features/admin/lib/admin-console-request";
 import { AuthPageShell } from "@/features/auth/components/auth-page-shell";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
@@ -25,7 +30,7 @@ export default async function AdminAccessPage({
   }
 
   const resolvedSearchParams = await searchParams;
-  const nextPath = resolvedSearchParams.next?.trim() || "/admin/users";
+  const nextPath = normalizeAdminNextPath(resolvedSearchParams.next);
   const currentUser = await getCurrentUser();
   const canOpenAdmin = canAccessAdminConsole(currentUser);
   const redirectPath = buildRedirectPath(nextPath, canOpenAdmin);
@@ -39,7 +44,7 @@ export default async function AdminAccessPage({
   }
 
   return (
-    <AuthPageShell homeHref="/access">
+    <AuthPageShell homeHref="/access" showAdminLabel>
       <AdminAccessGateForm redirectPath={redirectPath} />
     </AuthPageShell>
   );

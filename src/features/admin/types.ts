@@ -1,6 +1,6 @@
 import type { AuthUser, SpecialistStatus, UserRole } from "@/features/auth/types";
 
-export type AdminUserRoleFilter = "all" | "moderator" | "specialist";
+export type AdminUserRoleFilter = "all" | "moderator" | "specialist" | "user";
 export type AdminSpecialistStatusFilter = "all" | SpecialistStatus;
 
 export type AdminUsersFilters = {
@@ -23,6 +23,7 @@ export type AdminManagedUserPayload = {
   email?: string;
   firstName?: string | null;
   lastName?: string | null;
+  nickname?: string | null;
   password?: string;
   profileDescription?: string | null;
   role?: UserRole;
@@ -42,6 +43,20 @@ export type AdminBanUserPayload = {
 export type AdminManagedUserResponse = {
   ok: true;
   user: AdminListedUser;
+};
+
+export type AdminManagedUserFieldErrorName =
+  | "displayName"
+  | "email"
+  | "firstName"
+  | "lastName"
+  | "nickname"
+  | "password"
+  | "specialties";
+
+export type AdminManagedUserErrorResponse = {
+  error: string;
+  fieldErrors?: Partial<Record<AdminManagedUserFieldErrorName, string>>;
 };
 
 export type AdminUpdateUserPayload = {

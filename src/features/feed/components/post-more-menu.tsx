@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Dropdown } from "@heroui/react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import {
   BellIcon,
@@ -65,35 +66,7 @@ export function PostMoreMenu({
   post,
 }: PostMoreMenuProps) {
   const { user } = useAuthClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const isOwnedByCurrentUser = isPostOwnedByUser(post, user);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen]);
 
   const actions = useMemo<PostMenuRenderItem[]>(() => {
     const menuActions = isOwnedByCurrentUser
@@ -112,56 +85,48 @@ export function PostMoreMenu({
   }, [isOwnedByCurrentUser, onAction, post.id, post.viewer.bookmarked]);
 
   return (
-    <div
-      ref={menuRef}
-      className={`relative ${isOpen ? "z-[90]" : "z-20"}`}
-    >
-      <button
-        type="button"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        aria-label="Еще"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setIsOpen((current) => !current);
-        }}
-        className="interactive-control group/tooltip relative z-10 inline-flex cursor-pointer items-center justify-center self-center rounded-full p-2 transition-colors"
-      >
-        <MoreIcon />
-        {!isOpen ? <HoverTooltip label="Еще" /> : null}
-      </button>
+    <Dropdown.Root>
+      <HoverTooltip label="Еще">
+        <Dropdown.Trigger
+          aria-label="Еще"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          className="interactive-tertiary z-10 inline-flex cursor-pointer items-center justify-center self-center rounded-full p-2 text-[var(--label-primary)]"
+        >
+          <MoreIcon />
+        </Dropdown.Trigger>
+      </HoverTooltip>
 
-      {isOpen ? (
-        <div
-          className="surface-primary border-separator absolute right-0 top-full z-[100] mt-2 w-[260px] rounded-[20px] border p-2"
-          role="menu"
+      <Dropdown.Popover placement="bottom end" className="w-[260px]">
+        <Dropdown.Menu
+          aria-label="Меню публикации"
+          selectionMode="none"
+          onAction={(key) => {
+            const action = actions.find((item) => item.id === String(key));
+            action?.onSelect();
+          }}
         >
           {actions.map((action) => (
-            <button
+            <Dropdown.Item
               key={action.id}
-              type="button"
-              role="menuitem"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                action.onSelect();
-                setIsOpen(false);
-              }}
-              className={`interactive-control flex w-full cursor-pointer items-center gap-3 rounded-[14px] px-3 py-3 text-left text-[14px] transition-colors ${
-                action.id === "save" && post.viewer.bookmarked
-                  ? "text-label-primary font-semibold"
-                  : ""
-              }`}
+              id={action.id}
+              textValue={action.label}
+              className={
+                action.id === "save" && post.viewer.bookmarked ? "font-semibold text-label-primary" : ""
+              }
             >
-              <span className="inline-flex h-5 w-5 flex-none items-center justify-center">
-                {action.icon}
+              <span className="flex items-center gap-3">
+                <span className="inline-flex h-5 w-5 flex-none items-center justify-center">
+                  {action.icon}
+                </span>
+                <span>{action.label}</span>
               </span>
-              <span>{action.label}</span>
-            </button>
+            </Dropdown.Item>
           ))}
-        </div>
-      ) : null}
-    </div>
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown.Root>
   );
 }
