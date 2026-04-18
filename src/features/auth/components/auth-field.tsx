@@ -48,7 +48,7 @@ export function AuthField({
     >
       <Label
         htmlFor={id}
-        className="text-[14px] font-medium text-[var(--label-primary)]"
+        className="type-body-md-medium text-[var(--label-primary)]"
       >
         {label}
       </Label>
@@ -72,10 +72,10 @@ export function AuthField({
         data-form-type={disablePasswordManagerHints ? "other" : undefined}
         data-lpignore={disablePasswordManagerHints ? "true" : undefined}
         style={maskedTextStyle}
-        className="w-full rounded-2xl px-4 py-3 text-[16px] leading-5"
+        className="type-input w-full rounded-2xl px-4 py-3"
       />
       {error ? (
-        <ErrorMessage className="text-[12px] leading-4 text-[var(--accent-critical)]">
+        <ErrorMessage className="type-caption-tight text-[var(--danger)]">
           {error}
         </ErrorMessage>
       ) : null}

@@ -67,3 +67,13 @@ export function buildPostAuthRedirectPath(user: AuthUser, nextPath: string) {
 export function getUserHandle(user: Pick<AuthUser, "displayName" | "nickname">) {
   return user.nickname ? `@${user.nickname}` : user.displayName;
 }
+
+export function buildPublicProfilePathFromHandle(handle: string | null | undefined) {
+  const normalizedHandle = sanitizeProfileText(handle).replace(/^@+/, "");
+
+  if (!normalizedHandle) {
+    return null;
+  }
+
+  return `/profile/${encodeURIComponent(normalizedHandle)}`;
+}

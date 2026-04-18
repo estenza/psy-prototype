@@ -7,7 +7,7 @@ type PostFeedItemProps = {
   onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
   post: Post;
   viewMode: ViewMode;
-  onToggleLike: (postId: Post["id"]) => void;
+  onToggleLike: (postId: Post["id"], liked: boolean) => void;
 };
 
 export function PostFeedItem({

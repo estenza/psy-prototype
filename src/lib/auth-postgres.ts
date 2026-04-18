@@ -235,6 +235,88 @@ async function initializePostgresSchema() {
     CREATE INDEX IF NOT EXISTS discussions_author_user_id_idx
       ON discussions (author_user_id);
 
+    CREATE TABLE IF NOT EXISTS discussion_reactions (
+      id TEXT PRIMARY KEY,
+      discussion_id TEXT NOT NULL REFERENCES discussions (id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      reaction_type TEXT NOT NULL DEFAULT 'like' CHECK (reaction_type IN ('like')),
+      created_at TIMESTAMPTZ NOT NULL,
+      UNIQUE (discussion_id, user_id, reaction_type)
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_reactions_discussion_id_idx
+      ON discussion_reactions (discussion_id);
+    CREATE INDEX IF NOT EXISTS discussion_reactions_user_id_idx
+      ON discussion_reactions (user_id);
+
+    CREATE TABLE IF NOT EXISTS discussion_comments (
+      id TEXT PRIMARY KEY,
+      discussion_id TEXT NOT NULL REFERENCES discussions (id) ON DELETE CASCADE,
+      author_user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      parent_comment_id TEXT REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      root_comment_id TEXT REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      depth INTEGER NOT NULL DEFAULT 0 CHECK (depth IN (0, 1)),
+      body_html TEXT NOT NULL,
+      body_text TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'published' CHECK (
+        status IN ('published', 'hidden', 'deleted', 'pending')
+      ),
+      hidden_reason TEXT,
+      likes_count INTEGER NOT NULL DEFAULT 0,
+      replies_count INTEGER NOT NULL DEFAULT 0,
+      reports_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      edited_at TIMESTAMPTZ,
+      hidden_at TIMESTAMPTZ,
+      deleted_at TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_comments_discussion_id_idx
+      ON discussion_comments (discussion_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS discussion_comments_parent_comment_id_idx
+      ON discussion_comments (parent_comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comments_root_comment_id_idx
+      ON discussion_comments (root_comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comments_status_idx
+      ON discussion_comments (status);
+
+    CREATE TABLE IF NOT EXISTS discussion_comment_reactions (
+      id TEXT PRIMARY KEY,
+      comment_id TEXT NOT NULL REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      reaction_type TEXT NOT NULL DEFAULT 'like' CHECK (reaction_type IN ('like')),
+      created_at TIMESTAMPTZ NOT NULL,
+      UNIQUE (comment_id, user_id, reaction_type)
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_comment_reactions_comment_id_idx
+      ON discussion_comment_reactions (comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comment_reactions_user_id_idx
+      ON discussion_comment_reactions (user_id);
+
+    CREATE TABLE IF NOT EXISTS discussion_comment_reports (
+      id TEXT PRIMARY KEY,
+      comment_id TEXT NOT NULL REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      reporter_user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      reason TEXT,
+      details TEXT,
+      status TEXT NOT NULL DEFAULT 'open' CHECK (
+        status IN ('open', 'reviewed', 'dismissed', 'resolved')
+      ),
+      resolution_note TEXT,
+      resolved_by_user_id TEXT REFERENCES users (id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      resolved_at TIMESTAMPTZ,
+      UNIQUE (comment_id, reporter_user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_comment_reports_comment_id_idx
+      ON discussion_comment_reports (comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comment_reports_status_idx
+      ON discussion_comment_reports (status, created_at DESC);
+
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_source_url TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_card_url TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_description TEXT;

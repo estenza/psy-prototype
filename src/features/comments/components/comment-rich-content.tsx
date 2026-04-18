@@ -11,7 +11,7 @@ export function CommentRichContent({
 }: CommentRichContentProps) {
   return (
     <div
-      className="comment-rich-content text-label-primary w-full text-[14px] leading-5"
+      className="comment-rich-content text-label-primary w-full text-[16px] leading-6"
       data-clamped={clamped ? "true" : "false"}
       dangerouslySetInnerHTML={{
         __html: html,

@@ -34,16 +34,20 @@ export function CommentEditor({
   }, [value]);
 
   return (
-    <TextField className="w-full">
+    <TextField
+      aria-label={placeholder}
+      className="w-full"
+    >
       <TextArea
         ref={textareaRef}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
+        aria-label={placeholder}
         disabled={disabled}
         autoFocus={autoFocus}
-        rows={compact ? 1 : 2}
-        className={`comment-editor-shell surface-primary border-separator-strong w-full resize-none overflow-hidden rounded-[16px] px-[13px] text-[14px] leading-5 ${compact ? "min-h-5 py-3" : "min-h-[40px] py-[13px]"}`.trim()}
+        rows={2}
+        className={`comment-editor-shell type-body-md w-full resize-none overflow-hidden rounded-[16px] px-[13px] pt-3 pb-14 ${compact ? "min-h-[88px]" : "min-h-[96px]"}`.trim()}
       />
     </TextField>
   );

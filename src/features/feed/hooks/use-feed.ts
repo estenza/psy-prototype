@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { toast } from "@heroui/react";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
@@ -14,6 +14,10 @@ import {
   readHighlightedPublishedPostId,
 } from "@/features/feed/lib/published-posts";
 import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
+import type {
+  DiscussionMutationResponse,
+  DiscussionRouteErrorResponse,
+} from "@/features/feed/types";
 import {
   requestTopicDraftRestore,
   saveTopicDraft,
@@ -71,7 +75,6 @@ export function useFeed({
   initialViewMode = DEFAULT_VIEW_MODE,
   initialSortMode = DEFAULT_FEED_SORT_MODE,
 }: UseFeedOptions) {
-  const router = useRouter();
   const { user } = useAuthClient();
   const { runIfAuthorized } = useAuthRequiredAction();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
@@ -121,27 +124,35 @@ export function useFeed({
     };
   }, [initialPosts]);
 
-  const toggleLike = (postId: Post["id"]) => {
-    void runIfAuthorized(() => {
+  const toggleLike = (postId: Post["id"], liked: boolean) => {
+    void runIfAuthorized(async () => {
+      const response = await fetch(`/api/discussions/${postId}/like`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ liked }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as DiscussionRouteErrorResponse | null;
+        throw new Error(payload?.error ?? "Не удалось обновить лайк.");
+      }
+
+      const payload = await response.json() as DiscussionMutationResponse;
+
       setPosts((current) =>
-        current.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                viewer: {
-                  ...post.viewer,
-                  liked: !post.viewer.liked,
-                },
-                stats: {
-                  ...post.stats,
-                  likes: post.viewer.liked
-                    ? post.stats.likes - 1
-                    : post.stats.likes + 1,
-                },
-              }
-            : post,
-        ),
+        current.map((post) => (
+          post.id === payload.post.id
+            ? payload.post
+            : post
+        )),
       );
+    }).catch((error: unknown) => {
+      const message = error instanceof Error
+        ? error.message
+        : "Не удалось обновить лайк.";
+      toast.danger(message);
     });
   };
 
@@ -178,7 +189,7 @@ export function useFeed({
         updatedAt: new Date().toISOString(),
       });
       requestTopicDraftRestore();
-      router.push("/create-topic");
+      window.location.assign("/create-topic");
       return;
     }
 

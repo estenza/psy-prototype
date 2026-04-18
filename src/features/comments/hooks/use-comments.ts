@@ -34,7 +34,7 @@ export function useComments(pageId: string) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [submittingTarget, setSubmittingTarget] = useState<number | "root" | null>(
+  const [submittingTarget, setSubmittingTarget] = useState<string | "root" | null>(
     null,
   );
 
@@ -105,10 +105,7 @@ export function useComments(pageId: string) {
           message: "Комментарий отправлен на модерацию.",
         });
       } else {
-        setFeedback({
-          kind: "success",
-          message: "Комментарий опубликован.",
-        });
+        setFeedback(null);
       }
 
       await loadComments(sort);
@@ -128,7 +125,7 @@ export function useComments(pageId: string) {
     }
   }
 
-  async function voteComment(commentId: number, type: "up" | "down" | null) {
+  async function voteComment(commentId: string, type: "up" | "down" | null) {
     try {
       const response = await fetch(`/api/comments/${commentId}/vote`, {
         method: "POST",
@@ -158,7 +155,7 @@ export function useComments(pageId: string) {
     }
   }
 
-  async function reportComment(commentId: number) {
+  async function reportComment(commentId: string) {
     try {
       const response = await fetch(`/api/comments/${commentId}/report`, {
         method: "POST",
@@ -192,7 +189,79 @@ export function useComments(pageId: string) {
     }
   }
 
-  function blockCommentAuthor(commentId: number) {
+  async function editComment(commentId: string, body: string) {
+    setSubmittingTarget(commentId);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          body,
+        }),
+      });
+
+      const payload = await readJsonResponse<CommentActionResult>(response);
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Не удалось обновить комментарий.");
+      }
+
+      await loadComments(sort);
+      return true;
+    } catch (actionError) {
+      setFeedback({
+        kind: "error",
+        message:
+          actionError instanceof Error
+            ? actionError.message
+            : "Не удалось обновить комментарий.",
+      });
+
+      return false;
+    } finally {
+      setSubmittingTarget(null);
+    }
+  }
+
+  async function deleteComment(commentId: string) {
+    setFeedback(null);
+
+    if (!window.confirm("Удалить этот комментарий?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: "DELETE",
+      });
+
+      const payload = await readJsonResponse<CommentActionResult>(response);
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Не удалось удалить комментарий.");
+      }
+
+      setFeedback({
+        kind: "success",
+        message: "Комментарий удалён.",
+      });
+      await loadComments(sort);
+    } catch (actionError) {
+      setFeedback({
+        kind: "error",
+        message:
+          actionError instanceof Error
+            ? actionError.message
+            : "Не удалось удалить комментарий.",
+      });
+    }
+  }
+
+  function blockCommentAuthor(commentId: string) {
     void commentId;
     setFeedback({
       kind: "info",
@@ -218,7 +287,9 @@ export function useComments(pageId: string) {
   return {
     blockCommentAuthor,
     data,
+    deleteComment,
     dismissFeedback,
+    editComment,
     error,
     feedback,
     refresh,

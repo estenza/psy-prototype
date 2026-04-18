@@ -1,68 +1,74 @@
+const THERAPEUTIC_APPROACH_TONE_NEUTRAL = "bg-[var(--fill-secondary)] text-[var(--label-secondary)]";
+const THERAPEUTIC_APPROACH_TONE_SUCCESS = "bg-[var(--color-success-soft)] text-[var(--success)]";
+const THERAPEUTIC_APPROACH_TONE_WARNING = "bg-[var(--color-warning-soft)] text-[var(--warning)]";
+const THERAPEUTIC_APPROACH_TONE_DANGER = "bg-[var(--color-danger-soft)] text-[var(--accent-like)]";
+const THERAPEUTIC_APPROACH_TONE_ACCENT = "bg-[var(--color-accent-soft)] text-[var(--accent-primary)]";
+
 export const THERAPEUTIC_APPROACH_ENTITIES = [
   {
     id: "gestalt-therapy",
     label: "Гештальт-терапия",
-    tone: "bg-[var(--fill-secondary)] text-[var(--label-secondary)]",
+    tone: THERAPEUTIC_APPROACH_TONE_NEUTRAL,
   },
   {
     id: "systemic-family-approach",
     label: "Системный семейный подход",
-    tone: "bg-[color-mix(in_srgb,var(--accent-success)_14%,transparent)] text-[var(--accent-success)]",
+    tone: THERAPEUTIC_APPROACH_TONE_SUCCESS,
   },
   {
     id: "psychoanalytic-therapy",
     label: "Психоаналитическая терапия",
-    tone: "bg-[var(--fill-secondary)] text-[var(--label-secondary)]",
+    tone: THERAPEUTIC_APPROACH_TONE_NEUTRAL,
   },
   {
     id: "body-oriented-psychotherapy",
     label: "Телесно-ориентированная психотерапия",
-    tone: "bg-[color-mix(in_srgb,var(--accent-bookmark)_14%,transparent)] text-[var(--accent-bookmark)]",
+    tone: THERAPEUTIC_APPROACH_TONE_WARNING,
   },
   {
     id: "cbt",
     label: "КПТ",
-    tone: "bg-[color-mix(in_srgb,var(--accent-bookmark)_14%,transparent)] text-[var(--accent-bookmark)]",
+    tone: THERAPEUTIC_APPROACH_TONE_WARNING,
   },
   {
     id: "existential-psychotherapy",
     label: "Экзистенциальная психотерапия",
-    tone: "bg-[var(--fill-secondary)] text-[var(--label-secondary)]",
+    tone: THERAPEUTIC_APPROACH_TONE_NEUTRAL,
   },
   {
     id: "psychodrama",
     label: "Психодрама",
-    tone: "bg-[color-mix(in_srgb,var(--accent-like)_14%,transparent)] text-[var(--accent-like)]",
+    tone: THERAPEUTIC_APPROACH_TONE_DANGER,
   },
   {
     id: "transactional-analysis",
     label: "Транзактный анализ",
-    tone: "bg-[color-mix(in_srgb,var(--accent-primary)_14%,transparent)] text-[var(--accent-primary)]",
+    tone: THERAPEUTIC_APPROACH_TONE_ACCENT,
   },
   {
     id: "understanding-psychotherapy",
     label: "Понимающая психотерапия",
-    tone: "bg-[color-mix(in_srgb,var(--accent-success)_14%,transparent)] text-[var(--accent-success)]",
+    tone: THERAPEUTIC_APPROACH_TONE_SUCCESS,
   },
   {
     id: "client-centered-approach",
     label: "Клиент-центрированный подход",
-    tone: "bg-[color-mix(in_srgb,var(--accent-primary)_14%,transparent)] text-[var(--accent-primary)]",
+    tone: THERAPEUTIC_APPROACH_TONE_ACCENT,
   },
   {
     id: "symbol-drama",
     label: "Символдрама",
-    tone: "bg-[color-mix(in_srgb,var(--accent-like)_14%,transparent)] text-[var(--accent-like)]",
+    tone: THERAPEUTIC_APPROACH_TONE_DANGER,
   },
   {
     id: "jungian-analysis",
     label: "Юнгианский анализ",
-    tone: "bg-[var(--fill-secondary)] text-[var(--label-secondary)]",
+    tone: THERAPEUTIC_APPROACH_TONE_NEUTRAL,
   },
   {
     id: "positive-psychotherapy",
     label: "Позитивная психотерапия",
-    tone: "bg-[color-mix(in_srgb,var(--accent-success)_14%,transparent)] text-[var(--accent-success)]",
+    tone: THERAPEUTIC_APPROACH_TONE_SUCCESS,
   },
 ] as const;
 
@@ -102,5 +108,5 @@ export function normalizeTherapeuticApproaches(input: string[] | null | undefine
 
 export function getTherapeuticApproachTone(approach: string) {
   return THERAPEUTIC_APPROACH_BY_LABEL.get(approach as TherapeuticApproachLabel)?.tone
-    ?? "bg-[var(--fill-secondary)] text-[var(--label-secondary)]";
+    ?? THERAPEUTIC_APPROACH_TONE_NEUTRAL;
 }

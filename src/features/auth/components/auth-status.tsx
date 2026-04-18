@@ -4,7 +4,8 @@ import { Chip, Dropdown, Label } from "@heroui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { buttonClassName } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
+import { UserAvatarAction } from "@/components/ui/user-avatar-action";
 import {
   LogOutIcon,
   ProfileCircleIcon,
@@ -61,8 +62,8 @@ export function AuthStatus({
   if (status === "loading") {
     return (
       <div
-        className={`bg-[color-mix(in_srgb,var(--label-primary)_10%,transparent)] animate-pulse rounded-full ${
-          compact ? "h-10 w-10 lg:h-11 lg:w-11" : "h-11 w-11"
+        className={`bg-[var(--fill-control-subtle-hover)] animate-pulse rounded-full ${
+          compact ? "h-9 w-9" : "h-11 w-11"
         }`}
       />
     );
@@ -75,7 +76,7 @@ export function AuthStatus({
         className={buttonClassName({
           className: `rounded-full font-semibold ${
             compact
-              ? "h-10 px-3 text-[13px] lg:h-11 lg:px-4 lg:text-sm"
+              ? "type-caption-medium h-10 px-3 lg:h-11 lg:px-4 lg:text-sm"
               : "h-11 px-4 text-sm"
           }`,
           variant: "primary",
@@ -116,11 +117,13 @@ export function AuthStatus({
         aria-label="Открыть меню профиля"
         className="inline-flex cursor-pointer rounded-full p-0"
       >
-        <UserAvatar
+        <UserAvatarAction
           avatarUrl={user.avatarUrl}
+          ariaLabel="Открыть меню профиля"
+          interactive
           name={user.displayName}
           showStatusDot
-          size={compact ? "sm" : "md"}
+          size={compact ? "header" : "md"}
         />
       </Dropdown.Trigger>
 
@@ -131,7 +134,7 @@ export function AuthStatus({
 
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
-                <p className="min-w-0 truncate text-[15px] font-medium leading-5 text-[var(--label-primary)]">
+                <p className="type-label-lg min-w-0 truncate text-[var(--label-primary)]">
                   {user.displayName}
                 </p>
                 {adminBadgeLabel ? (
@@ -140,7 +143,7 @@ export function AuthStatus({
                   </Chip>
                 ) : null}
               </div>
-              <p className="truncate text-[13px] leading-5 text-[var(--label-secondary)]">
+              <p className="type-caption truncate text-[var(--label-secondary)]">
                 {accountName}
               </p>
             </div>
@@ -176,7 +179,7 @@ export function AuthStatus({
                   className="font-medium"
                 >
                   <div className="flex w-full items-center justify-between gap-3">
-                    <Label className="min-w-0 flex-1 truncate text-[15px] font-medium leading-6 text-[var(--label-primary)]">
+                    <Label className="type-menu-label min-w-0 flex-1 truncate text-[var(--label-primary)]">
                       {item.label}
                     </Label>
                     {"icon" in item && item.icon ? (
@@ -195,7 +198,7 @@ export function AuthStatus({
             className="font-medium"
           >
             <div className="flex w-full items-center justify-between gap-3">
-              <Label className="min-w-0 flex-1 truncate text-[15px] font-medium leading-6">
+              <Label className="type-menu-label min-w-0 flex-1 truncate">
                 {isSigningOut ? "Выходим..." : "Выйти"}
               </Label>
               <span className="flex-none text-danger">

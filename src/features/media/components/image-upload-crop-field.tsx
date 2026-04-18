@@ -161,7 +161,7 @@ export function ImageUploadCropField({
                     alt={label}
                     className="h-full w-full object-cover"
                   />
-                  <div className="absolute inset-0 rounded-full bg-[rgba(0,0,0,0.4)]" />
+                  <div className="absolute inset-0 rounded-full bg-[var(--overlay-media-scrim)]" />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <input {...getInputProps()} />
@@ -272,7 +272,7 @@ export function ImageUploadCropField({
             )}
 
             {errorMessage ? (
-              <p className="text-sm text-[var(--accent-critical)]">{errorMessage}</p>
+              <p className="text-sm text-[var(--danger)]">{errorMessage}</p>
             ) : null}
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Dropdown } from "@heroui/react";
+import { Button, Dropdown } from "@heroui/react";
 import { MoreHorizontalIcon } from "@/components/ui/icons";
 
 type CommentMoreMenuProps = {
@@ -9,6 +9,9 @@ type CommentMoreMenuProps = {
   canDelete: boolean;
   isViewerAuthenticated: boolean;
   viewerOwnsComment: boolean;
+  actionRow?: boolean;
+  onDelete: () => void;
+  onEdit: () => void;
   onBlock: () => void;
   onReport: () => void;
 };
@@ -19,6 +22,9 @@ export function CommentMoreMenu({
   canDelete,
   isViewerAuthenticated,
   viewerOwnsComment,
+  actionRow = false,
+  onDelete,
+  onEdit,
   onBlock,
   onReport,
 }: CommentMoreMenuProps) {
@@ -28,12 +34,12 @@ export function CommentMoreMenu({
           {
             label: "Редактировать",
             disabled: !canEdit,
-            onSelect: () => undefined,
+            onSelect: onEdit,
           },
           {
             label: "Удалить",
             disabled: !canDelete,
-            onSelect: () => undefined,
+            onSelect: onDelete,
           },
         ]
       : [
@@ -51,12 +57,19 @@ export function CommentMoreMenu({
 
   return (
     <Dropdown.Root>
-      <Dropdown.Trigger
-        className="interactive-tertiary text-label-secondary inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full"
+      <Button
+        isIconOnly
+        variant="ghost"
+        size="sm"
         aria-label="Открыть меню действий"
+        className={
+          actionRow
+            ? "interactive-tertiary button--icon-only !inline-flex h-9 w-9 min-w-9 rounded-full px-0 text-[var(--label-primary)]"
+            : "!inline-flex text-[var(--label-primary)]"
+        }
       >
-        <MoreHorizontalIcon />
-      </Dropdown.Trigger>
+        <MoreHorizontalIcon aria-hidden />
+      </Button>
 
       <Dropdown.Popover placement="bottom end" className="min-w-[188px]">
         <Dropdown.Menu

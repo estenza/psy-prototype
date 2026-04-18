@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildCommentsCapabilities, getHyvorServerConfig } from "@/features/comments/lib/hyvor-config";
-import { reportHyvorComment } from "@/features/comments/lib/hyvor-api";
+import { getCurrentUser } from "@/features/auth/lib/current-user";
+import { CommentsServiceError, reportComment } from "@/features/comments/lib/comments-service";
+
+export const runtime = "nodejs";
 
 type ReportPayload = {
   reason?: string | null;
@@ -10,38 +12,39 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ commentId: string }> },
 ) {
-  const { commentId } = await context.params;
-  const payload = (await request.json()) as ReportPayload;
-  const capabilities = buildCommentsCapabilities(getHyvorServerConfig());
-
-  if (!capabilities.canReport) {
-    return NextResponse.json(
-      {
-        error:
-          "Report actions are intentionally disabled in the custom UI until Hyvor SSO-backed user attribution is available.",
-      },
-      {
-        status: 501,
-      },
-    );
-  }
-
   try {
-    await reportHyvorComment(Number(commentId), payload.reason ?? null);
+    const { commentId } = await context.params;
+    const payload = (await request.json()) as ReportPayload;
+
+    await reportComment({
+      commentId,
+      currentUser: await getCurrentUser(),
+      reason: payload.reason ?? null,
+    });
 
     return NextResponse.json({
       ok: true,
     });
   } catch (error) {
+    if (error instanceof CommentsServiceError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+        },
+        {
+          status: error.status,
+        },
+      );
+    }
+
+    console.error("[api/comments/report]", error);
+
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to report the comment.",
+        error: "Не удалось отправить жалобу на комментарий.",
       },
       {
-        status: 502,
+        status: 500,
       },
     );
   }

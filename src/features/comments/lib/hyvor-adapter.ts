@@ -56,14 +56,14 @@ function mapComment(
   capabilities: CommentsCapabilities,
   viewer: CommentsViewer,
 ): CommentNode {
-  const parentId = comment.parent_ids[0] ?? null;
-  const rootId = comment.parent_ids.at(-1) ?? comment.id;
+  const parentId = comment.parent_ids[0]?.toString() ?? null;
+  const rootId = (comment.parent_ids.at(-1) ?? comment.id).toString();
   const viewerOwnsComment = Boolean(
     viewer.hyvorUserHtid && comment.user.htid && viewer.hyvorUserHtid === comment.user.htid,
   );
 
   return {
-    id: comment.id,
+    id: comment.id.toString(),
     parentId,
     rootId,
     depth: comment.depth,
@@ -106,14 +106,14 @@ export function buildCommentsSectionData({
   viewer: CommentsViewer;
   capabilities: CommentsCapabilities;
 }): CommentsSectionData {
-  const repliesByRootCommentId = new Map<number, HyvorDataComment[]>();
+  const repliesByRootCommentId = new Map<string, HyvorDataComment[]>();
 
   comments.forEach((comment) => {
     if (comment.parent_ids.length === 0) {
       return;
     }
 
-    const rootId = comment.parent_ids.at(-1);
+    const rootId = comment.parent_ids.at(-1)?.toString();
 
     if (!rootId) {
       return;
@@ -131,7 +131,7 @@ export function buildCommentsSectionData({
 
   const mappedTopLevelComments = topLevelComments.map((comment) => {
     const mappedReplies = sortReplies(
-      repliesByRootCommentId.get(comment.id) ?? [],
+      repliesByRootCommentId.get(comment.id.toString()) ?? [],
     ).map((replyComment) => mapComment(replyComment, [], capabilities, viewer));
 
     return mapComment(comment, mappedReplies, capabilities, viewer);

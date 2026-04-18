@@ -1,11 +1,15 @@
-import { Button as HeroButton, buttonVariants, cn } from "@heroui/react";
+"use client";
+
+import { Button as HeroButton } from "@heroui/react";
+import { cn } from "@heroui/styles";
 import type { ButtonProps as HeroButtonProps } from "@heroui/react";
 import type { ReactNode } from "react";
-
-export type ButtonVariant = "primary" | "secondary" | "tertiary";
-export type ButtonSize = "sm" | "md" | "lg";
-
-type HeroVariant = NonNullable<HeroButtonProps["variant"]>;
+import {
+  type ButtonSize,
+  type ButtonVariant,
+  buttonSizeMap,
+  buttonVariantMap,
+} from "@/components/ui/button-styles";
 
 type ButtonProps = Omit<HeroButtonProps, "children" | "isDisabled" | "size" | "variant"> & {
   children?: ReactNode;
@@ -15,37 +19,6 @@ type ButtonProps = Omit<HeroButtonProps, "children" | "isDisabled" | "size" | "v
   variant?: ButtonVariant;
   size?: ButtonSize;
 };
-
-const variantMap: Record<ButtonVariant, HeroVariant> = {
-  primary: "primary",
-  secondary: "secondary",
-  tertiary: "ghost",
-};
-
-const sizeMap: Record<ButtonSize, "sm" | "md" | "lg"> = {
-  sm: "sm",
-  md: "md",
-  lg: "lg",
-};
-
-export function buttonClassName({
-  className = "",
-  size = "md",
-  variant = "secondary",
-}: {
-  className?: string;
-  size?: ButtonSize;
-  variant?: ButtonVariant;
-}) {
-  return cn(
-    buttonVariants({
-      size: sizeMap[size],
-      variant: variantMap[variant],
-    }),
-    "rounded-full",
-    className,
-  );
-}
 
 export function Button({
   children,
@@ -62,8 +35,8 @@ export function Button({
     <HeroButton
       type={type}
       isDisabled={isDisabled ?? disabled}
-      size={sizeMap[size]}
-      variant={variantMap[variant]}
+      size={buttonSizeMap[size]}
+      variant={buttonVariantMap[variant]}
       className={cn("rounded-full", className)}
       {...props}
     >

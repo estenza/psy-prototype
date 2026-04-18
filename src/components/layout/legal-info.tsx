@@ -18,7 +18,11 @@ export function LegalInfo({ className = "" }: LegalInfoProps) {
       <p>© 2026 внутри</p>
       <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1">
         {legalItems.map((item) => (
-          <Link key={item.href} href={item.href}>
+          <Link
+            key={item.href}
+            href={item.href}
+            className="font-normal no-underline hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4"
+          >
             {item.label}
           </Link>
         ))}

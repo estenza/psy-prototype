@@ -10,11 +10,13 @@ type CommentListProps = {
   isViewerAuthenticated: boolean;
   onRequireAuth: () => void;
   postDisabledReason?: string | null;
-  submittingTarget: number | "root" | null;
-  onSubmitReply: (body: string, parentId: number) => Promise<boolean>;
-  onVote: (commentId: number, type: "up" | "down" | null) => void;
-  onBlock: (commentId: number) => void;
-  onReport: (commentId: number) => void;
+  submittingTarget: string | "root" | null;
+  onDeleteComment: (commentId: string) => Promise<void>;
+  onEditComment: (commentId: string, body: string) => Promise<boolean>;
+  onSubmitReply: (body: string, parentId: string) => Promise<boolean>;
+  onVote: (commentId: string, type: "up" | "down" | null) => void;
+  onBlock: (commentId: string) => void;
+  onReport: (commentId: string) => void;
 };
 
 export function CommentList({
@@ -25,6 +27,8 @@ export function CommentList({
   onRequireAuth,
   postDisabledReason = null,
   submittingTarget,
+  onDeleteComment,
+  onEditComment,
   onSubmitReply,
   onVote,
   onBlock,
@@ -42,6 +46,8 @@ export function CommentList({
           onRequireAuth={onRequireAuth}
           postDisabledReason={postDisabledReason}
           submittingTarget={submittingTarget}
+          onDeleteComment={onDeleteComment}
+          onEditComment={onEditComment}
           onSubmitReply={onSubmitReply}
           onVote={onVote}
           onBlock={onBlock}

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CommentAvatar } from "@/features/comments/components/comment-avatar";
 import { CommentEditor } from "@/features/comments/components/comment-editor";
 import type { CommentsViewer } from "@/features/comments/types";
 
@@ -10,6 +9,8 @@ type CommentsComposerProps = {
   viewer: CommentsViewer;
   placeholder: string;
   submitLabel: string;
+  initialValue?: string;
+  showInlineCancel?: boolean;
   submitDisabled: boolean;
   editorDisabled?: boolean;
   disabledReason?: string | null;
@@ -24,6 +25,8 @@ export function CommentsComposer({
   viewer,
   placeholder,
   submitLabel,
+  initialValue = "",
+  showInlineCancel = false,
   submitDisabled,
   editorDisabled = false,
   disabledReason = null,
@@ -33,13 +36,14 @@ export function CommentsComposer({
   onCancel,
   onSubmit,
 }: CommentsComposerProps) {
-  const [draft, setDraft] = useState("");
-  const [isActive, setIsActive] = useState(autoFocus);
-  const showAvatar = viewer.isAuthenticated;
+  const [draft, setDraft] = useState(initialValue);
+  const [isActive, setIsActive] = useState(autoFocus || initialValue.trim().length > 0);
+  void viewer;
 
   const trimmedDraft = draft.trim();
+  const hasDraft = trimmedDraft.length > 0;
   const canSubmit =
-    !editorDisabled && !submitDisabled && trimmedDraft.length > 0 && !submitting;
+    !editorDisabled && !submitDisabled && hasDraft && !submitting;
 
   async function handleSubmit() {
     if (!canSubmit) {
@@ -54,81 +58,71 @@ export function CommentsComposer({
 
     setDraft("");
     setIsActive(false);
-  }
-
-  function handleCancel() {
-    setDraft("");
-    setIsActive(false);
     onCancel?.();
   }
 
   return (
-    <div className={`flex w-full items-start ${showAvatar ? "gap-3" : ""}`.trim()}>
-      {showAvatar ? (
-        <CommentAvatar
-          avatarUrl={viewer.avatarUrl}
-          handle={viewer.handle}
-          name={viewer.displayName}
-          size={compact ? "sm" : "md"}
-        />
-      ) : null}
+    <div className="flex w-full min-w-0 flex-col gap-3">
+      <div
+        className="relative w-full"
+        onClick={() => {
+          if (editorDisabled) {
+            return;
+          }
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div
-          className="w-full"
-          onClick={() => {
-            if (editorDisabled) {
-              return;
+          setIsActive(true);
+        }}
+      >
+        <CommentEditor
+          value={draft}
+          onChange={(nextValue) => {
+            setDraft(nextValue);
+            if (!isActive) {
+              setIsActive(true);
             }
-
-            setIsActive(true);
           }}
-        >
-          <CommentEditor
-            value={draft}
-            onChange={(nextValue) => {
-              setDraft(nextValue);
-              if (!isActive) {
-                setIsActive(true);
-              }
-            }}
-            placeholder={placeholder}
-            disabled={submitting || editorDisabled}
-            compact={compact}
-            autoFocus={autoFocus && !editorDisabled}
-          />
-        </div>
+          placeholder={placeholder}
+          disabled={submitting || editorDisabled}
+          compact={compact}
+          autoFocus={autoFocus && !editorDisabled}
+        />
 
-        {submitDisabled && disabledReason ? (
-          <p className="text-label-tertiary text-[12px] leading-4">
-            {disabledReason}
-          </p>
-        ) : null}
+        {showInlineCancel || hasDraft ? (
+          <div className="pointer-events-none absolute bottom-3 right-3 flex items-center">
+            <div className="flex items-center gap-2">
+              {showInlineCancel ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="pointer-events-auto type-caption-medium !rounded-full !px-4 !py-2 font-semibold"
+                  onClick={onCancel}
+                  disabled={submitting}
+                >
+                  Отменить
+                </Button>
+              ) : null}
 
-        {isActive || trimmedDraft.length > 0 ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              variant="tertiary"
-              size="sm"
-              className="!rounded-full !px-4 !py-2 text-[13px]"
-              onClick={handleCancel}
-              disabled={submitting}
-            >
-              Отмена
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              className="!rounded-full !px-4 !py-2 text-[13px] font-semibold"
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-            >
-              {submitting ? "Отправка..." : submitLabel}
-            </Button>
+              {hasDraft ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="pointer-events-auto type-caption-medium !rounded-full !px-4 !py-2 font-semibold"
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                >
+                  {submitting ? "Отправка..." : submitLabel}
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>
+
+      {submitDisabled && disabledReason ? (
+        <p className="type-caption-tight text-label-tertiary">
+          {disabledReason}
+        </p>
+      ) : null}
     </div>
   );
 }

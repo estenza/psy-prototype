@@ -49,10 +49,10 @@ function OnboardingField({
 
   return (
     <TextField isInvalid={Boolean(error)} className="flex flex-col gap-2">
-      <Label htmlFor={id} className="text-[14px] font-medium text-[var(--label-primary)]">
+      <Label htmlFor={id} className="type-body-md-medium text-[var(--label-primary)]">
         {label}
       </Label>
-      <Description className="text-[13px] leading-5 text-[var(--label-secondary)]">
+      <Description className="type-caption text-[var(--label-secondary)]">
         {description}
       </Description>
       <Input
@@ -63,7 +63,7 @@ function OnboardingField({
         className="rounded-2xl px-4 py-3 text-sm"
       />
       {error ? (
-        <ErrorMessage className="text-[12px] leading-4 text-[var(--accent-critical)]">
+        <ErrorMessage className="type-caption-tight text-[var(--danger)]">
           {error}
         </ErrorMessage>
       ) : null}
@@ -199,10 +199,10 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
       {currentStep === "role" ? (
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-3">
-            <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
+            <h1 className="type-page-title text-[var(--label-primary)]">
               Выберите роль
             </h1>
-            <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
+            <p className="type-body-relaxed text-[var(--label-secondary)]">
               Сначала определим, как вы планируете использовать платформу. Роль можно изменить позже.
             </p>
           </div>
@@ -230,14 +230,14 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
                 }}
                 className={`border-separator cursor-pointer rounded-[24px] border px-5 py-4 text-left transition-colors ${
                   selectedRole === option.role
-                    ? "bg-[color-mix(in_srgb,var(--label-primary)_6%,var(--background-primary))]"
+                    ? "bg-[var(--fill-selected-subtle)]"
                     : "bg-transparent"
                 }`}
               >
-                <div className="text-[16px] font-semibold text-[var(--label-primary)]">
+                <div className="type-subtitle text-[var(--label-primary)]">
                   {option.title}
                 </div>
-                <div className="mt-1 text-[14px] leading-5 text-[var(--label-secondary)]">
+                <div className="type-body-md mt-1 text-[var(--label-secondary)]">
                   {option.description}
                 </div>
               </button>
@@ -245,7 +245,7 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
           </div>
 
           {fieldErrors.role || formError ? (
-            <p className="text-[13px] leading-5 text-[var(--accent-critical)]">
+            <p className="type-caption text-[var(--danger)]">
               {fieldErrors.role ?? formError}
             </p>
           ) : null}
@@ -285,10 +285,10 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
           }}
         >
           <div className="flex flex-col gap-3">
-            <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
+            <h1 className="type-page-title text-[var(--label-primary)]">
               Как вас будут видеть другие?
             </h1>
-            <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
+            <p className="type-body-relaxed text-[var(--label-secondary)]">
               Ник нужен, чтобы вы могли публиковать и участвовать в обсуждениях без раскрытия реального имени.
             </p>
           </div>
@@ -311,11 +311,11 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
 
           {nicknameStatus.message ? (
             <p
-              className={`text-[13px] leading-5 ${
+              className={`type-caption ${
                 nicknameStatus.tone === "error"
-                  ? "text-[var(--accent-critical)]"
+                  ? "text-[var(--danger)]"
                   : nicknameStatus.tone === "success"
-                    ? "text-[var(--accent-success)]"
+                    ? "text-[var(--success)]"
                     : "text-[var(--label-secondary)]"
               }`}
             >
@@ -324,7 +324,7 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
           ) : null}
 
           {formError ? (
-            <p className="text-[13px] leading-5 text-[var(--accent-critical)]">
+            <p className="type-caption text-[var(--danger)]">
               {formError}
             </p>
           ) : null}
@@ -354,10 +354,10 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
           }}
         >
           <div className="flex flex-col gap-3">
-            <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
+            <h1 className="type-page-title text-[var(--label-primary)]">
               Публичные данные профиля
             </h1>
-            <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
+            <p className="type-body-relaxed text-[var(--label-secondary)]">
               Эти данные будут отображаться в профиле и видны пользователям, чтобы профиль выглядел профессионально и вызывал доверие.
             </p>
           </div>
@@ -411,7 +411,7 @@ export function AuthOnboarding({ currentUser, nextPath }: AuthOnboardingProps) {
           />
 
           {formError ? (
-            <p className="text-[13px] leading-5 text-[var(--accent-critical)]">
+            <p className="type-caption text-[var(--danger)]">
               {formError}
             </p>
           ) : null}

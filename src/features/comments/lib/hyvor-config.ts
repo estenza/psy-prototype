@@ -70,7 +70,7 @@ export function buildCommentsCapabilities(
   if (!config.consoleApiKey) {
     canPostAsCurrentViewer = false;
     postDisabledReason =
-      "Публикация из кастомного UI включится после настройки Hyvor Console API key.";
+      "Комментирование в этой версии интерфейса пока недоступно.";
   } else if (websiteSettings) {
     const currentViewerIsGuestPrototype = config.viewer.kind === "guest-prototype";
 
@@ -80,7 +80,7 @@ export function buildCommentsCapabilities(
     ) {
       canPostAsCurrentViewer = false;
       postDisabledReason =
-        "На стороне Hyvor выключено guest commenting, а POST /comment по документации принимает только guest_name или user_sso_id, но не HYVOR user.";
+        "Комментирование сейчас временно недоступно.";
       limitations.unshift(
         "Текущий сайт Hyvor использует auth_type=hyvor и выключенный guest commenting, поэтому custom end-user posting через документированный POST /comment сейчас недоступен.",
       );
@@ -90,7 +90,7 @@ export function buildCommentsCapabilities(
     ) {
       canPostAsCurrentViewer = false;
       postDisabledReason =
-        "Hyvor требует guest_email для публикации гостевого комментария, а в текущем prototype viewer email не собирается.";
+        "Комментирование сейчас временно недоступно.";
       limitations.unshift(
         "Для guest posting у этого сайта обязателен guest_email, поэтому current composer должен сначала собирать email.",
       );

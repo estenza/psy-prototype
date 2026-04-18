@@ -8,6 +8,7 @@ type HoverTooltipProps = {
   delay?: number;
   label: string;
   showArrow?: boolean;
+  triggerClassName?: string;
 };
 
 export function HoverTooltip({
@@ -15,10 +16,11 @@ export function HoverTooltip({
   delay = 500,
   label,
   showArrow = false,
+  triggerClassName,
 }: HoverTooltipProps) {
   return (
     <Tooltip.Root delay={delay} closeDelay={80}>
-      <Tooltip.Trigger>{children}</Tooltip.Trigger>
+      <Tooltip.Trigger className={triggerClassName}>{children}</Tooltip.Trigger>
       <Tooltip.Content showArrow={showArrow}>{label}</Tooltip.Content>
     </Tooltip.Root>
   );

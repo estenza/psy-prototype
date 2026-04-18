@@ -19,14 +19,9 @@ export default async function Home() {
       <AppHeader />
 
       <div className="min-[721px]:pt-[var(--app-header-height)]">
-        <main className="mx-auto grid w-full grid-cols-1 gap-0 px-4 sm:px-6 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-0 min-[1441px]:max-w-[var(--app-shell-max-width)] min-[1441px]:px-5">
-          <LeftNav
-            items={navItems}
-            activeSection={DEFAULT_ACTIVE_SECTION}
-          />
-
+        <main className="mx-auto grid w-full grid-cols-1 gap-0 px-0 sm:px-0 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-0 min-[1441px]:max-w-[var(--app-shell-max-width)] min-[1441px]:px-5">
+          <LeftNav items={navItems} activeSection={DEFAULT_ACTIVE_SECTION} />
           <FeedSection initialPosts={posts} />
-
           <LegalSidebar />
         </main>
       </div>

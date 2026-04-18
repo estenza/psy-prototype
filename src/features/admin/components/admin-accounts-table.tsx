@@ -213,7 +213,7 @@ function DetailsModal({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      className="fixed inset-0 z-[260] bg-[rgba(15,23,42,0.56)]"
+      className="overlay-scrim-strong fixed inset-0 z-[260]"
     >
       <Modal.Container
         scroll="outside"

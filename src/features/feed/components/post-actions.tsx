@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { ToggleButton, cn, toast } from "@heroui/react";
 import {
   ChatIcon,
-  HeartIcon,
+  PostHeartIcon,
   ShareIcon,
 } from "@/components/ui/icons";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
@@ -10,7 +13,7 @@ import type { Post } from "@/features/feed/types";
 type PostActionsProps = {
   post: Post;
   className: string;
-  onToggleLike: (postId: Post["id"]) => void;
+  onToggleLike: (postId: Post["id"], liked: boolean) => void;
 };
 
 export function PostActions({
@@ -18,36 +21,86 @@ export function PostActions({
   className,
   onToggleLike,
 }: PostActionsProps) {
+  const likedActionClassName =
+    "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)]";
+  const tertiaryActionClassName =
+    "interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors";
+  const tertiaryIconOnlyActionClassName = cn(
+    tertiaryActionClassName,
+    "button--icon-only w-9 px-0",
+  );
+
+  async function handleShare() {
+    const discussionUrl = new URL(`/discussions/${post.id}`, window.location.origin).toString();
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: post.content.title,
+          text: post.content.excerpt,
+          url: discussionUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(discussionUrl);
+      toast.success("Ссылка на обсуждение скопирована.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      toast.danger("Не удалось поделиться ссылкой.");
+    }
+  }
+
   return (
-    <div className={className}>
+    <div
+      className={cn(className, "pointer-events-none relative z-20 gap-2")}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
       <HoverTooltip label={post.viewer.liked ? "Больше не нравится" : "Нравится"}>
-        <button
-          type="button"
+        <ToggleButton
           aria-label={post.viewer.liked ? "Больше не нравится" : "Нравится"}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onToggleLike(post.id);
-          }}
-          className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-normal ${
+          isSelected={post.viewer.liked}
+          onChange={() => onToggleLike(post.id, !post.viewer.liked)}
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            tertiaryActionClassName,
+            "pointer-events-auto",
+            post.stats.likes > 0 ? "gap-2 align-middle" : "button--icon-only w-9 px-0",
             post.viewer.liked
-              ? "interactive-accent-like"
-              : "interactive-toggle-like"
-          }`}
+              ? likedActionClassName
+              : "",
+          )}
         >
-          <HeartIcon filled={post.viewer.liked} />
-          <span>{post.stats.likes}</span>
-        </button>
+          <span className="flex h-5 w-5 flex-none items-center justify-center">
+            <PostHeartIcon filled={post.viewer.liked} />
+          </span>
+          {post.stats.likes > 0 ? (
+            <span className="flex items-center leading-5">{post.stats.likes}</span>
+          ) : null}
+        </ToggleButton>
       </HoverTooltip>
 
       <HoverTooltip label="Ответить">
         <Link
           href={`/discussions/${post.id}`}
           aria-label="Ответить"
-          className="interactive-fill inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 text-sm font-normal"
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            tertiaryActionClassName,
+            "pointer-events-auto",
+            post.stats.comments > 0 ? "gap-2 align-middle" : "button--icon-only w-9 px-0",
+          )}
         >
-          <ChatIcon />
-          <span>{post.stats.comments}</span>
+          <span className="flex h-5 w-5 flex-none items-center justify-center">
+            <ChatIcon />
+          </span>
+          {post.stats.comments > 0 ? (
+            <span className="flex items-center leading-5">{post.stats.comments}</span>
+          ) : null}
         </Link>
       </HoverTooltip>
 
@@ -55,9 +108,16 @@ export function PostActions({
         <button
           type="button"
           aria-label="Поделиться"
-          className="interactive-fill inline-flex cursor-pointer items-center rounded-full px-3 py-2 text-sm font-normal"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void handleShare();
+          }}
+          className={cn(tertiaryIconOnlyActionClassName, "pointer-events-auto")}
         >
-          <ShareIcon />
+          <span className="flex h-5 w-5 flex-none items-center justify-center">
+            <ShareIcon />
+          </span>
         </button>
       </HoverTooltip>
     </div>

@@ -34,9 +34,9 @@ export type CommentAuthor = {
 };
 
 export type CommentNode = {
-  id: number;
-  parentId: number | null;
-  rootId: number;
+  id: string;
+  parentId: string | null;
+  rootId: string;
   depth: number;
   author: CommentAuthor;
   createdAt: number;
@@ -77,7 +77,7 @@ export type CommentsResponsePayload = {
 export type CreateCommentPayload = {
   pageId: string;
   body: string;
-  parentId?: number | null;
+  parentId?: string | null;
 };
 
 export type CreateCommentResult = {
@@ -87,4 +87,34 @@ export type CreateCommentResult = {
 
 export type CommentActionResult = {
   ok: true;
+};
+
+export type UpdateCommentPayload = {
+  body: string;
+};
+
+export type AdminModerateCommentPayload = {
+  action: "hide" | "restore" | "delete";
+  reason?: string | null;
+};
+
+export type AdminCommentReportItem = {
+  id: string;
+  status: "open" | "reviewed" | "dismissed" | "resolved";
+  reason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  comment: {
+    id: string;
+    discussionId: string;
+    discussionTitle: string;
+    bodyText: string;
+    status: "published" | "hidden" | "deleted" | "pending";
+    author: CommentAuthor;
+  };
+  reporter: CommentAuthor;
+};
+
+export type AdminCommentReportsResponse = {
+  reports: AdminCommentReportItem[];
 };

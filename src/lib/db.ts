@@ -125,6 +125,103 @@ function createDiscussionsTable(database: DatabaseSync) {
       ON discussions (created_at DESC);
     CREATE INDEX IF NOT EXISTS discussions_author_user_id_idx
       ON discussions (author_user_id);
+
+    CREATE TABLE IF NOT EXISTS discussion_reactions (
+      id TEXT PRIMARY KEY,
+      discussion_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      reaction_type TEXT NOT NULL DEFAULT 'like' CHECK (reaction_type IN ('like')),
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (discussion_id) REFERENCES discussions (id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+      UNIQUE (discussion_id, user_id, reaction_type)
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_reactions_discussion_id_idx
+      ON discussion_reactions (discussion_id);
+    CREATE INDEX IF NOT EXISTS discussion_reactions_user_id_idx
+      ON discussion_reactions (user_id);
+  `);
+}
+
+function createDiscussionCommentsTables(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS discussion_comments (
+      id TEXT PRIMARY KEY,
+      discussion_id TEXT NOT NULL,
+      author_user_id TEXT NOT NULL,
+      parent_comment_id TEXT,
+      root_comment_id TEXT,
+      depth INTEGER NOT NULL DEFAULT 0 CHECK (depth IN (0, 1)),
+      body_html TEXT NOT NULL,
+      body_text TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'published' CHECK (
+        status IN ('published', 'hidden', 'deleted', 'pending')
+      ),
+      hidden_reason TEXT,
+      likes_count INTEGER NOT NULL DEFAULT 0,
+      replies_count INTEGER NOT NULL DEFAULT 0,
+      reports_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      edited_at TEXT,
+      hidden_at TEXT,
+      deleted_at TEXT,
+      FOREIGN KEY (discussion_id) REFERENCES discussions (id) ON DELETE CASCADE,
+      FOREIGN KEY (author_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      FOREIGN KEY (root_comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_comments_discussion_id_idx
+      ON discussion_comments (discussion_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS discussion_comments_parent_comment_id_idx
+      ON discussion_comments (parent_comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comments_root_comment_id_idx
+      ON discussion_comments (root_comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comments_status_idx
+      ON discussion_comments (status);
+
+    CREATE TABLE IF NOT EXISTS discussion_comment_reactions (
+      id TEXT PRIMARY KEY,
+      comment_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      reaction_type TEXT NOT NULL DEFAULT 'like' CHECK (reaction_type IN ('like')),
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+      UNIQUE (comment_id, user_id, reaction_type)
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_comment_reactions_comment_id_idx
+      ON discussion_comment_reactions (comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comment_reactions_user_id_idx
+      ON discussion_comment_reactions (user_id);
+
+    CREATE TABLE IF NOT EXISTS discussion_comment_reports (
+      id TEXT PRIMARY KEY,
+      comment_id TEXT NOT NULL,
+      reporter_user_id TEXT NOT NULL,
+      reason TEXT,
+      details TEXT,
+      status TEXT NOT NULL DEFAULT 'open' CHECK (
+        status IN ('open', 'reviewed', 'dismissed', 'resolved')
+      ),
+      resolution_note TEXT,
+      resolved_by_user_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      resolved_at TEXT,
+      FOREIGN KEY (comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      FOREIGN KEY (reporter_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (resolved_by_user_id) REFERENCES users (id) ON DELETE SET NULL,
+      UNIQUE (comment_id, reporter_user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS discussion_comment_reports_comment_id_idx
+      ON discussion_comment_reports (comment_id);
+    CREATE INDEX IF NOT EXISTS discussion_comment_reports_status_idx
+      ON discussion_comment_reports (status, created_at DESC);
   `);
 }
 
@@ -279,6 +376,7 @@ function initializeDatabase(database: DatabaseSync) {
   createUsersTable(database);
   ensureUsersTableColumns(database);
   createDiscussionsTable(database);
+  createDiscussionCommentsTables(database);
   createSessionsTable(database);
   createPasswordResetTokensTable(database);
   repairLegacySessionsForeignKey(database);

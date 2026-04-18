@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import { NavIcon } from "@/components/ui/icons";
-import { buttonClassName } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
 import { isNavigationItemCurrent } from "@/constants/navigation";
 import type { NavigationItem, NavigationItemKey } from "@/types/navigation";
 
@@ -30,10 +30,10 @@ export function LeftNav({ items, activeSection }: LeftNavProps) {
   }
 
   return (
-    <aside className="surface-primary hidden lg:block lg:pl-[var(--app-shell-side-offset)] lg:pr-[var(--app-shell-rail-gap)]">
+    <aside className="surface-primary hidden lg:block lg:pl-[var(--app-shell-side-offset)]">
       <nav
         aria-label="Основная навигация"
-        className="sticky top-[var(--app-header-height)] flex h-[calc(100dvh-var(--app-header-height))] w-full flex-col gap-1 overflow-y-auto pb-4 pt-8"
+        className="surface-primary border-separator sticky top-[var(--app-header-height)] flex h-[calc(100dvh-var(--app-header-height))] w-full flex-col gap-1 overflow-y-auto pb-4 pr-6 pt-8"
       >
         {items.map((item) => (
           <Link
@@ -51,7 +51,7 @@ export function LeftNav({ items, activeSection }: LeftNavProps) {
             })}
           >
             <span className="flex h-8 w-8 items-center justify-center">
-              <NavIcon name={item.key} />
+              <NavIcon name={item.key} filled={item.key === activeSection} />
             </span>
             <span>{item.name}</span>
           </Link>

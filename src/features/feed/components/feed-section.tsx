@@ -25,7 +25,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
   } = useFeed({ initialPosts });
 
   return (
-    <section className="surface-primary border-separator -mx-4 min-w-0 sm:-mx-6 lg:mx-0 lg:border-l lg:border-r">
+    <section className="min-w-0 min-[1024px]:min-w-[720px] min-[1140px]:min-w-0">
       <FeedToolbar
         activeTopic={activeTopic}
         sortMode={sortMode}
@@ -35,7 +35,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
         onViewModeChange={setViewMode}
       />
 
-      <div className="pb-24">
+      <div className="space-y-4 px-4 pb-24 md:px-6 lg:px-0">
         {feed.length > 0 ? (
           feed.map((post) => {
             const isHighlighted = post.id === highlightedPostId;
@@ -43,18 +43,16 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
             return (
               <article
                 key={post.id}
-                className="border-separator group relative cursor-pointer border-b"
+                className="group relative cursor-pointer"
               >
                 <Link
                   href={`/discussions/${post.id}`}
-                  className="absolute inset-0 z-10 cursor-pointer"
+                  className="absolute inset-0 z-10 cursor-pointer rounded-[28px]"
                   aria-label={post.content.title}
                 />
                 <div
-                  className={`relative px-5 py-4 sm:px-6 ${
-                    isHighlighted
-                      ? "feed-post-flash"
-                      : "group-hover:bg-[var(--fill-card-hover)]"
+                  className={`surface-card feed-card-surface relative px-5 py-4 sm:px-6 ${
+                    isHighlighted ? "feed-post-flash" : ""
                   }`}
                 >
                   <PostFeedItem
@@ -68,14 +66,14 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
             );
           })
         ) : (
-          <div className="flex justify-center px-5 py-12 text-center sm:px-6 sm:py-16">
+          <div className="surface-card flex justify-center px-5 py-12 text-center sm:px-6 sm:py-16">
             <div className="max-w-[640px]">
-              <h2 className="font-helvetica text-label-primary text-[20px] font-semibold leading-6 sm:text-[22px] sm:leading-7">
+              <h2 className="type-empty-state-title text-label-primary">
                 {activeTopic === "all"
                   ? "Пока нет опубликованных обсуждений"
                   : "Пока нет тем по этому фильтру"}
               </h2>
-              <p className="text-label-tertiary mt-3 text-[16px] leading-7">
+              <p className="type-empty-state-body text-label-tertiary mt-3">
                 {activeTopic === "all"
                   ? "Создайте первое обсуждение, и оно сразу появится здесь в ленте."
                   : "Попробуйте выбрать другую тему или вернитесь к общей ленте. Все публикации остаются в одном потоке, а темы работают как фильтр и метаданные."}

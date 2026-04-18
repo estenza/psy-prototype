@@ -1,7 +1,12 @@
+"use client";
+
 import type { ButtonProps as HeroButtonProps } from "@heroui/react";
 import { Button as HeroButton, cn } from "@heroui/react";
 import type { ReactNode } from "react";
-import { type ButtonVariant } from "@/components/ui/button";
+import {
+  type ButtonVariant,
+  buttonVariantMap,
+} from "@/components/ui/button-styles";
 
 type IconButtonProps = Omit<HeroButtonProps, "children" | "isDisabled" | "size" | "variant"> & {
   disabled?: boolean;
@@ -9,12 +14,6 @@ type IconButtonProps = Omit<HeroButtonProps, "children" | "isDisabled" | "size" 
   isDisabled?: boolean;
   label: string;
   variant?: ButtonVariant;
-};
-
-const variantMap: Record<ButtonVariant, NonNullable<HeroButtonProps["variant"]>> = {
-  primary: "primary",
-  secondary: "secondary",
-  tertiary: "ghost",
 };
 
 export function IconButton({
@@ -34,7 +33,7 @@ export function IconButton({
       isDisabled={isDisabled ?? disabled}
       isIconOnly
       size="sm"
-      variant={variantMap[variant]}
+      variant={buttonVariantMap[variant]}
       className={cn("h-10 w-10 flex-none min-w-10 rounded-full p-0", className)}
       {...props}
     >

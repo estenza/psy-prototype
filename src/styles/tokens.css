@@ -18,10 +18,7 @@
 
   /* Accents */
   --accent-primary: var(--accent);
-  --accent-critical: var(--danger);
   --accent-like: var(--danger);
-  --accent-bookmark: var(--warning);
-  --accent-success: var(--success);
 
   /* Backgrounds */
   --background-primary: var(--background);
@@ -33,13 +30,15 @@
   --fill-secondary: var(--default);
   --fill-tertiary: var(--default-hover);
   --fill-quaternary: color-mix(in oklab, var(--default) 52%, transparent);
+  --fill-selected-subtle: color-mix(in srgb, var(--label-primary) 6%, var(--background-primary));
+  --fill-control-subtle: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --fill-control-subtle-hover: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --fill-control-subtle-pressed: color-mix(in oklab, var(--foreground) 16%, transparent);
   --fill-inverse-primary: rgba(255, 255, 255, 0.16);
   --fill-inverse-secondary: rgba(255, 255, 255, 0.24);
   --fill-inverse-tertiary: rgba(255, 255, 255, 0.32);
   --fill-card-hover: color-mix(in oklab, var(--default) 24%, transparent);
   --fill-control-hover: var(--default-hover);
-  --fill-like: color-mix(in oklab, var(--danger) 16%, transparent);
-  --fill-like-hover: color-mix(in oklab, var(--danger) 24%, transparent);
   --fill-bookmark: color-mix(in oklab, var(--warning) 16%, transparent);
   --fill-bookmark-hover: color-mix(in oklab, var(--warning) 24%, transparent);
   --interactive-secondary-fill: var(--fill-secondary);
@@ -64,12 +63,71 @@
   --label-tertiary: color-mix(in oklab, var(--foreground) 56%, var(--background-primary));
   --label-quaternary: color-mix(in oklab, var(--foreground) 34%, var(--background-primary));
   --label-inverse: var(--snow);
+  --underline-primary: color-mix(in srgb, var(--label-primary) 18%, transparent);
+  --underline-secondary: color-mix(in srgb, var(--label-secondary) 20%, transparent);
+
+  /* Typography */
+  --type-page-title-size: 28px;
+  --type-page-title-leading: 1;
+  --type-page-title-lg-size: 30px;
+  --type-page-title-lg-leading: 1;
+  --type-modal-title-size: 26px;
+  --type-modal-title-leading: 1;
+  --type-feed-title-size: 20px;
+  --type-feed-title-leading: 24px;
+  --type-section-title-size: 16px;
+  --type-section-title-leading: 20px;
+  --type-subtitle-size: 16px;
+  --type-subtitle-leading: 20px;
+  --type-body-base-size: 15px;
+  --type-body-base-leading: 24px;
+  --type-body-lg-size: 16px;
+  --type-body-lg-leading: 24px;
+  --type-body-md-size: 14px;
+  --type-body-md-leading: 20px;
+  --type-body-relaxed-size: 14px;
+  --type-body-relaxed-leading: 24px;
+  --type-caption-size: 13px;
+  --type-caption-leading: 20px;
+  --type-caption-tight-size: 12px;
+  --type-caption-tight-leading: 16px;
+  --type-comment-author-size: 13px;
+  --type-comment-author-leading: 18px;
+  --type-comment-meta-size: 12px;
+  --type-comment-meta-leading: 18px;
+  --type-label-lg-size: 15px;
+  --type-label-lg-leading: 20px;
+  --type-menu-label-size: 15px;
+  --type-menu-label-leading: 24px;
+  --type-input-size: 16px;
+  --type-input-leading: 20px;
+  --type-avatar-header-size: 12px;
+  --type-avatar-header-leading: 16px;
+  --type-avatar-lg-size: 24px;
+  --type-avatar-lg-leading: 1;
+  --type-avatar-md-size: 14px;
+  --type-avatar-md-leading: 20px;
+  --type-avatar-sm-size: 13px;
+  --type-avatar-sm-leading: 20px;
+  --type-avatar-comment-md-size: 12px;
+  --type-avatar-comment-md-leading: 18px;
+  --type-avatar-comment-sm-size: 10px;
+  --type-avatar-comment-sm-leading: 16px;
+  --type-empty-state-title-size: 20px;
+  --type-empty-state-title-leading: 24px;
+  --type-empty-state-title-size-sm: 22px;
+  --type-empty-state-title-leading-sm: 28px;
+  --type-empty-state-body-size: 16px;
+  --type-empty-state-body-leading: 28px;
 
   /* Separators */
   --separator-primary: var(--separator);
   --separator-strong: color-mix(in oklab, var(--separator) 80%, var(--foreground) 20%);
 
   /* Overlays */
+  --overlay-scrim: color-mix(in srgb, var(--black) 32%, transparent);
+  --overlay-scrim-strong: color-mix(in srgb, var(--black) 56%, transparent);
+  --overlay-media-scrim: color-mix(in srgb, var(--black) 40%, transparent);
   --tooltip-foreground: var(--overlay-foreground);
   --tooltip-background: var(--overlay);
 }

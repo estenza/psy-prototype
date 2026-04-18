@@ -5,6 +5,7 @@ import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/li
 import { getDatabase } from "@/lib/db";
 import { isPostIntent, isPostTopic } from "@/constants/post-taxonomy";
 import type { SessionUser } from "@/features/auth/types";
+import { formatRelativeDate } from "@/features/comments/lib/comment-format";
 import { TOPIC_TITLE_MAX_LENGTH } from "@/features/topic-creation/constants";
 import { hasTopicBodyContent } from "@/features/topic-creation/lib/draft-storage";
 import type { Post } from "@/features/feed/types";
@@ -28,6 +29,7 @@ type DiscussionRow = {
   updated_at: string;
   author_display_name: string;
   author_nickname: string | null;
+  viewer_liked: boolean | number | null;
 };
 
 type DiscussionMutationInput = {
@@ -149,33 +151,17 @@ function buildExcerpt(content: string) {
 }
 
 function formatPublishedAtLabel(createdAtIso: string) {
-  const deltaInMinutes = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(createdAtIso).getTime()) / 60000),
+  return formatRelativeDate(
+    Math.floor(new Date(createdAtIso).getTime() / 1000),
   );
+}
 
-  if (deltaInMinutes < 1) {
-    return "только что";
+function readBoolean(value: boolean | number | null | undefined) {
+  if (typeof value === "boolean") {
+    return value;
   }
 
-  if (deltaInMinutes < 60) {
-    return `${deltaInMinutes} мин назад`;
-  }
-
-  const deltaInHours = Math.floor(deltaInMinutes / 60);
-
-  if (deltaInHours < 24) {
-    return `${deltaInHours} ч назад`;
-  }
-
-  const deltaInDays = Math.floor(deltaInHours / 24);
-
-  if (deltaInDays < 7) {
-    return `${deltaInDays} дн назад`;
-  }
-
-  const deltaInWeeks = Math.floor(deltaInDays / 7);
-  return `${deltaInWeeks} нед назад`;
+  return Boolean(value);
 }
 
 function mapDiscussion(row: DiscussionRow, currentUser: SessionUser | null): Post {
@@ -212,7 +198,7 @@ function mapDiscussion(row: DiscussionRow, currentUser: SessionUser | null): Pos
     },
     viewer: {
       isAuthor,
-      liked: false,
+      liked: readBoolean(row.viewer_liked),
       bookmarked: false,
     },
     editorState: {
@@ -292,8 +278,17 @@ function prepareDiscussionRecord(input: {
 export async function listDiscussions(currentUser: SessionUser | null) {
   if (isPostgresAuthEnabled()) {
     const rows = await queryPgRows<DiscussionRow>(
-      `${DISCUSSION_SELECT_BASE}
-       ORDER BY discussions.created_at DESC`,
+      `SELECT
+        ${PG_DISCUSSION_COLUMNS},
+        CASE WHEN viewer_reaction.id IS NULL THEN FALSE ELSE TRUE END AS viewer_liked
+      FROM discussions
+      INNER JOIN users ON users.id = discussions.author_user_id
+      LEFT JOIN discussion_reactions AS viewer_reaction
+        ON viewer_reaction.discussion_id = discussions.id
+        AND viewer_reaction.user_id = $1
+        AND viewer_reaction.reaction_type = 'like'
+      ORDER BY discussions.created_at DESC`,
+      [currentUser?.id ?? null],
     );
 
     return rows.map((row) => mapDiscussion(row, currentUser));
@@ -304,12 +299,18 @@ export async function listDiscussions(currentUser: SessionUser | null) {
       `SELECT
         discussions.*,
         users.display_name AS author_display_name,
-        users.nickname AS author_nickname
+        users.nickname AS author_nickname,
+        users.avatar_url AS author_avatar_url,
+        CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
       FROM discussions
       INNER JOIN users ON users.id = discussions.author_user_id
+      LEFT JOIN discussion_reactions AS viewer_reaction
+        ON viewer_reaction.discussion_id = discussions.id
+        AND viewer_reaction.user_id = ?
+        AND viewer_reaction.reaction_type = 'like'
       ORDER BY discussions.created_at DESC`,
     )
-    .all() as DiscussionRow[];
+    .all(currentUser?.id ?? null) as DiscussionRow[];
 
   return rows.map((row) => mapDiscussion(row, currentUser));
 }
@@ -318,10 +319,18 @@ export async function findDiscussionById(postId: string, currentUser: SessionUse
   if (isPostgresAuthEnabled()) {
     const row = readDiscussionRow(
       await queryPgOne<DiscussionRow>(
-        `${DISCUSSION_SELECT_BASE}
+        `SELECT
+          ${PG_DISCUSSION_COLUMNS},
+          CASE WHEN viewer_reaction.id IS NULL THEN FALSE ELSE TRUE END AS viewer_liked
+        FROM discussions
+        INNER JOIN users ON users.id = discussions.author_user_id
+        LEFT JOIN discussion_reactions AS viewer_reaction
+          ON viewer_reaction.discussion_id = discussions.id
+          AND viewer_reaction.user_id = $2
+          AND viewer_reaction.reaction_type = 'like'
          WHERE discussions.id = $1
          LIMIT 1`,
-        [postId],
+        [postId, currentUser?.id ?? null],
       ),
     );
 
@@ -333,13 +342,19 @@ export async function findDiscussionById(postId: string, currentUser: SessionUse
       `SELECT
         discussions.*,
         users.display_name AS author_display_name,
-        users.nickname AS author_nickname
+        users.nickname AS author_nickname,
+        users.avatar_url AS author_avatar_url,
+        CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
       FROM discussions
       INNER JOIN users ON users.id = discussions.author_user_id
+      LEFT JOIN discussion_reactions AS viewer_reaction
+        ON viewer_reaction.discussion_id = discussions.id
+        AND viewer_reaction.user_id = ?
+        AND viewer_reaction.reaction_type = 'like'
       WHERE discussions.id = ?
       LIMIT 1`,
     )
-    .get(postId);
+    .get(currentUser?.id ?? null, postId);
 
   const row = readDiscussionRow(result);
   return row ? mapDiscussion(row, currentUser) : null;
@@ -436,6 +451,121 @@ export async function createDiscussion(input: DiscussionMutationInput) {
   }
 
   return createdDiscussion;
+}
+
+function assertCanSetDiscussionLike(actor: SessionUser) {
+  if (actor.isBanned) {
+    throw new DiscussionRepositoryError("Лайки для этого аккаунта недоступны.", {
+      status: 403,
+    });
+  }
+}
+
+async function syncDiscussionLikesCount(postId: string) {
+  if (isPostgresAuthEnabled()) {
+    await execAuthPostgres(
+      `UPDATE discussions
+       SET likes_count = (
+         SELECT COUNT(*)
+         FROM discussion_reactions
+         WHERE discussion_id = $1
+           AND reaction_type = 'like'
+       )
+       WHERE id = $1`,
+      [postId],
+    );
+    return;
+  }
+
+  getDatabase()
+    .prepare(
+      `UPDATE discussions
+       SET likes_count = (
+         SELECT COUNT(*)
+         FROM discussion_reactions
+         WHERE discussion_id = ?
+           AND reaction_type = 'like'
+       )
+       WHERE id = ?`,
+    )
+    .run(postId, postId);
+}
+
+export async function setDiscussionLike(params: {
+  actor: SessionUser;
+  liked: boolean;
+  postId: string;
+}) {
+  assertCanSetDiscussionLike(params.actor);
+
+  const existingDiscussion = await findDiscussionById(params.postId, params.actor);
+
+  if (!existingDiscussion) {
+    throw new DiscussionRepositoryError("Обсуждение не найдено.", {
+      status: 404,
+    });
+  }
+
+  const timestamp = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    if (params.liked) {
+      await execAuthPostgres(
+        `INSERT INTO discussion_reactions (
+          id,
+          discussion_id,
+          user_id,
+          reaction_type,
+          created_at
+        )
+        VALUES ($1, $2, $3, 'like', $4)
+        ON CONFLICT (discussion_id, user_id, reaction_type) DO NOTHING`,
+        [randomUUID(), params.postId, params.actor.id, timestamp],
+      );
+    } else {
+      await execAuthPostgres(
+        `DELETE FROM discussion_reactions
+         WHERE discussion_id = $1
+           AND user_id = $2
+           AND reaction_type = 'like'`,
+        [params.postId, params.actor.id],
+      );
+    }
+  } else if (params.liked) {
+    getDatabase()
+      .prepare(
+        `INSERT OR IGNORE INTO discussion_reactions (
+          id,
+          discussion_id,
+          user_id,
+          reaction_type,
+          created_at
+        )
+        VALUES (?, ?, ?, 'like', ?)`,
+      )
+      .run(randomUUID(), params.postId, params.actor.id, timestamp);
+  } else {
+    getDatabase()
+      .prepare(
+        `DELETE FROM discussion_reactions
+         WHERE discussion_id = ?
+           AND user_id = ?
+           AND reaction_type = 'like'`,
+      )
+      .run(params.postId, params.actor.id);
+  }
+
+  await syncDiscussionLikesCount(params.postId);
+
+  const updatedDiscussion = await findDiscussionById(params.postId, params.actor);
+
+  if (!updatedDiscussion) {
+    throw new DiscussionRepositoryError("Не удалось загрузить обсуждение после обновления лайка.", {
+      status: 500,
+    });
+  }
+
+  return updatedDiscussion;
 }
 
 export async function updateDiscussion(postId: string, input: DiscussionMutationInput) {

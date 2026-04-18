@@ -61,10 +61,10 @@ export function PasswordResetRequestForm({
   return (
     <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
       <div className="flex flex-col gap-3">
-        <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
+        <h1 className="type-page-title text-label-primary">
           Восстановление пароля
         </h1>
-        <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
+        <p className="type-body-relaxed text-[var(--label-secondary)]">
           Введите email, который использовали при регистрации. Если такой аккаунт
           существует, мы отправим письмо со ссылкой для сброса пароля.
         </p>
@@ -90,13 +90,13 @@ export function PasswordResetRequestForm({
         />
 
         {formError ? (
-          <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
+          <div className="feedback-critical-surface type-caption rounded-2xl px-4 py-3">
             {formError}
           </div>
         ) : null}
 
         {successMessage ? (
-          <div className="feedback-primary-surface rounded-2xl px-4 py-3 text-[13px] leading-6">
+          <div className="feedback-primary-surface type-caption rounded-2xl px-4 py-3">
             <p>{successMessage}</p>
             {debugResetUrl ? (
               <p className="mt-2">
@@ -123,11 +123,11 @@ export function PasswordResetRequestForm({
         </Button>
       </form>
 
-      <div className="mt-5 text-[14px] leading-6 text-[var(--label-secondary)]">
+      <div className="type-body-relaxed mt-5 text-[var(--label-secondary)]">
         Вспомнили пароль?{" "}
         <Link
           href="/sign-in"
-          className="font-semibold text-[var(--label-primary)] underline decoration-[color-mix(in_srgb,var(--label-primary)_18%,transparent)] underline-offset-4"
+          className="font-semibold text-[var(--label-primary)] underline decoration-[var(--underline-primary)] underline-offset-4"
         >
           Вернуться ко входу
         </Link>

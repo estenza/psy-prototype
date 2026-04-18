@@ -32,10 +32,7 @@ export function TopicPicker({ onChange, value }: TopicPickerProps) {
         <Select.Indicator className="text-[var(--field-placeholder)]" />
       </Select.Trigger>
 
-      <Select.Popover
-        placement="top start"
-        className="!rounded-[16px]"
-      >
+      <Select.Popover placement="top start">
         <ListBox aria-label="Выберите тему" className="text-[16px] leading-6">
           <ListBox.Section>
             <Header className="px-3">Выберите тему</Header>

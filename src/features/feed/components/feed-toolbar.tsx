@@ -11,7 +11,7 @@ import {
   ChevronDownIcon,
   CompactModeIcon,
 } from "@/components/ui/icons";
-import { buttonClassName } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
 import type {
   FeedSortMode,
   FeedTopicFilter,
@@ -38,21 +38,25 @@ export function FeedToolbar({
   const activeTopicLabel =
     POST_TOPIC_FILTER_OPTIONS.find((option) => option.value === activeTopic)
       ?.label ?? "Все темы";
+  const chevronClassName = "flex h-3 w-3 flex-none items-center justify-center";
 
   return (
-    <div className="surface-primary border-separator relative z-30 border-b px-4 py-2 sm:px-5">
+    <div className="surface-primary border-separator relative z-30 px-4 py-3">
       <div className="relative z-40 flex items-center justify-start gap-0 text-sm">
         <Dropdown.Root>
           <Dropdown.Trigger
             className={buttonClassName({
-              className: "h-10 rounded-full px-3 text-[var(--label-primary)]",
+              className:
+                "inline-flex h-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
               size: "sm",
               variant: "tertiary",
             })}
           >
-            <span className="flex items-center gap-1.5">
+            <span className="inline-flex items-center leading-none">
               <span>{activeTopicLabel}</span>
-              <ChevronDownIcon />
+              <span className={`ml-1.5 ${chevronClassName}`}>
+                <ChevronDownIcon />
+              </span>
             </span>
           </Dropdown.Trigger>
           <Dropdown.Popover placement="bottom start" className="min-w-56">
@@ -74,14 +78,17 @@ export function FeedToolbar({
         <Dropdown.Root>
           <Dropdown.Trigger
             className={buttonClassName({
-              className: "h-10 rounded-full px-3 text-[var(--label-primary)]",
+              className:
+                "inline-flex h-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
               size: "sm",
               variant: "tertiary",
             })}
           >
-            <span className="flex items-center gap-1.5">
+            <span className="inline-flex items-center leading-none">
               <span>{sortMode}</span>
-              <ChevronDownIcon />
+              <span className={`ml-1.5 ${chevronClassName}`}>
+                <ChevronDownIcon />
+              </span>
             </span>
           </Dropdown.Trigger>
           <Dropdown.Popover placement="bottom start" className="min-w-44">
@@ -103,16 +110,19 @@ export function FeedToolbar({
         <Dropdown.Root>
           <Dropdown.Trigger
             className={buttonClassName({
-              className: "h-10 min-w-10 rounded-full px-3 text-[var(--label-primary)]",
+              className:
+                "inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
               size: "sm",
               variant: "tertiary",
             })}
           >
-            <span className="flex items-center gap-1">
-              <span className="[&_svg]:h-4 [&_svg]:w-4">
+            <span className="inline-flex items-center leading-none">
+              <span className="flex h-5 w-5 flex-none items-center justify-center">
                 {viewMode === "card" ? <CardModeIcon /> : <CompactModeIcon />}
               </span>
-              <ChevronDownIcon />
+              <span className={`ml-1 ${chevronClassName}`}>
+                <ChevronDownIcon />
+              </span>
             </span>
           </Dropdown.Trigger>
           <Dropdown.Popover placement="bottom start" className="min-w-44">
@@ -125,9 +135,9 @@ export function FeedToolbar({
                 <Dropdown.Item key={option.value} id={option.value} textValue={option.label}>
                   <Label className="flex items-center gap-2">
                     {option.value === "card" ? (
-                      <CardModeIcon filled={false} />
+                      <CardModeIcon filled={option.value === viewMode} />
                     ) : (
-                      <CompactModeIcon filled={false} />
+                      <CompactModeIcon filled={option.value === viewMode} />
                     )}
                     <span>{option.label}</span>
                   </Label>

@@ -53,7 +53,31 @@ function normalizeOrigin(candidate: string | null) {
   }
 
   try {
-    return new URL(candidate).origin;
+    const url = new URL(candidate);
+
+    if (url.hostname.endsWith(".localhost")) {
+      url.hostname = "localhost";
+    }
+
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeReferer(candidate: string | null) {
+  if (!candidate) {
+    return null;
+  }
+
+  try {
+    const url = new URL(candidate);
+
+    if (url.hostname.endsWith(".localhost")) {
+      url.hostname = "localhost";
+    }
+
+    return url.toString();
   } catch {
     return null;
   }
@@ -63,9 +87,10 @@ function buildRequestHeaders({
   requestOrigin,
   requestReferer,
 }: HyvorRequestContext) {
-  const origin = normalizeOrigin(requestOrigin) ?? normalizeOrigin(requestReferer);
+  const referer = normalizeReferer(requestReferer);
+  const origin = normalizeOrigin(requestOrigin) ?? normalizeOrigin(referer);
 
-  if (!origin && !requestReferer) {
+  if (!origin && !referer) {
     return undefined;
   }
 
@@ -75,8 +100,8 @@ function buildRequestHeaders({
     headers.Origin = origin;
   }
 
-  if (requestReferer) {
-    headers.Referer = requestReferer;
+  if (referer) {
+    headers.Referer = referer;
   } else if (origin) {
     headers.Referer = `${origin}/`;
   }

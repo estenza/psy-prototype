@@ -13,6 +13,15 @@ const commentsCountLabels: Record<Intl.LDMLPluralRule, string> = {
   other: "комментариев",
 };
 
+const repliesCountLabels: Record<Intl.LDMLPluralRule, string> = {
+  zero: "ответов",
+  one: "ответ",
+  two: "ответа",
+  few: "ответа",
+  many: "ответов",
+  other: "ответов",
+};
+
 export function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -67,6 +76,13 @@ export function normalizeCommentHandle(username: string | null | undefined, name
 export function formatCommentCount(value: number) {
   const category = russianPluralRules.select(value);
   const label = commentsCountLabels[category] ?? commentsCountLabels.other;
+
+  return `${value} ${label}`;
+}
+
+export function formatReplyCount(value: number) {
+  const category = russianPluralRules.select(value);
+  const label = repliesCountLabels[category] ?? repliesCountLabels.other;
 
   return `${value} ${label}`;
 }

@@ -7,7 +7,7 @@ type TopicLabelProps = {
 
 export function TopicLabel({ topic }: TopicLabelProps) {
   return (
-    <span className="text-label-tertiary inline-flex items-center text-[14px] font-normal leading-5">
+    <span className="type-body-md text-label-tertiary inline-flex items-center">
       {POST_TOPIC_META[topic].label}
     </span>
   );

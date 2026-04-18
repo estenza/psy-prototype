@@ -1,3 +1,5 @@
+"use client";
+
 import { Input } from "@heroui/react";
 import { forwardRef } from "react";
 import type { InputHTMLAttributes } from "react";

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildCommentsCapabilities, getHyvorServerConfig } from "@/features/comments/lib/hyvor-config";
-import { voteHyvorComment } from "@/features/comments/lib/hyvor-api";
+import { getCurrentUser } from "@/features/auth/lib/current-user";
+import { CommentsServiceError, voteComment } from "@/features/comments/lib/comments-service";
+
+export const runtime = "nodejs";
 
 type VotePayload = {
   type: "up" | "down" | null;
@@ -10,36 +12,39 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ commentId: string }> },
 ) {
-  const { commentId } = await context.params;
-  const payload = (await request.json()) as VotePayload;
-  const capabilities = buildCommentsCapabilities(getHyvorServerConfig());
-
-  if (!capabilities.canVote) {
-    return NextResponse.json(
-      {
-        error:
-          "Vote actions are intentionally disabled in the custom UI until Hyvor SSO-backed user attribution is available.",
-      },
-      {
-        status: 501,
-      },
-    );
-  }
-
   try {
-    await voteHyvorComment(Number(commentId), payload.type ?? null);
+    const { commentId } = await context.params;
+    const payload = (await request.json()) as VotePayload;
+
+    await voteComment({
+      commentId,
+      currentUser: await getCurrentUser(),
+      type: payload.type ?? null,
+    });
 
     return NextResponse.json({
       ok: true,
     });
   } catch (error) {
+    if (error instanceof CommentsServiceError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+        },
+        {
+          status: error.status,
+        },
+      );
+    }
+
+    console.error("[api/comments/vote]", error);
+
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to vote on comment.",
+        error: "Не удалось поставить лайк.",
       },
       {
-        status: 502,
+        status: 500,
       },
     );
   }

@@ -1,4 +1,4 @@
-import { cn, linkVariants } from "@heroui/react";
+import { cn, linkVariants } from "@heroui/styles";
 import NextLink from "next/link";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 

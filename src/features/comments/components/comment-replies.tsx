@@ -1,79 +1,51 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { ChevronDownSmallIcon, ChevronUpSmallIcon } from "@/components/ui/icons";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 type CommentRepliesProps = {
-  replyCount: number;
   isOpen: boolean;
-  onToggle: () => void;
   children: ReactNode;
 };
 
-export function CommentReplies({
-  replyCount,
-  isOpen,
-  onToggle,
-  children,
-}: CommentRepliesProps) {
-  if (replyCount === 0) {
+export function CommentReplies({ isOpen, children }: CommentRepliesProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerTopRef = useRef<number | null>(null);
+  const previousIsOpenRef = useRef(isOpen);
+
+  useLayoutEffect(() => {
+    if (isOpen && !previousIsOpenRef.current && containerRef.current) {
+      containerTopRef.current = containerRef.current.getBoundingClientRect().top;
+    }
+
+    if (containerTopRef.current === null || !containerRef.current) {
+      previousIsOpenRef.current = isOpen;
+      return;
+    }
+
+    const nextTop = containerRef.current.getBoundingClientRect().top;
+    const delta = nextTop - containerTopRef.current;
+
+    if (delta !== 0) {
+      window.scrollBy({ top: delta, left: 0, behavior: "auto" });
+    }
+
+    containerTopRef.current = null;
+    previousIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  if (!isOpen) {
     return null;
   }
 
   return (
-    <div className="w-full">
-      {isOpen ? (
-        <>
-          <div className="flex w-full items-start">
-            <div className="comment-thread-gutter relative h-full w-9 shrink-0">
-              <div className="comment-thread-corner absolute left-1/2 right-0 top-0 h-6" />
-              <div className="comment-thread-rail absolute bottom-0 left-1/2 right-0 top-0" />
-            </div>
+    <div ref={containerRef} className="flex w-full items-stretch">
+      <div className="comment-branch flex w-6 shrink-0 justify-center" role="presentation">
+        <div className="h-full w-0.5 rounded-full bg-[var(--separator-primary)]" />
+      </div>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-4 pl-3 pt-3">
-              {children}
-            </div>
-          </div>
-
-          <div className="flex w-full items-start">
-            <div className="comment-thread-gutter relative h-12 w-9 shrink-0">
-              <div className="comment-thread-corner absolute left-1/2 right-0 top-0 h-[30px]" />
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col justify-center pt-3">
-              <button
-                type="button"
-                className="interactive-tertiary text-label-primary inline-flex h-9 items-center rounded-full px-4 text-[14px] font-medium leading-9"
-                onClick={onToggle}
-              >
-                Скрыть ответы
-                <span className="ml-1 inline-flex">
-                  <ChevronUpSmallIcon />
-                </span>
-              </button>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="flex w-full items-start">
-          <div className="comment-thread-gutter relative h-12 w-9 shrink-0">
-            <div className="comment-thread-corner absolute left-1/2 right-0 top-0 h-[30px]" />
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col justify-center pt-3">
-            <button
-              type="button"
-              className="interactive-tertiary text-label-primary inline-flex h-9 items-center rounded-full px-4 text-[14px] font-medium leading-9"
-              onClick={onToggle}
-            >
-              Показать ответы ({replyCount})
-              <span className="ml-1 inline-flex">
-                <ChevronDownSmallIcon />
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
+        {children}
+      </div>
     </div>
   );
 }

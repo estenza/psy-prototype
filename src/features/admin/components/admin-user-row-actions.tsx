@@ -34,7 +34,7 @@ function ConfirmDialog({
       onOpenChange={(open) => {
         if (!open && !isLoading) onClose();
       }}
-      className="fixed inset-0 z-[320] bg-[rgba(15,23,42,0.56)]"
+      className="overlay-scrim-strong fixed inset-0 z-[320]"
     >
       <Modal.Container scroll="outside" className="!p-4">
         <Modal.Dialog
@@ -46,7 +46,7 @@ function ConfirmDialog({
               {title}
             </h3>
             {errorMessage ? (
-              <p className="mt-3 text-sm text-[var(--accent-critical)]">{errorMessage}</p>
+              <p className="mt-3 text-sm text-[var(--danger)]">{errorMessage}</p>
             ) : null}
 
             <div className="mt-6 flex justify-end gap-2">
@@ -283,7 +283,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
                 key="delete"
                 id="delete"
                 textValue="Удалить аккаунт"
-                className="text-[var(--accent-critical)]"
+                className="text-[var(--danger)]"
               >
                 Удалить аккаунт
               </Dropdown.Item>

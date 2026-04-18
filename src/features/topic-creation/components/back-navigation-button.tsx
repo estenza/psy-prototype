@@ -1,3 +1,5 @@
+"use client";
+
 import { IconButton } from "@/components/ui/icon-button";
 import { TopicBackIcon } from "@/features/topic-creation/components/topic-creation-icons";
 

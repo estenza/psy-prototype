@@ -69,8 +69,10 @@ function ToolbarButton({
         isDisabled={disabled}
         onClick={onClick}
         aria-label={label}
-        className={`h-9 w-9 min-w-9 rounded-[24px] p-0 text-[var(--label-primary)] ${
-          active ? "bg-[var(--fill-secondary)]" : ""
+        className={`h-9 w-9 min-w-9 rounded-[24px] p-0 text-[var(--label-primary)] transition-colors hover:bg-[var(--color-accent-soft)] hover:text-[var(--accent-primary)] data-[hovered=true]:bg-[var(--color-accent-soft)] data-[hovered=true]:text-[var(--accent-primary)] ${
+          active
+            ? "bg-[var(--color-accent-soft-hover)] text-[var(--accent-primary)]"
+            : ""
         }`}
       >
         <span className="inline-flex items-center justify-center">{icon}</span>

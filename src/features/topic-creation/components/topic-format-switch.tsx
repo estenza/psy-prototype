@@ -30,9 +30,13 @@ export function TopicFormatSwitch({
     <Tabs
       selectedKey={value}
       onSelectionChange={(key) => onChange(String(key) as PostIntent)}
+      className="flex flex-col gap-4"
     >
       <Tabs.ListContainer>
-        <Tabs.List aria-label="Формат публикации">
+        <Tabs.List
+          aria-label="Формат публикации"
+          className="bg-[var(--background-primary)]"
+        >
           {(Object.keys(TOPIC_FORMAT_OPTIONS) as PostIntent[]).map((mode, index) => (
             <Tabs.Tab
               key={mode}
@@ -47,8 +51,8 @@ export function TopicFormatSwitch({
       </Tabs.ListContainer>
 
       {(Object.keys(TOPIC_FORMAT_OPTIONS) as PostIntent[]).map((mode) => (
-        <Tabs.Panel className="pt-4" key={mode} id={mode}>
-          <Description className="text-[14px]">
+        <Tabs.Panel className="px-2 pt-0" key={mode} id={mode}>
+          <Description className="block w-full py-0 text-[14px]">
             {TOPIC_FORMAT_OPTIONS[mode].description}
           </Description>
         </Tabs.Panel>

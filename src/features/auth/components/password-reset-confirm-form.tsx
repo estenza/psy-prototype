@@ -90,17 +90,17 @@ export function PasswordResetConfirmForm({
   return (
     <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
       <div className="flex flex-col gap-3">
-        <h1 className="font-helvetica text-[28px] font-bold leading-none text-[var(--label-primary)]">
+        <h1 className="type-page-title text-label-primary">
           Новый пароль
         </h1>
-        <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
+        <p className="type-body-relaxed text-[var(--label-secondary)]">
           Задайте новый пароль для входа. После сохранения старые сессии будут
           завершены, и войти можно будет только с новым паролем.
         </p>
       </div>
 
       {!tokenValid ? (
-        <div className="feedback-critical-surface mt-6 rounded-2xl px-4 py-4 text-[14px] leading-6">
+        <div className="feedback-critical-surface type-body-relaxed mt-6 rounded-2xl px-4 py-4">
           <p>Ссылка для восстановления недействительна или уже истекла.</p>
           <p className="mt-2">
             <Link
@@ -114,7 +114,7 @@ export function PasswordResetConfirmForm({
       ) : null}
 
       {successMessage ? (
-        <div className="feedback-primary-surface mt-6 rounded-2xl px-4 py-4 text-[14px] leading-6">
+        <div className="feedback-primary-surface type-body-relaxed mt-6 rounded-2xl px-4 py-4">
           <p>{successMessage}</p>
           <p className="mt-2">
             <Link
@@ -159,13 +159,13 @@ export function PasswordResetConfirmForm({
           />
 
           {fieldErrors.token ? (
-            <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
+            <div className="feedback-critical-surface type-caption rounded-2xl px-4 py-3">
               {fieldErrors.token}
             </div>
           ) : null}
 
           {formError ? (
-            <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
+            <div className="feedback-critical-surface type-caption rounded-2xl px-4 py-3">
               {formError}
             </div>
           ) : null}
@@ -182,10 +182,10 @@ export function PasswordResetConfirmForm({
         </form>
       ) : null}
 
-      <div className="mt-5 text-[14px] leading-6 text-[var(--label-secondary)]">
+      <div className="type-body-relaxed mt-5 text-[var(--label-secondary)]">
         <Link
           href="/sign-in"
-          className="font-semibold text-[var(--label-primary)] underline decoration-[color-mix(in_srgb,var(--label-primary)_18%,transparent)] underline-offset-4"
+          className="font-semibold text-[var(--label-primary)] underline decoration-[var(--underline-primary)] underline-offset-4"
         >
           Вернуться ко входу
         </Link>

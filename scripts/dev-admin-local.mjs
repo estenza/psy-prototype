@@ -1,5 +1,10 @@
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(scriptDir, "..");
+const nextBinPath = resolve(repoRoot, "node_modules", "next", "dist", "bin", "next");
 
 const port = process.env.PORT?.trim() || "3000";
 const publicHost = "localhost";
@@ -16,7 +21,7 @@ const env = {
   AUTH_INITIAL_MODERATOR_EMAILS: localAdminEmail,
   AUTH_DATABASE_PATH:
     process.env.AUTH_DATABASE_PATH?.trim()
-    || resolve(process.cwd(), "data", "admin-local.db"),
+    || resolve(repoRoot, "data", "admin-local.db"),
 };
 
 delete env.ADMIN_APP_URL;
@@ -30,10 +35,10 @@ Local admin access key: ${localAdminAccessKey}
 
 Create the account on the public host first, then sign in on the admin host.`);
 
-const child = spawn("next", ["dev", "-p", port], {
+const child = spawn(process.execPath, [nextBinPath, "dev", "--webpack", "-p", port], {
+  cwd: repoRoot,
   env,
   stdio: "inherit",
-  shell: true,
 });
 
 child.on("exit", (code, signal) => {

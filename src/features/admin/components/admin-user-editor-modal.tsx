@@ -126,7 +126,7 @@ function FormTextField({
         />
       </div>
       {error ? (
-        <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--accent-critical)]">
+        <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--danger)]">
           {error}
         </ErrorMessage>
       ) : null}
@@ -663,7 +663,7 @@ export function AdminUserEditorModal({
                 <button
                   type="button"
                   onClick={handleGenerateCredentials}
-                  className="cursor-pointer text-sm font-medium text-[var(--accent-primary)] transition-none hover:text-[color-mix(in_srgb,var(--accent-primary)_82%,white)]"
+                  className="cursor-pointer text-sm font-medium text-[var(--accent-primary)] transition-none hover:text-[var(--color-accent-hover)]"
                 >
                   Сгенерировать
                 </button>
@@ -846,7 +846,7 @@ export function AdminUserEditorModal({
                 </div>
 
                 {formErrors.specialties ? (
-                  <p className="mt-3 text-[13px] text-[var(--accent-critical)]">
+                  <p className="mt-3 text-[13px] text-[var(--danger)]">
                     {formErrors.specialties}
                   </p>
                 ) : null}
@@ -935,7 +935,7 @@ export function AdminUserEditorModal({
           )}
 
           {errorMessage ? (
-            <p className="text-sm text-[var(--accent-critical)]">{errorMessage}</p>
+            <p className="text-sm text-[var(--danger)]">{errorMessage}</p>
           ) : null}
 
           <div className="flex flex-wrap justify-end gap-2">
@@ -963,7 +963,7 @@ export function AdminUserEditorModal({
       onOpenChange={(open) => {
         if (!open && !isSaving) onClose();
       }}
-      className="fixed inset-0 z-[220] bg-[rgba(15,23,42,0.56)]"
+      className="overlay-scrim-strong fixed inset-0 z-[220]"
     >
       <Modal.Container scroll="outside" className="!p-4">
         <Modal.Dialog

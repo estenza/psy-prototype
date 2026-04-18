@@ -1,14 +1,15 @@
 import Image from "next/image";
+import { AuthorInline } from "@/components/ui/author-inline";
+import { buildPublicProfilePathFromHandle } from "@/features/auth/lib/profile";
 import { PostActions } from "@/features/feed/components/post-actions";
 import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
-import { PostContextBadges } from "@/features/feed/components/post-context-badges";
+import { IntentBadge } from "@/features/feed/components/intent-badge";
 import { PostMoreMenu } from "@/features/feed/components/post-more-menu";
-import { UserAvatar } from "@/features/auth/components/user-avatar";
 import type { Post } from "@/features/feed/types";
 
 type CardPostItemProps = {
   post: Post;
-  onToggleLike: (postId: Post["id"]) => void;
+  onToggleLike: (postId: Post["id"], liked: boolean) => void;
   onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
 };
 
@@ -18,46 +19,35 @@ export function CardPostItem({
   onPostMenuAction,
 }: CardPostItemProps) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2">
-        <div className="flex min-h-10 items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <UserAvatar
-              avatarUrl={post.author.avatarUrl ?? null}
-              name={post.author.name}
-              size="comment-md"
-            />
-            <div className="text-label-tertiary flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0 text-[14px] leading-5">
-              <span className="relative z-10 inline-flex min-w-0 items-center self-center truncate cursor-pointer">
-                {post.author.handle}
-              </span>
-              <span
-                aria-hidden="true"
-                className="inline-flex h-1 w-1 shrink-0 self-center rounded-full bg-[var(--label-tertiary)]"
-              />
-              <span className="inline-flex items-center self-center">
-                {post.activity.publishedAtLabel}
-              </span>
-            </div>
-          </div>
-          <PostMoreMenu post={post} onAction={onPostMenuAction} />
-        </div>
+    <div className="pointer-events-none flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <AuthorInline
+          avatarUrl={post.author.avatarUrl}
+          handle={post.author.handle}
+          name={post.author.name}
+          meta={post.activity.publishedAtLabel}
+          profileHref={buildPublicProfilePathFromHandle(post.author.handle)}
+          showStatusDot
+        />
+        <PostMoreMenu post={post} onAction={onPostMenuAction} />
+      </div>
 
-        <PostContextBadges intent={post.intent} topic={post.topic} />
+      <div className="flex flex-wrap items-center gap-2">
+        <IntentBadge intent={post.intent} />
       </div>
 
       <div className="flex flex-col gap-2 pl-0.5">
-        <h2 className="font-helvetica text-label-primary text-[20px] font-semibold leading-6">
+        <h2 className="type-feed-title text-label-primary">
           {post.content.title}
         </h2>
 
-        <p className="text-label-secondary text-[16px] leading-6">
+        <p className="type-body-lg text-label-secondary">
           {post.content.excerpt}
         </p>
       </div>
 
       {post.media?.type === "image" ? (
-        <div className="border-separator surface-secondary overflow-hidden rounded-2xl border">
+        <div className="surface-secondary overflow-hidden rounded-2xl">
           <Image
             src={post.media.src}
             alt={post.media.alt ?? "Изображение в посте"}

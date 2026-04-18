@@ -69,7 +69,7 @@ export function ImageCropModal({
 
   return (
     <Modal.Backdrop
-      className="fixed inset-0 z-[260] bg-[rgba(15,23,42,0.56)]"
+      className="overlay-scrim-strong fixed inset-0 z-[260]"
       isDismissable
       onClick={onClose}
     >
@@ -215,11 +215,11 @@ export function ImageCropModal({
           }
 
           .crop-slider::-webkit-slider-thumb:hover {
-            background: color-mix(in srgb, var(--accent-primary) 82%, white);
+            background: var(--color-accent-hover);
           }
 
           .crop-slider::-moz-range-thumb:hover {
-            background: color-mix(in srgb, var(--accent-primary) 82%, white);
+            background: var(--color-accent-hover);
           }
         `}</style>
       </Modal.Dialog>

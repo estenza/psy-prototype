@@ -16,7 +16,7 @@ import {
   NotificationIcon,
   PlusCircleIcon,
 } from "@/components/ui/icons";
-import { buttonClassName } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { AuthStatus } from "@/features/auth/components/auth-status";
@@ -49,17 +49,25 @@ const mobileMenuButtonClassName =
 
 function NotificationButton() {
   return (
-    <Badge.Anchor>
+    <Badge.Anchor className="relative flex-none">
       <HoverTooltip label="Уведомления">
         <button
           type="button"
           aria-label="Уведомления"
-          className={circularControlClassName}
+          className={`${circularControlClassName} overflow-visible`.trim()}
         >
-          <NotificationIcon />
+          <span className="flex h-5 w-5 flex-none items-center justify-center">
+            <NotificationIcon />
+          </span>
         </button>
       </HoverTooltip>
-      <Badge color="danger" size="sm" variant="primary">3</Badge>
+      <Badge
+        size="sm"
+        variant="primary"
+        className="pointer-events-none absolute top-2 right-2 min-h-[18px] min-w-[18px] select-none border-0 bg-[var(--accent-primary)] px-1 text-[11px] font-semibold leading-none text-white shadow-none"
+      >
+        3
+      </Badge>
     </Badge.Anchor>
   );
 }
@@ -92,12 +100,14 @@ type CreateTopicButtonProps = {
   children?: ReactNode;
   className: string;
   onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+  variant?: "secondary" | "tertiary";
 };
 
 function CreateTopicButton({
   children,
   className,
   onClick,
+  variant = "tertiary",
 }: CreateTopicButtonProps) {
   return (
     <Link
@@ -105,15 +115,27 @@ function CreateTopicButton({
       onClick={onClick}
       className={buttonClassName({
         className: `flex-none gap-2 whitespace-nowrap ${className}`.trim(),
-        variant: "tertiary",
+        variant,
       })}
     >
-      <span className="flex-none">
+      <span className="flex h-5 w-5 flex-none items-center justify-center">
         <PlusCircleIcon />
       </span>
       <span className="whitespace-nowrap">{children ?? "Создать обсуждение"}</span>
     </Link>
   );
+}
+
+function getMobilePanelItemClassName(isActive = false) {
+  return buttonClassName({
+    className: `min-h-14 h-auto w-full justify-start gap-3 px-4 py-3 text-left text-[16px] ${
+      isActive
+        ? "font-semibold text-[var(--label-primary)]"
+        : "font-medium text-[var(--label-tertiary)]"
+    }`,
+    size: "lg",
+    variant: "tertiary",
+  });
 }
 
 function resolveActiveSection(pathname: string | null): NavigationItemKey {
@@ -134,6 +156,7 @@ export function AppHeader({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeSection = resolveActiveSection(pathname);
   const isAdminHeader = adminMode;
+  const homeHref = isAdminHeader ? "/admin/users" : "/";
   const shouldShowSearch = showSearch && !isAdminHeader;
   const shouldShowNotification = Boolean(user) && !isAdminHeader;
 
@@ -205,7 +228,7 @@ export function AppHeader({
   }
 
   return (
-    <header className={`surface-primary border-separator relative z-50 border-b ${
+    <header className={`surface-elevated border-separator relative z-50 shadow-[0_2px_12px_rgba(17,24,39,0.06)] ${
       isAdminHeader
         ? "fixed inset-x-0 top-0"
         : "min-[721px]:fixed min-[721px]:inset-x-0 min-[721px]:top-0"
@@ -226,7 +249,7 @@ export function AppHeader({
           ) : null}
 
           <Link
-            href="/"
+            href={homeHref}
             aria-label="внутри"
             className={`w-fit max-w-full cursor-pointer ${
               isAdminHeader ? "inline-flex" : "min-[361px]:inline-flex hidden lg:max-w-[var(--app-shell-side-rail-width)]"
@@ -234,8 +257,8 @@ export function AppHeader({
           >
             <AppBrand
               showAdminLabel={isAdminHeader}
-              wordmarkClassName={isAdminHeader ? "h-7 w-auto shrink-0" : "h-[22px] w-auto shrink-0 sm:h-7 lg:h-8"}
-              labelClassName={isAdminHeader ? "h-[18px] w-auto shrink-0" : "h-[14px] w-auto shrink-0 sm:h-[18px] lg:h-5"}
+              wordmarkClassName={isAdminHeader ? "h-7 w-auto shrink-0" : "h-7 w-auto shrink-0 lg:h-8"}
+              labelClassName={isAdminHeader ? "h-[18px] w-auto shrink-0" : "h-[18px] w-auto shrink-0 lg:h-5"}
             />
           </Link>
 
@@ -244,49 +267,56 @@ export function AppHeader({
         {shouldShowSearch ? (
           <HeroSearchField
             aria-label="Поиск по историям, темам, психологам"
-            className="hidden min-w-0 w-full justify-self-center overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:block"
+            className="surface--default hidden min-w-0 w-full justify-self-center overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:block"
             fullWidth
           >
-            <HeroSearchField.Group className="w-full">
+            <HeroSearchField.Group className="h-11 min-h-11 w-full">
               <HeroSearchField.SearchIcon />
               <HeroSearchField.Input
                 aria-label="Поиск по историям, темам, психологам"
                 placeholder="Поиск по историям, темам, психологам"
+                className="!text-[14px] !leading-5"
               />
               <HeroSearchField.ClearButton aria-label="Очистить поиск" />
             </HeroSearchField.Group>
           </HeroSearchField>
         ) : null}
 
-        <div className={`flex w-fit max-w-full min-w-0 items-center justify-end justify-self-end ${
-          isAdminHeader ? "gap-2" : "gap-1 sm:gap-2 lg:justify-start"
-        }`.trim()}>
-          {showCreateAction ? (
-            <CreateTopicButton
-              className="h-10 px-3 text-[13px] min-[721px]:h-11 min-[721px]:px-4 min-[721px]:text-sm"
-              onClick={handleCreateTopicClick}
-            >
-              <>
-                <span className="inline lg:hidden">Создать</span>
-                <span className="hidden lg:inline">Создать обсуждение</span>
-              </>
-            </CreateTopicButton>
-          ) : null}
-          {shouldShowNotification ? <NotificationButton /> : null}
-          <AuthStatus compact hideNavigationItems={isAdminHeader} />
+        <div className="flex w-fit max-w-full min-w-0 items-center justify-end justify-self-end">
+          <div className={`flex min-w-0 items-center ${
+            isAdminHeader ? "gap-0" : "gap-0 lg:justify-start"
+          }`.trim()}>
+            {showCreateAction ? (
+              <CreateTopicButton
+                className="h-10 px-3 text-[13px] min-[721px]:h-11 min-[721px]:px-4 min-[721px]:text-sm"
+                onClick={handleCreateTopicClick}
+              >
+                <>
+                  <span className="inline lg:hidden">Создать</span>
+                  <span className="hidden lg:inline">Создать обсуждение</span>
+                </>
+              </CreateTopicButton>
+            ) : null}
+            {shouldShowNotification ? <NotificationButton /> : null}
+          </div>
+
+          <div className={`${showCreateAction || shouldShowNotification ? "ml-4" : ""} flex flex-none items-center`.trim()}>
+            <AuthStatus compact hideNavigationItems={isAdminHeader} />
+          </div>
         </div>
 
         {shouldShowSearch ? (
           <HeroSearchField
             aria-label="Поиск по историям, темам, психологам"
-            className="col-span-2 w-full overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:hidden"
+            className="surface--default col-span-2 w-full overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:hidden"
             fullWidth
           >
-            <HeroSearchField.Group className="w-full">
+            <HeroSearchField.Group className="h-11 min-h-11 w-full">
               <HeroSearchField.SearchIcon />
               <HeroSearchField.Input
                 aria-label="Поиск по историям, темам, психологам"
                 placeholder="Поиск по историям, темам, психологам"
+                className="!text-[14px] !leading-5"
               />
               <HeroSearchField.ClearButton aria-label="Очистить поиск" />
             </HeroSearchField.Group>
@@ -304,7 +334,7 @@ export function AppHeader({
           type="button"
           aria-label="Закрыть меню"
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`absolute inset-0 bg-[rgba(10,12,16,0.32)] transition-opacity duration-300 ease-out ${
+          className={`overlay-scrim absolute inset-0 transition-opacity duration-300 ease-out ${
             isMobileMenuOpen ? "opacity-100" : "opacity-0"
           }`}
         />
@@ -312,14 +342,14 @@ export function AppHeader({
         <aside
           id="app-mobile-navigation"
           aria-label="Разделы"
-          className={`surface-primary border-separator relative flex h-full w-[320px] max-w-[86vw] flex-col overflow-y-auto border-r transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          className={`surface-elevated border-separator relative flex h-full w-[320px] max-w-[86vw] flex-col overflow-y-auto border-r transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
             isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           <div className="flex min-h-full flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-[calc(env(safe-area-inset-top)+18px)]">
             <div className="px-3 pb-5 pt-2">
               <Link
-                href="/"
+                href={homeHref}
                 onClick={() => setIsMobileMenuOpen(false)}
                 aria-label="внутри"
                 className="inline-flex max-w-full"
@@ -328,7 +358,7 @@ export function AppHeader({
               </Link>
             </div>
 
-            <nav className="flex flex-col gap-1" aria-label="Навигация">
+            <nav className="flex flex-col gap-2" aria-label="Навигация">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
@@ -337,18 +367,10 @@ export function AppHeader({
                     setIsMobileMenuOpen(false);
                     handleNavigationItemClick(event, item);
                   }}
-                  className={buttonClassName({
-                    className: `min-h-14 h-auto justify-start gap-3 rounded-[18px] px-3 py-3 text-left text-[16px] ${
-                      item.key === activeSection
-                        ? "bg-[var(--fill-secondary)] font-semibold text-[var(--label-primary)]"
-                        : "text-[var(--label-tertiary)]"
-                    }`,
-                    size: "lg",
-                    variant: "tertiary",
-                  })}
+                  className={getMobilePanelItemClassName(item.key === activeSection)}
                 >
                   <span className="flex h-8 w-8 flex-none items-center justify-center">
-                    <NavIcon name={item.key} />
+                    <NavIcon name={item.key} filled={item.key === activeSection} />
                   </span>
                   <span className="flex-1">{item.name}</span>
                 </Link>
@@ -363,6 +385,7 @@ export function AppHeader({
                     setIsMobileMenuOpen(false);
                     await handleCreateTopicClick(event);
                   }}
+                  variant="secondary"
                 >
                   Создать обсуждение
                 </CreateTopicButton>

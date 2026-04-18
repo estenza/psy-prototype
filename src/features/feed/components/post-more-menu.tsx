@@ -1,6 +1,6 @@
 "use client";
 
-import { Dropdown } from "@heroui/react";
+import { Button, Dropdown, Label } from "@heroui/react";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import {
@@ -8,9 +8,8 @@ import {
   BookmarkIcon,
   EyeOffIcon,
   FlagIcon,
-  MoreIcon,
+  MoreHorizontalIcon,
 } from "@/components/ui/icons";
-import { HoverTooltip } from "@/components/ui/hover-tooltip";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import {
   COMMUNITY_POST_MENU_ACTIONS,
@@ -46,25 +45,13 @@ function resolveMenuIcon(actionId: PostMenuActionId, bookmarked: boolean) {
     );
   }
 
-  if (actionId === "follow") {
-    return <BellIcon />;
-  }
-
-  if (actionId === "save") {
-    return <BookmarkIcon filled={bookmarked} />;
-  }
-
-  if (actionId === "report") {
-    return <FlagIcon />;
-  }
-
+  if (actionId === "follow") return <BellIcon />;
+  if (actionId === "save") return <BookmarkIcon filled={bookmarked} />;
+  if (actionId === "report") return <FlagIcon />;
   return <EyeOffIcon />;
 }
 
-export function PostMoreMenu({
-  onAction,
-  post,
-}: PostMoreMenuProps) {
+export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
   const { user } = useAuthClient();
   const isOwnedByCurrentUser = isPostOwnedByUser(post, user);
 
@@ -73,60 +60,69 @@ export function PostMoreMenu({
       ? OWN_POST_MENU_ACTIONS
       : COMMUNITY_POST_MENU_ACTIONS;
 
-    return menuActions.map((action) => {
-      return {
-        icon: resolveMenuIcon(action.id, post.viewer.bookmarked),
-        id: action.id,
-        label: action.label,
-        onSelect: () => onAction(action.id, post.id),
-        tone: "tone" in action ? action.tone : undefined,
-      };
-    });
+    return menuActions.map((action) => ({
+      icon: resolveMenuIcon(action.id, post.viewer.bookmarked),
+      id: action.id,
+      label: action.label,
+      onSelect: () => onAction(action.id, post.id),
+      tone: "tone" in action ? action.tone : undefined,
+    }));
   }, [isOwnedByCurrentUser, onAction, post.id, post.viewer.bookmarked]);
 
   return (
-    <Dropdown.Root>
-      <HoverTooltip label="Еще">
-        <Dropdown.Trigger
+    <div
+      className="pointer-events-auto relative z-30 shrink-0"
+      onClickCapture={(event) => event.stopPropagation()}
+    >
+      <Dropdown>
+        <Button
+          isIconOnly
+          variant="ghost"
+          size="sm"
           aria-label="Еще"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          className="interactive-tertiary z-10 inline-flex cursor-pointer items-center justify-center self-center rounded-full p-2 text-[var(--label-primary)]"
+          className="!inline-flex text-[var(--label-primary)]"
         >
-          <MoreIcon />
-        </Dropdown.Trigger>
-      </HoverTooltip>
+          <MoreHorizontalIcon aria-hidden />
+        </Button>
 
-      <Dropdown.Popover placement="bottom end" className="w-[260px]">
-        <Dropdown.Menu
-          aria-label="Меню публикации"
-          selectionMode="none"
-          onAction={(key) => {
-            const action = actions.find((item) => item.id === String(key));
-            action?.onSelect();
-          }}
-        >
-          {actions.map((action) => (
-            <Dropdown.Item
-              key={action.id}
-              id={action.id}
-              textValue={action.label}
-              className={
-                action.id === "save" && post.viewer.bookmarked ? "font-semibold text-label-primary" : ""
-              }
-            >
-              <span className="flex items-center gap-3">
-                <span className="inline-flex h-5 w-5 flex-none items-center justify-center">
-                  {action.icon}
-                </span>
-                <span>{action.label}</span>
-              </span>
-            </Dropdown.Item>
-          ))}
-        </Dropdown.Menu>
-      </Dropdown.Popover>
-    </Dropdown.Root>
+        <Dropdown.Popover placement="bottom end" className="w-[260px]">
+          <Dropdown.Menu
+            aria-label="Меню публикации"
+            selectionMode="none"
+          >
+            {actions.map((action) => (
+              <Dropdown.Item
+                key={action.id}
+                id={action.id}
+                textValue={action.label}
+                variant={action.tone === "danger" ? "danger" : undefined}
+                onAction={action.onSelect}
+              >
+                <div className="flex w-full items-center justify-between gap-3">
+                  <Label
+                    className={
+                      action.id === "save" && post.viewer.bookmarked
+                        ? "min-w-0 flex-1 truncate font-medium text-[var(--label-primary)]"
+                        : "min-w-0 flex-1 truncate"
+                    }
+                  >
+                    {action.label}
+                  </Label>
+                  <span
+                    className={
+                      action.tone === "danger"
+                        ? "inline-flex h-5 w-5 flex-none items-center justify-center text-danger"
+                        : "inline-flex h-5 w-5 flex-none items-center justify-center text-[var(--label-secondary)]"
+                    }
+                  >
+                    {action.icon}
+                  </span>
+                </div>
+              </Dropdown.Item>
+            ))}
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown>
+    </div>
   );
 }

@@ -16,8 +16,8 @@ export function CommentsHeader({
   onSortChange,
 }: CommentsHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4 pt-6">
-      <h2 className="font-helvetica text-label-primary text-[16px] font-bold leading-5 tracking-[0.16px]">
+    <div className="flex items-center justify-between gap-4 pt-4">
+      <h2 className="type-section-title text-label-primary">
         {formatCommentCount(totalCount)}
       </h2>
 

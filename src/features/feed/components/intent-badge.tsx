@@ -1,4 +1,4 @@
-import { Badge } from "@heroui/react";
+import { Chip } from "@heroui/react";
 import { POST_INTENT_META } from "@/constants/post-taxonomy";
 import type { PostIntent } from "@/types/post-taxonomy";
 
@@ -10,8 +10,8 @@ export function IntentBadge({ intent }: IntentBadgeProps) {
   const color = intent === "support" ? "success" : "accent";
 
   return (
-    <Badge color={color} variant="soft">
+    <Chip color={color} size="sm" variant="soft">
       {POST_INTENT_META[intent].badgeLabel}
-    </Badge>
+    </Chip>
   );
 }

@@ -16,6 +16,8 @@ export function CommentsSection({ pageId }: CommentsSectionProps) {
     blockCommentAuthor,
     data,
     dismissFeedback,
+    deleteComment,
+    editComment,
     error,
     feedback,
     reportComment,
@@ -34,98 +36,111 @@ export function CommentsSection({ pageId }: CommentsSectionProps) {
   const composerDisabledReason = viewerIsAuthenticated ? postDisabledReason : null;
 
   return (
-    <section className="flex w-full flex-col gap-5">
-      <CommentsHeader
-        totalCount={data?.totalCount ?? 0}
-        sort={sort}
-        onSortChange={setSort}
-      />
-
-      {data ? (
-        <CommentsComposer
-          viewer={data.viewer}
-          placeholder="Введите комментарий..."
-          submitLabel="Комментировать"
-          submitDisabled={submitDisabled}
-          disabledReason={composerDisabledReason}
-          submitting={submittingTarget === "root"}
-          onSubmit={(body) =>
-            runIfAuthorized(() => submitComment({ pageId, body })).then((result) =>
-              typeof result === "boolean" ? result : false,
-            )
-          }
+    <section className="surface--default flex w-full flex-col gap-4">
+      <div className="comments-top flex flex-col gap-4">
+        <CommentsHeader
+          totalCount={data?.totalCount ?? 0}
+          sort={sort}
+          onSortChange={setSort}
         />
-      ) : null}
 
-      {feedback ? (
-        <button
-          type="button"
-          className={`w-fit rounded-full px-3 py-1 text-[12px] leading-4 ${
-            feedback.kind === "error"
-              ? "bg-[color-mix(in_srgb,var(--accent-like)_12%,transparent)] text-[var(--accent-like)]"
-              : "bg-[var(--fill-quaternary)] text-[var(--label-secondary)]"
-          }`.trim()}
-          onClick={dismissFeedback}
-        >
-          {feedback.message}
-        </button>
-      ) : null}
+        {data ? (
+          <CommentsComposer
+            viewer={data.viewer}
+            placeholder="Введите комментарий..."
+            submitLabel="Отправить"
+            submitDisabled={submitDisabled}
+            editorDisabled={submitDisabled}
+            disabledReason={composerDisabledReason}
+            submitting={submittingTarget === "root"}
+            onSubmit={(body) =>
+              runIfAuthorized(() => submitComment({ pageId, body })).then((result) =>
+                typeof result === "boolean" ? result : false,
+              )
+            }
+          />
+        ) : null}
 
-      {status === "loading" ? (
-        <div className="flex flex-col gap-4 py-3">
-          <div className="comment-skeleton h-6 w-40 rounded-full" />
-          <div className="comment-skeleton h-[88px] w-full rounded-[16px]" />
-          <div className="comment-skeleton h-24 w-full rounded-[20px]" />
-        </div>
-      ) : null}
+        {feedback ? (
+          <button
+            type="button"
+            className={`type-caption-tight w-fit rounded-full px-3 py-1 ${
+              feedback.kind === "error"
+                ? "bg-[var(--color-danger-soft)] text-[var(--accent-like)]"
+                : "bg-[var(--fill-quaternary)] text-[var(--label-secondary)]"
+            }`.trim()}
+            onClick={dismissFeedback}
+          >
+            {feedback.message}
+          </button>
+        ) : null}
+      </div>
 
-      {data && data.comments.length > 0 ? (
-        <CommentList
-          comments={data.comments}
-          viewer={data.viewer}
-          canPostReply={data.capabilities.canReply}
-          postDisabledReason={postDisabledReason}
-          isViewerAuthenticated={viewerIsAuthenticated}
-          onRequireAuth={openAuthModal}
-          submittingTarget={submittingTarget}
-          onSubmitReply={(body, parentId) =>
-            runIfAuthorized(() =>
-              submitComment({
-                pageId,
-                body,
-                parentId,
-              }),
-            ).then((result) => (typeof result === "boolean" ? result : false))
-          }
-          onVote={(commentId, type) => {
-            void runIfAuthorized(() => voteComment(commentId, type));
-          }}
-          onBlock={blockCommentAuthor}
-          onReport={reportComment}
-        />
-      ) : null}
+      <div className="comments flex flex-col gap-6">
+        {status === "loading" ? (
+          <div className="flex flex-col gap-4 py-3">
+            <div className="comment-skeleton h-6 w-40 rounded-full" />
+            <div className="comment-skeleton h-[88px] w-full rounded-[16px]" />
+            <div className="comment-skeleton h-24 w-full rounded-[20px]" />
+          </div>
+        ) : null}
 
-      {data && data.comments.length === 0 && status === "ready" ? (
-        <div className="border-separator rounded-[20px] border border-dashed px-4 py-5">
-          <p className="text-label-primary text-[14px] font-medium leading-5">
-            Пока нет комментариев
-          </p>
-          <p className="text-label-secondary mt-1 text-[13px] leading-5">
-            Станьте первым, кто откликнется на это обсуждение.
-          </p>
-        </div>
-      ) : null}
+        {data && data.comments.length > 0 ? (
+          <CommentList
+            comments={data.comments}
+            viewer={data.viewer}
+            canPostReply={data.capabilities.canReply}
+            postDisabledReason={postDisabledReason}
+            isViewerAuthenticated={viewerIsAuthenticated}
+            onRequireAuth={openAuthModal}
+            submittingTarget={submittingTarget}
+            onSubmitReply={(body, parentId) =>
+              runIfAuthorized(() =>
+                submitComment({
+                  pageId,
+                  body,
+                  parentId,
+                }),
+              ).then((result) => (typeof result === "boolean" ? result : false))
+            }
+            onDeleteComment={(commentId) =>
+              runIfAuthorized(() => deleteComment(commentId)).then(() => undefined)
+            }
+            onEditComment={(commentId, body) =>
+              runIfAuthorized(() => editComment(commentId, body)).then((result) =>
+                typeof result === "boolean" ? result : false,
+              )
+            }
+            onVote={(commentId, type) => {
+              void runIfAuthorized(() => voteComment(commentId, type));
+            }}
+            onBlock={blockCommentAuthor}
+            onReport={reportComment}
+          />
+        ) : null}
 
-      {error && status === "error" ? (
-        <div className="border-separator rounded-[20px] border px-4 py-4">
-          <p className="text-label-primary text-[14px] font-medium leading-5">
-            Не удалось загрузить комментарии из Hyvor Talk.
-          </p>
-          <p className="text-label-secondary mt-1 text-[13px] leading-5">
-            {error}
-          </p>
-        </div>
-      ) : null}
+        {data && data.comments.length === 0 && status === "ready" ? (
+          <div className="border-separator rounded-[20px] border border-dashed px-4 py-5">
+            <p className="type-body-md-medium text-label-primary">
+              Пока нет комментариев
+            </p>
+            <p className="type-caption text-label-secondary mt-1">
+              Станьте первым, кто откликнется на это обсуждение.
+            </p>
+          </div>
+        ) : null}
+
+        {error && status === "error" ? (
+          <div className="border-separator rounded-[20px] border px-4 py-4">
+            <p className="type-body-md-medium text-label-primary">
+              Не удалось загрузить комментарии.
+            </p>
+            <p className="type-caption text-label-secondary mt-1">
+              Комментарии временно недоступны. Попробуйте обновить страницу позже.
+            </p>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
