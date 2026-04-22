@@ -8,11 +8,9 @@ import {
 import { toast } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
+import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
-import { LeftNav } from "@/components/layout/left-nav";
-import { LegalSidebar } from "@/components/layout/legal-sidebar";
-import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
 import { CommentsSection } from "@/features/comments/components/comments-section";
 import { CardPostItem } from "@/features/feed/components/card-post-item";
 import { getDiscussionBodyText } from "@/features/feed/lib/discussion-detail";
@@ -137,39 +135,38 @@ export function DiscussionViewScreen({
   }
 
   return (
-    <div className="surface-primary text-label-primary min-h-dvh">
+    <div className="surface-primary text-label-primary min-h-[100svh] min-[721px]:min-h-dvh">
       <AppHeader />
 
       <div className="min-[721px]:pt-[var(--app-header-height)]">
-        <main className="mx-auto grid w-full grid-cols-1 gap-0 px-0 sm:px-0 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-0 min-[1441px]:max-w-[var(--app-shell-max-width)] min-[1441px]:px-5">
-          <LeftNav
-            items={navItems}
-            activeSection={DEFAULT_ACTIVE_SECTION}
-          />
-
-          <section className="min-w-0 min-[1024px]:min-w-[720px] min-[1140px]:min-w-0">
-            <div className="surface-primary border-separator relative z-30 px-4 py-3">
+        <DesktopAppShell
+          centerClassName="w-full max-w-[672px]"
+          fitCenterToContent
+        >
+          <section className="min-w-0">
+            <div className="surface-primary border-separator relative z-30 px-2 py-3 min-[481px]:px-3 min-[721px]:px-0">
               <div className="relative z-40 flex items-center justify-start gap-0 text-sm">
                 <BackNavigationButton onClick={handleBack} />
               </div>
             </div>
 
             {detailedPost ? (
-              <div className="space-y-4 px-4 pb-24 md:px-6 lg:px-0">
-                <div className="surface-card feed-card-surface px-5 py-4 sm:px-6">
+              <div className="space-y-2 px-2 pb-8 min-[481px]:space-y-3 min-[481px]:px-3 min-[481px]:pb-12 min-[721px]:space-y-4 min-[721px]:px-0 min-[721px]:pb-24">
+                <div className="surface-card px-3 py-4 min-[481px]:px-5 sm:px-6">
                   <CardPostItem
                     post={detailedPost}
+                    blockPointerEvents={false}
                     onToggleLike={handleToggleLike}
                     onPostMenuAction={handlePostMenuAction}
                   />
                 </div>
 
-                <div className="surface-card feed-card-surface px-5 pb-8 pt-0 sm:px-6">
+                <div className="surface-card feed-card-surface px-3 pb-8 pt-0 min-[481px]:px-5 sm:px-6">
                   <CommentsSection pageId={`discussion:${detailedPost.id}`} />
                 </div>
               </div>
             ) : (
-              <div className="px-4 pb-24 md:px-6 lg:px-0">
+              <div className="px-2 pb-8 min-[481px]:px-3 min-[481px]:pb-12 min-[721px]:px-0 min-[721px]:pb-24">
                 <div className="surface-card px-5 py-12 text-center sm:px-6">
                   <h1 className="type-feed-title text-label-primary">
                     Обсуждение не найдено
@@ -181,9 +178,7 @@ export function DiscussionViewScreen({
               </div>
             )}
           </section>
-
-          <LegalSidebar />
-        </main>
+        </DesktopAppShell>
       </div>
     </div>
   );

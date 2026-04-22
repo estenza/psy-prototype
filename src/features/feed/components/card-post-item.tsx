@@ -9,25 +9,28 @@ import type { Post } from "@/features/feed/types";
 
 type CardPostItemProps = {
   post: Post;
+  blockPointerEvents?: boolean;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
   onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
 };
 
 export function CardPostItem({
   post,
+  blockPointerEvents = true,
   onToggleLike,
   onPostMenuAction,
 }: CardPostItemProps) {
   return (
-    <div className="pointer-events-none flex flex-col gap-3">
+    <div className={`${blockPointerEvents ? "pointer-events-none" : ""} flex flex-col gap-3`.trim()}>
       <div className="flex items-center justify-between gap-2">
         <AuthorInline
           avatarUrl={post.author.avatarUrl}
           handle={post.author.handle}
           name={post.author.name}
           meta={post.activity.publishedAtLabel}
+          compactMeta={post.activity.compactPublishedAtLabel}
           profileHref={buildPublicProfilePathFromHandle(post.author.handle)}
-          showStatusDot
+          showStatusDot={post.viewer.isAuthor}
         />
         <PostMoreMenu post={post} onAction={onPostMenuAction} />
       </div>
@@ -41,7 +44,7 @@ export function CardPostItem({
           {post.content.title}
         </h2>
 
-        <p className="type-body-lg text-label-secondary">
+        <p className="type-body-lg text-label-primary">
           {post.content.excerpt}
         </p>
       </div>

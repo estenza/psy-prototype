@@ -42,8 +42,9 @@ export function CompactPostItem({
             handle={post.author.handle}
             name={post.author.name}
             meta={post.activity.publishedAtLabel}
+            compactMeta={post.activity.compactPublishedAtLabel}
             profileHref={buildPublicProfilePathFromHandle(post.author.handle)}
-            showStatusDot
+            showStatusDot={post.viewer.isAuthor}
             className="min-w-0 flex-1"
             metaRowClassName="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 text-[14px] leading-5"
             handleClassName="text-label-tertiary inline-flex min-w-0 items-center self-center truncate"
@@ -62,7 +63,7 @@ export function CompactPostItem({
             {post.content.title}
           </h2>
 
-          <p className="type-body-lg text-label-secondary">
+          <p className="type-body-lg text-label-primary">
             {post.content.excerpt}
           </p>
         </div>

@@ -1,7 +1,8 @@
+import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
-import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
-import { LeftNav } from "@/components/layout/left-nav";
-import { LegalSidebar } from "@/components/layout/legal-sidebar";
+import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
+import { isAdminConsoleRequest } from "@/features/admin/lib/admin-console-request";
+import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
 import { FeedSection } from "@/features/feed/components/feed-section";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import { listDiscussions } from "@/features/feed/lib/discussions-repository";
@@ -11,19 +12,26 @@ import { listDiscussions } from "@/features/feed/lib/discussions-repository";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const adminConsoleRequest = await isAdminConsoleRequest();
   const currentUser = await getCurrentUser();
+
+  if (adminConsoleRequest) {
+    redirect(canAccessAdminConsole(currentUser) ? "/admin/users" : "/sign-in");
+  }
+
   const posts = await listDiscussions(currentUser);
 
   return (
-    <div className="surface-primary text-label-primary min-h-dvh">
+    <div className="surface-primary text-label-primary min-h-[100svh] min-[721px]:min-h-dvh">
       <AppHeader />
 
       <div className="min-[721px]:pt-[var(--app-header-height)]">
-        <main className="mx-auto grid w-full grid-cols-1 gap-0 px-0 sm:px-0 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-0 min-[1441px]:max-w-[var(--app-shell-max-width)] min-[1441px]:px-5">
-          <LeftNav items={navItems} activeSection={DEFAULT_ACTIVE_SECTION} />
+        <DesktopAppShell
+          centerClassName="w-full max-w-[672px]"
+          fitCenterToContent
+        >
           <FeedSection initialPosts={posts} />
-          <LegalSidebar />
-        </main>
+        </DesktopAppShell>
       </div>
     </div>
   );

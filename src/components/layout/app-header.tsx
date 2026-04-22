@@ -15,6 +15,7 @@ import {
   NavIcon,
   NotificationIcon,
   PlusCircleIcon,
+  SearchIcon,
 } from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button-styles";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
@@ -45,7 +46,7 @@ const mobileMenuButtonClassName =
       "button--icon-only relative h-11 w-11 flex-none px-0 text-[var(--label-primary)]",
     size: "lg",
     variant: "tertiary",
-  })} lg:hidden`;
+  })} min-[721px]:hidden`;
 
 function NotificationButton() {
   return (
@@ -97,15 +98,19 @@ function MobileMenuButton({
 }
 
 type CreateTopicButtonProps = {
+  ariaLabel?: string;
   children?: ReactNode;
   className: string;
+  iconOnly?: boolean;
   onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
   variant?: "secondary" | "tertiary";
 };
 
 function CreateTopicButton({
+  ariaLabel = "Создать обсуждение",
   children,
   className,
+  iconOnly = false,
   onClick,
   variant = "tertiary",
 }: CreateTopicButtonProps) {
@@ -113,6 +118,7 @@ function CreateTopicButton({
     <Link
       href="/create-topic"
       onClick={onClick}
+      aria-label={ariaLabel}
       className={buttonClassName({
         className: `flex-none gap-2 whitespace-nowrap ${className}`.trim(),
         variant,
@@ -121,7 +127,9 @@ function CreateTopicButton({
       <span className="flex h-5 w-5 flex-none items-center justify-center">
         <PlusCircleIcon />
       </span>
-      <span className="whitespace-nowrap">{children ?? "Создать обсуждение"}</span>
+      {!iconOnly ? (
+        <span className="whitespace-nowrap">{children ?? "Создать обсуждение"}</span>
+      ) : null}
     </Link>
   );
 }
@@ -157,7 +165,11 @@ export function AppHeader({
   const activeSection = resolveActiveSection(pathname);
   const isAdminHeader = adminMode;
   const homeHref = isAdminHeader ? "/admin/users" : "/";
+  const isFeedHomePage = pathname === "/";
   const shouldShowSearch = showSearch && !isAdminHeader;
+  const shouldShowMobileSearchField = shouldShowSearch && isFeedHomePage;
+  const shouldShowMobileSearchButton = shouldShowSearch && !isFeedHomePage;
+  const shouldShowMobileCreateIconOnly = showCreateAction && !isAdminHeader && !isFeedHomePage;
   const shouldShowNotification = Boolean(user) && !isAdminHeader;
 
   useEffect(() => {
@@ -196,7 +208,7 @@ export function AppHeader({
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const mediaQuery = window.matchMedia("(min-width: 721px)");
 
     function handleMediaQueryChange(event: MediaQueryListEvent) {
       if (event.matches) {
@@ -227,6 +239,37 @@ export function AppHeader({
     router.refresh();
   }
 
+  function handleSearchGroupPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    const target = event.target;
+
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    if (target.closest('[data-slot="search-field-clear-button"], [slot="clear"]')) {
+      return;
+    }
+
+    const input = event.currentTarget.querySelector('input');
+
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (document.activeElement !== input) {
+      event.preventDefault();
+      input.focus();
+
+      const valueLength = input.value.length;
+
+      try {
+        input.setSelectionRange(valueLength, valueLength);
+      } catch {
+        // Some browsers may disallow manual caret placement for search inputs.
+      }
+    }
+  }
+
   return (
     <header className={`surface-elevated border-separator relative z-50 shadow-[0_2px_12px_rgba(17,24,39,0.06)] ${
       isAdminHeader
@@ -236,10 +279,10 @@ export function AppHeader({
       <div className={`relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] items-center ${
         isAdminHeader
           ? "min-h-16 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-3 px-4 py-3 min-[1280px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[1280px]:px-[var(--app-shell-side-offset)]"
-          : "gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:gap-3 min-[721px]:py-1 lg:px-[var(--app-shell-side-offset)] min-[721px]:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]"
+          : "gap-x-2 gap-y-3 px-3 py-3 sm:px-4 min-[721px]:h-16 min-[721px]:gap-3 min-[721px]:px-[var(--app-shell-side-offset)] min-[721px]:py-1 min-[721px]:grid-cols-[224px_minmax(0,1fr)_224px] min-[1025px]:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-header-search-width))_minmax(var(--app-shell-side-column-min-width),1fr)] max-[720px]:grid-cols-[minmax(0,1fr)_auto]"
       }`}>
         <div className={`flex min-w-0 items-center ${
-          isAdminHeader ? "gap-2" : "gap-1 sm:gap-2 lg:pl-5"
+          isAdminHeader ? "gap-2" : "gap-1 sm:gap-2 min-[721px]:pl-5"
         }`.trim()}>
           {!isAdminHeader ? (
             <MobileMenuButton
@@ -252,13 +295,13 @@ export function AppHeader({
             href={homeHref}
             aria-label="внутри"
             className={`w-fit max-w-full cursor-pointer ${
-              isAdminHeader ? "inline-flex" : "min-[361px]:inline-flex hidden lg:max-w-[var(--app-shell-side-rail-width)]"
+              isAdminHeader ? "inline-flex" : "hidden min-[361px]:inline-flex min-[721px]:max-w-[var(--app-shell-side-rail-width)]"
             }`}
           >
             <AppBrand
               showAdminLabel={isAdminHeader}
-              wordmarkClassName={isAdminHeader ? "h-7 w-auto shrink-0" : "h-7 w-auto shrink-0 lg:h-8"}
-              labelClassName={isAdminHeader ? "h-[18px] w-auto shrink-0" : "h-[18px] w-auto shrink-0 lg:h-5"}
+              wordmarkClassName={isAdminHeader ? "h-7 w-auto shrink-0" : "h-7 w-auto shrink-0 min-[721px]:h-8"}
+              labelClassName={isAdminHeader ? "h-[18px] w-auto shrink-0" : "h-[18px] w-auto shrink-0 min-[721px]:h-5"}
             />
           </Link>
 
@@ -270,7 +313,10 @@ export function AppHeader({
             className="surface--default hidden min-w-0 w-full justify-self-center overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:block"
             fullWidth
           >
-            <HeroSearchField.Group className="h-11 min-h-11 w-full">
+            <HeroSearchField.Group
+              className="app-header-search-group h-11 min-h-11 w-full"
+              onPointerDown={handleSearchGroupPointerDown}
+            >
               <HeroSearchField.SearchIcon />
               <HeroSearchField.Input
                 aria-label="Поиск по историям, темам, психологам"
@@ -284,18 +330,42 @@ export function AppHeader({
 
         <div className="flex w-fit max-w-full min-w-0 items-center justify-end justify-self-end">
           <div className={`flex min-w-0 items-center ${
-            isAdminHeader ? "gap-0" : "gap-0 lg:justify-start"
+            isAdminHeader ? "gap-0" : "gap-0 min-[721px]:justify-start"
           }`.trim()}>
-            {showCreateAction ? (
-              <CreateTopicButton
-                className="h-10 px-3 text-[13px] min-[721px]:h-11 min-[721px]:px-4 min-[721px]:text-sm"
-                onClick={handleCreateTopicClick}
+            {shouldShowMobileSearchButton ? (
+              <button
+                type="button"
+                aria-label="Поиск"
+                className={`${circularControlClassName} min-[721px]:hidden`.trim()}
               >
-                <>
-                  <span className="inline lg:hidden">Создать</span>
-                  <span className="hidden lg:inline">Создать обсуждение</span>
-                </>
-              </CreateTopicButton>
+                <span className="flex h-5 w-5 flex-none items-center justify-center">
+                  <SearchIcon />
+                </span>
+              </button>
+            ) : null}
+            {showCreateAction ? (
+              <>
+                {shouldShowMobileCreateIconOnly ? (
+                  <CreateTopicButton
+                    ariaLabel="Создать обсуждение"
+                    className="button--icon-only h-10 w-10 px-0 min-[481px]:hidden"
+                    iconOnly
+                    onClick={handleCreateTopicClick}
+                  />
+                ) : null}
+
+                <CreateTopicButton
+                  className={`h-10 px-3 text-[13px] min-[721px]:h-11 min-[721px]:px-4 min-[721px]:text-sm ${
+                    shouldShowMobileCreateIconOnly ? "hidden min-[481px]:inline-flex" : ""
+                  }`.trim()}
+                  onClick={handleCreateTopicClick}
+                >
+                  <>
+                    <span className="inline min-[1025px]:hidden">Создать</span>
+                    <span className="hidden min-[1025px]:inline">Создать обсуждение</span>
+                  </>
+                </CreateTopicButton>
+              </>
             ) : null}
             {shouldShowNotification ? <NotificationButton /> : null}
           </div>
@@ -305,18 +375,21 @@ export function AppHeader({
           </div>
         </div>
 
-        {shouldShowSearch ? (
+        {shouldShowMobileSearchField ? (
           <HeroSearchField
             aria-label="Поиск по историям, темам, психологам"
             className="surface--default col-span-2 w-full overflow-visible border-0 bg-transparent p-0 shadow-none outline-none ring-0 focus-within:border-0 focus-within:shadow-none focus-within:outline-none min-[721px]:hidden"
             fullWidth
           >
-            <HeroSearchField.Group className="h-11 min-h-11 w-full">
+            <HeroSearchField.Group
+              className="app-header-search-group h-11 min-h-11 w-full"
+              onPointerDown={handleSearchGroupPointerDown}
+            >
               <HeroSearchField.SearchIcon />
               <HeroSearchField.Input
                 aria-label="Поиск по историям, темам, психологам"
                 placeholder="Поиск по историям, темам, психологам"
-                className="!text-[14px] !leading-5"
+                className="!text-[16px] !leading-5"
               />
               <HeroSearchField.ClearButton aria-label="Очистить поиск" />
             </HeroSearchField.Group>
@@ -325,7 +398,7 @@ export function AppHeader({
       </div>
 
       <div
-        className={`fixed inset-0 z-[120] lg:hidden ${
+        className={`fixed inset-0 z-[120] min-[721px]:hidden ${
           isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
         aria-hidden={!isMobileMenuOpen}

@@ -1,12 +1,12 @@
 "use client";
 
 import { Chip, Dropdown, Label } from "@heroui/react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { buttonClassName } from "@/components/ui/button-styles";
 import { UserAvatarAction } from "@/components/ui/user-avatar-action";
 import {
+  AdminShieldIcon,
   LogOutIcon,
   ProfileCircleIcon,
   SettingsSlidersIcon,
@@ -14,6 +14,7 @@ import {
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { UserAvatar } from "@/features/auth/components/user-avatar";
 import { dispatchAuthStateChanged } from "@/features/auth/hooks/use-current-user";
+import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
 import { getUserHandle } from "@/features/auth/lib/profile";
 import type { AuthUser } from "@/features/auth/types";
 
@@ -41,8 +42,23 @@ export function AuthStatus({
   hideNavigationItems = false,
 }: AuthStatusProps) {
   const router = useRouter();
-  const { status, user } = useAuthClient();
+  const { openAuthModal, status, user } = useAuthClient();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [adminConsoleUrl, setAdminConsoleUrl] = useState<string | null>(null);
+  const [publicSiteUrl, setPublicSiteUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const publicHost = host.replace(/^admin\./, "");
+    const resolvedAdminHost = host.startsWith("admin.") ? host : `admin.${publicHost}`;
+
+    setAdminConsoleUrl(`${protocol}//${resolvedAdminHost}`);
+
+    if (hideNavigationItems) {
+      setPublicSiteUrl(`${protocol}//${publicHost}`);
+    }
+  }, [hideNavigationItems]);
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -71,8 +87,9 @@ export function AuthStatus({
 
   if (!user) {
     return (
-      <Link
-        href="/sign-in"
+      <button
+        type="button"
+        onClick={openAuthModal}
         className={buttonClassName({
           className: `rounded-full font-semibold ${
             compact
@@ -83,12 +100,13 @@ export function AuthStatus({
         })}
       >
         Войти
-      </Link>
+      </button>
     );
   }
 
   const menuWidthClass = compact ? "w-[272px] lg:w-[304px]" : "w-[304px]";
   const adminBadgeLabel = getAdminBadgeLabel(user);
+  const canOpenAdminConsole = canAccessAdminConsole(user);
   const accountName = getUserHandle(user);
   const navigationItems = [
     {
@@ -153,11 +171,22 @@ export function AuthStatus({
         <Dropdown.Menu
           aria-label="Меню профиля"
           selectionMode="none"
+          className="dropdown-menu-profile p-2 pt-1"
           onAction={(key) => {
             const action = String(key);
 
             if (action === "sign-out") {
               void handleSignOut();
+              return;
+            }
+
+            if (action === "back-to-site" && publicSiteUrl) {
+              window.location.href = publicSiteUrl;
+              return;
+            }
+
+            if (action === "open-admin-console" && adminConsoleUrl) {
+              window.location.href = adminConsoleUrl;
               return;
             }
 
@@ -167,8 +196,21 @@ export function AuthStatus({
               router.push(navigationItem.href);
             }
           }}
-          className="p-2 pt-1"
         >
+          {hideNavigationItems && publicSiteUrl ? (
+            <Dropdown.Item
+              key="back-to-site"
+              id="back-to-site"
+              textValue="На главную"
+              className="font-medium"
+            >
+              <div className="flex w-full items-center justify-between gap-3">
+                <Label className="type-menu-label min-w-0 flex-1 truncate text-[var(--label-primary)]">
+                  На главную
+                </Label>
+              </div>
+            </Dropdown.Item>
+          ) : null}
           {hideNavigationItems
             ? null
             : navigationItems.map((item) => (
@@ -188,6 +230,24 @@ export function AuthStatus({
                   </div>
                 </Dropdown.Item>
               ))}
+
+          {!hideNavigationItems && canOpenAdminConsole && adminConsoleUrl ? (
+            <Dropdown.Item
+              key="open-admin-console"
+              id="open-admin-console"
+              textValue="Админка"
+              className="font-medium"
+            >
+              <div className="flex w-full items-center justify-between gap-3">
+                <Label className="type-menu-label min-w-0 flex-1 truncate text-[var(--label-primary)]">
+                  Админка
+                </Label>
+                <span className="flex-none text-[var(--label-secondary)]">
+                  <AdminShieldIcon />
+                </span>
+              </div>
+            </Dropdown.Item>
+          ) : null}
 
           <Dropdown.Item
             key="sign-out"

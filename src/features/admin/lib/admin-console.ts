@@ -13,7 +13,11 @@ function validateAdminConfig() {
 
   hasValidatedAdminConfig = true;
 
-  if (!process.env.ADMIN_APP_HOST?.trim() && !process.env.ADMIN_APP_URL?.trim()) {
+  if (
+    process.env.NODE_ENV === "production"
+    && !process.env.ADMIN_APP_HOST?.trim()
+    && !process.env.ADMIN_APP_URL?.trim()
+  ) {
     console.warn(
       "[admin-console] ADMIN_APP_HOST/ADMIN_APP_URL is not set. Admin console is disabled.",
     );
@@ -58,7 +62,15 @@ export function getAdminConsoleHost() {
 
   const hostFromUrl = normalizeHost(parseHostFromUrl(process.env.ADMIN_APP_URL));
 
-  return hostFromUrl;
+  if (hostFromUrl) {
+    return hostFromUrl;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return "admin.localhost";
+  }
+
+  return null;
 }
 
 export function isAdminConsoleHost(host: string | null | undefined) {
@@ -154,6 +166,10 @@ export function getAdminConsoleAllowedEmails() {
   const allowedEmails = process.env.ADMIN_ALLOWED_EMAILS;
 
   if (!allowedEmails?.trim()) {
+    if (process.env.NODE_ENV !== "production") {
+      return new Set<string>(["admin@local.test"]);
+    }
+
     return new Set<string>();
   }
 

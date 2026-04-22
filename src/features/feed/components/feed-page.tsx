@@ -1,10 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FeedToolbar } from "@/features/feed/components/feed-toolbar";
 import { PostFeedItem } from "@/features/feed/components/post-feed-item";
 import { useFeed } from "@/features/feed/hooks/use-feed";
+import { isInteractivePostCardTarget } from "@/features/feed/lib/post-card-navigation";
 import type { Post } from "@/features/feed/types";
 
 type FeedPageProps = {
@@ -14,6 +15,7 @@ type FeedPageProps = {
 };
 
 export function FeedPage({ initialPosts, leftNav, rightSidebar }: FeedPageProps) {
+  const router = useRouter();
   const {
     activeTopic,
     feed,
@@ -57,12 +59,32 @@ export function FeedPage({ initialPosts, leftNav, rightSidebar }: FeedPageProps)
               feed.map((post) => {
                 const isHighlighted = post.id === highlightedPostId;
                 return (
-                  <article key={post.id} className="group relative cursor-pointer">
-                    <Link
-                      href={`/discussions/${post.id}`}
-                      className="absolute inset-0 z-10 cursor-pointer rounded-[28px]"
-                      aria-label={post.content.title}
-                    />
+                  <article
+                    key={post.id}
+                    className="group relative cursor-pointer"
+                    role="link"
+                    tabIndex={0}
+                    aria-label={post.content.title}
+                    onClick={(event) => {
+                      if (isInteractivePostCardTarget(event.target, event.currentTarget)) {
+                        return;
+                      }
+
+                      router.push(`/discussions/${post.id}`);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") {
+                        return;
+                      }
+
+                      if (isInteractivePostCardTarget(event.target, event.currentTarget)) {
+                        return;
+                      }
+
+                      event.preventDefault();
+                      router.push(`/discussions/${post.id}`);
+                    }}
+                  >
                     <div
                       className={`surface-card feed-card-surface relative px-5 py-4 sm:px-6 ${
                         isHighlighted ? "feed-post-flash" : ""

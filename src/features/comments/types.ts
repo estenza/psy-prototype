@@ -41,6 +41,7 @@ export type CommentNode = {
   author: CommentAuthor;
   createdAt: number;
   relativeDate: string;
+  compactRelativeDate: string;
   bodyHtml: string;
   bodyText: string;
   upvotes: number;

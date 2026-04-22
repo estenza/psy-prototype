@@ -64,8 +64,8 @@ export function CommentMoreMenu({
         aria-label="Открыть меню действий"
         className={
           actionRow
-            ? "interactive-tertiary button--icon-only !inline-flex h-9 w-9 min-w-9 rounded-full px-0 text-[var(--label-primary)]"
-            : "!inline-flex text-[var(--label-primary)]"
+            ? "interactive-tertiary button--blur-no-focus button--icon-only !inline-flex h-9 w-9 min-w-9 rounded-full px-0 text-[var(--label-primary)]"
+            : "button--blur-no-focus !inline-flex text-[var(--label-primary)]"
         }
       >
         <MoreHorizontalIcon aria-hidden />
@@ -75,6 +75,7 @@ export function CommentMoreMenu({
         <Dropdown.Menu
           aria-label="Меню комментария"
           selectionMode="none"
+          className="dropdown-menu-default"
           onAction={(key) => {
             const item = items.find((entry) => entry.label === String(key));
             item?.onSelect();

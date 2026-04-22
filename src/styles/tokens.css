@@ -1,7 +1,22 @@
 :root {
   /* Layout */
   --app-shell-max-width: calc(var(--spacing) * 360);
-  --app-shell-content-max-width: calc(var(--spacing) * 180);
+  --app-shell-nav-compact-width: 88px;
+  --app-shell-nav-width-min: 248px;
+  --app-shell-nav-width-max: 280px;
+  --app-shell-nav-width: clamp(
+    var(--app-shell-nav-width-min),
+    17.5vw,
+    var(--app-shell-nav-width-max)
+  );
+  --app-shell-primary-column-width: calc(var(--spacing) * 168);
+  --app-shell-sidebar-column-width: 344px;
+  --app-shell-column-gap: 16px;
+  --app-shell-content-max-width: var(--app-shell-primary-column-width);
+  --app-shell-legal-width: var(--app-shell-sidebar-column-width);
+  --app-shell-main-width: calc(
+    var(--app-shell-primary-column-width) + var(--app-shell-column-gap) + var(--app-shell-sidebar-column-width)
+  );
   --app-shell-side-column-min-width: calc(var(--spacing) * 66);
   --app-shell-side-rail-width: calc(var(--spacing) * 65);
   --app-header-search-width: clamp(
@@ -123,6 +138,12 @@
   /* Separators */
   --separator-primary: var(--separator);
   --separator-strong: color-mix(in oklab, var(--separator) 80%, var(--foreground) 20%);
+}
+
+.dark,
+[data-theme="dark"] {
+  --separator-primary: oklch(38% .006 286.033);
+  --separator-strong: color-mix(in oklab, oklch(38% .006 286.033) 80%, var(--foreground) 20%);
 
   /* Overlays */
   --overlay-scrim: color-mix(in srgb, var(--black) 32%, transparent);

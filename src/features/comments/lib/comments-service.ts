@@ -62,7 +62,6 @@ export function buildCommentsViewer(currentUser: SessionUser | null): CommentsVi
 export function buildCommentsCapabilities(currentUser: SessionUser | null): CommentsCapabilities {
   const canInteract = Boolean(currentUser && !currentUser.isBanned);
   const limitations = [
-    "Для MVP поддерживается только один уровень ответов.",
     "Редактирование и удаление комментариев в пользовательском UI пока не подключены, хотя backend уже подготовлен.",
   ];
 
@@ -75,7 +74,7 @@ export function buildCommentsCapabilities(currentUser: SessionUser | null): Comm
     canEditOwnComments: false,
     canDeleteOwnComments: false,
     authMode: currentUser ? "sso" : "unknown",
-    editorMode: "custom-plain",
+    editorMode: "custom-rich-html",
     postDisabledReason:
       currentUser?.isBanned
         ? "Комментирование для этого аккаунта временно недоступно."

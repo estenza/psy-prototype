@@ -36,7 +36,7 @@ export function CommentsSection({ pageId }: CommentsSectionProps) {
   const composerDisabledReason = viewerIsAuthenticated ? postDisabledReason : null;
 
   return (
-    <section className="surface--default flex w-full flex-col gap-4">
+    <section className="surface--default flex w-full flex-col gap-6">
       <div className="comments-top flex flex-col gap-4">
         <CommentsHeader
           totalCount={data?.totalCount ?? 0}

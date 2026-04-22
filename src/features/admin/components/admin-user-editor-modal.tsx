@@ -959,11 +959,14 @@ export function AdminUserEditorModal({
   return (
     <Modal.Backdrop
       isOpen={isOpen}
+      variant="opaque"
       isDismissable={!isSaving}
-      onOpenChange={(open) => {
-        if (!open && !isSaving) onClose();
+      onClick={(event) => {
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        if (target?.closest('[data-slot="modal-dialog"]')) return;
+        if (!isSaving) onClose();
       }}
-      className="overlay-scrim-strong fixed inset-0 z-[220]"
+      className="fixed inset-0 z-[220]"
     >
       <Modal.Container scroll="outside" className="!p-4">
         <Modal.Dialog

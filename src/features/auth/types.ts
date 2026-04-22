@@ -89,6 +89,7 @@ export type AuthSuccessResponse = {
 export type AuthMessageResponse = {
   ok: true;
   message: string;
+  debugOtpCode?: string;
   debugResetUrl?: string;
 };
 

@@ -7,6 +7,7 @@ type AuthorInlineProps = {
   handle: string;
   name: string;
   meta: string;
+  compactMeta?: string;
   afterMeta?: ReactNode;
   avatarSize?: "comment-md" | "comment-sm" | "header" | "lg" | "md" | "sm";
   showStatusDot?: boolean;
@@ -32,6 +33,7 @@ export function AuthorInline({
   handle,
   name,
   meta,
+  compactMeta,
   afterMeta,
   avatarSize = "comment-md",
   showStatusDot = false,
@@ -77,7 +79,14 @@ export function AuthorInline({
         </span>
         <div className={metaClassName}>
           <span aria-hidden="true">•</span>
-          <span>{meta}</span>
+          {compactMeta ? (
+            <>
+              <span className="min-[480px]:hidden">{compactMeta}</span>
+              <span className="hidden min-[480px]:inline">{meta}</span>
+            </>
+          ) : (
+            <span>{meta}</span>
+          )}
         </div>
         {afterMeta}
       </div>

@@ -38,6 +38,16 @@ body {
 
 html {
   background: var(--background);
+  overflow-y: auto;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
 
 body {
@@ -317,6 +327,12 @@ textarea:placeholder-shown::selection {
     box-shadow: none;
   }
 
+  @media (max-width: 480px) {
+    .surface-card {
+      border-radius: 20px;
+    }
+  }
+
   .feed-card-surface {
     transition:
       background-color 150ms var(--ease-out),
@@ -536,6 +552,14 @@ textarea:placeholder-shown::selection {
     border-radius: 12px !important;
   }
 
+  .dropdown-menu-default [data-slot="menu-item"] {
+    font-weight: var(--font-weight-regular) !important;
+  }
+
+  .dropdown-menu-default [data-slot="menu-item"] :is(label, span, p, .type-menu-label) {
+    font-weight: var(--font-weight-regular) !important;
+  }
+
   .search-field__group,
   [data-slot="search-field-group"] {
     border-radius: 9999px !important;
@@ -556,6 +580,15 @@ textarea:placeholder-shown::selection {
   .button--icon-only.button--lg:active,
   .button--icon-only.button--lg[data-pressed="true"] {
     transform: scale(0.88);
+  }
+
+  .button--blur-no-focus,
+  .button--blur-no-focus:focus,
+  .button--blur-no-focus:focus-visible,
+  .button--blur-no-focus[data-focused="true"],
+  .button--blur-no-focus[data-focus-visible="true"] {
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   .interactive-solid {
@@ -747,6 +780,14 @@ textarea:placeholder-shown::selection {
   }
 
   .modal-surface {
+    /* Re-declare tokens so .light overrides of --background/--foreground take effect */
+    --background-primary: var(--background);
+    --label-primary: var(--foreground);
+    --label-secondary: color-mix(in oklab, var(--foreground) 76%, var(--background-primary));
+    --label-tertiary: color-mix(in oklab, var(--foreground) 56%, var(--background-primary));
+    --label-quaternary: color-mix(in oklab, var(--foreground) 34%, var(--background-primary));
+    --underline-primary: color-mix(in srgb, var(--label-primary) 18%, transparent);
+    --fill-tertiary: color-mix(in oklab, var(--foreground) 16%, transparent);
     background-color: var(--background-primary);
     border: none;
     border-radius: 28px !important;
@@ -933,6 +974,30 @@ textarea:placeholder-shown::selection {
     opacity: 0.72;
   }
 
+  .comment-editor-prosemirror > * {
+    margin: 0;
+  }
+
+  .comment-editor-prosemirror > * + * {
+    margin-top: 0.5rem;
+  }
+
+  .comment-editor-prosemirror strong {
+    font-weight: 600;
+  }
+
+  .comment-editor-prosemirror blockquote {
+    border-left: 2px solid var(--separator-primary);
+    color: var(--label-secondary);
+    padding-left: 0.75rem;
+  }
+
+  .comment-editor-prosemirror img {
+    border-radius: 12px;
+    display: block;
+    max-width: 100%;
+  }
+
   .comment-rich-content[data-clamped="true"] {
     display: -webkit-box;
     overflow: hidden;
@@ -998,6 +1063,74 @@ textarea:placeholder-shown::selection {
     );
     background-size: 200% 100%;
     animation: comment-skeleton-shimmer 1.25s linear infinite;
+  }
+
+  .surface--default :is([data-slot="input"], [data-slot="input-group"]) {
+    background-color: var(--field-background);
+    border: 1px solid var(--separator-primary);
+    box-shadow: none;
+    transition:
+      background-color 150ms var(--ease-smooth),
+      border-color 150ms var(--ease-smooth),
+      box-shadow 150ms var(--ease-out);
+  }
+
+  .surface--default [data-slot="input"]:-webkit-autofill,
+  .surface--default [data-slot="input"]:-webkit-autofill:hover,
+  .surface--default [data-slot="input"]:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px var(--field-background) inset;
+    -webkit-text-fill-color: var(--label-primary);
+    caret-color: var(--label-primary);
+    transition: background-color 0s 9999999s;
+  }
+
+  @media (hover: hover) {
+    .surface--default [data-slot="input"]:hover:not(:focus):not(:focus-visible):not([data-invalid="true"]),
+    .surface--default [data-slot="input"][data-hovered="true"]:not([data-focused="true"]):not([data-invalid="true"]),
+    .surface--default [data-slot="input-group"]:has(input:hover):not(:focus-within):not([data-invalid="true"]) {
+      border-color: var(--separator-strong);
+      box-shadow: none;
+    }
+  }
+
+  .surface--default [data-slot="input"]:focus,
+  .surface--default [data-slot="input"][data-focused="true"],
+  .surface--default [data-slot="input-group"]:focus-within {
+    background-color: var(--field-background);
+    border-color: var(--accent-primary);
+    box-shadow:
+      var(--tw-inset-shadow),
+      var(--tw-inset-ring-shadow),
+      var(--tw-ring-offset-shadow),
+      var(--tw-ring-shadow),
+      var(--tw-shadow);
+    --tw-ring-color: var(--color-accent-soft);
+    --tw-ring-offset-width: 0px;
+    --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  }
+
+  .surface--default [data-slot="input"][data-invalid="true"],
+  .surface--default [data-slot="input-group"][data-invalid="true"] {
+    background-color: var(--field-background);
+    border-color: var(--danger);
+    box-shadow: none;
+  }
+
+  .surface--default [data-slot="input"][data-invalid="true"]:focus,
+  .surface--default [data-slot="input-group"][data-invalid="true"]:focus-within {
+    border-color: var(--danger);
+    box-shadow:
+      var(--tw-inset-shadow),
+      var(--tw-inset-ring-shadow),
+      var(--tw-ring-offset-shadow),
+      var(--tw-ring-shadow),
+      var(--tw-shadow);
+    --tw-ring-color: var(--danger);
+    --tw-ring-offset-width: 0px;
+    --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    outline: none;
   }
 
   .surface--default :is([data-slot="textarea"], .topic-editor-shell) {
@@ -1101,6 +1234,65 @@ textarea:placeholder-shown::selection {
       background-color 150ms var(--ease-smooth),
       border-color 150ms var(--ease-smooth),
       box-shadow 150ms var(--ease-out);
+  }
+
+  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group {
+    position: relative;
+    cursor: text;
+  }
+
+  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+      .search-field__clear-button,
+      [data-slot="search-field-clear-button"]
+    ) {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    z-index: 2;
+    margin-right: 0;
+    transform: translateY(-50%);
+  }
+
+  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+      .search-field__input,
+      [data-slot="search-field-input"]
+    ) {
+    min-width: 0;
+    padding-right: 8px;
+  }
+
+  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+      .search-field__input,
+      [data-slot="search-field-input"]
+    ):placeholder-shown {
+    padding-right: 4px;
+  }
+
+  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+      .search-field__input,
+      [data-slot="search-field-input"]
+    ):not(:placeholder-shown) {
+    padding-right: 44px;
+  }
+
+  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group:has(
+      :is(.search-field__input, [data-slot="search-field-input"]):placeholder-shown
+    )::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    width: 32px;
+    pointer-events: none;
+    border-top-right-radius: inherit;
+    border-bottom-right-radius: inherit;
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--field-background) 0%, transparent) 0%,
+      color-mix(in srgb, var(--field-background) 64%, transparent) 48%,
+      var(--field-background) 100%
+    );
   }
 
   @media (hover: hover) {

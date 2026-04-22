@@ -1215,3 +1215,118 @@ export async function markPasswordResetTokenAsUsed(tokenId: string) {
     `)
     .run(new Date().toISOString(), tokenId);
 }
+
+// ─── OTP codes ───────────────────────────────────────────────────────────────
+
+type OtpCodeRow = {
+  id: string;
+  email: string;
+  code_hash: string;
+  purpose: string;
+  expires_at: string;
+  used_at: string | null;
+  attempts: number;
+  created_at: string;
+};
+
+export async function createOtpCode(input: {
+  id: string;
+  email: string;
+  codeHash: string;
+  purpose: "sign-in" | "sign-up";
+  expiresAt: string;
+}) {
+  const now = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `INSERT INTO auth_otp_codes (id, email, code_hash, purpose, expires_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [input.id, input.email, input.codeHash, input.purpose, input.expiresAt, now],
+    );
+    return;
+  }
+
+  getDatabase()
+    .prepare(
+      `INSERT INTO auth_otp_codes (id, email, code_hash, purpose, expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(input.id, input.email, input.codeHash, input.purpose, input.expiresAt, now);
+}
+
+export async function findActiveOtpCode(
+  email: string,
+  purpose: "sign-in" | "sign-up",
+): Promise<OtpCodeRow | null> {
+  const now = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    return await queryPgOne<OtpCodeRow>(
+      `SELECT id, email, code_hash, purpose, expires_at::text AS expires_at,
+              used_at::text AS used_at, attempts, created_at::text AS created_at
+       FROM auth_otp_codes
+       WHERE email = $1 AND purpose = $2 AND used_at IS NULL AND expires_at > $3
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [email, purpose, now],
+    );
+  }
+
+  const row = getDatabase()
+    .prepare(
+      `SELECT * FROM auth_otp_codes
+       WHERE email = ? AND purpose = ? AND used_at IS NULL AND expires_at > ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+    )
+    .get(email, purpose, now) as OtpCodeRow | undefined;
+
+  return row ?? null;
+}
+
+export async function markOtpCodeAsUsed(id: string) {
+  const now = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `UPDATE auth_otp_codes SET used_at = $1 WHERE id = $2`,
+      [now, id],
+    );
+    return;
+  }
+
+  getDatabase()
+    .prepare("UPDATE auth_otp_codes SET used_at = ? WHERE id = ?")
+    .run(now, id);
+}
+
+export async function incrementOtpAttempts(id: string) {
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      `UPDATE auth_otp_codes SET attempts = attempts + 1 WHERE id = $1`,
+      [id],
+    );
+    return;
+  }
+
+  getDatabase()
+    .prepare("UPDATE auth_otp_codes SET attempts = attempts + 1 WHERE id = ?")
+    .run(id);
+}
+
+export async function deleteExpiredOtpCodes() {
+  const now = new Date().toISOString();
+
+  if (isPostgresAuthEnabled()) {
+    await execPg(
+      "DELETE FROM auth_otp_codes WHERE expires_at < $1",
+      [now],
+    );
+    return;
+  }
+
+  getDatabase()
+    .prepare("DELETE FROM auth_otp_codes WHERE expires_at < ?")
+    .run(now);
+}

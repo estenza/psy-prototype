@@ -36,11 +36,11 @@ export function CommentActions({
   const actionClassName =
     "interactive-action-soft type-body-md inline-flex h-7 items-center justify-center rounded-full px-3 font-normal transition-colors";
   const tertiaryActionClassName =
-    "interactive-tertiary type-body-md inline-flex h-7 items-center justify-center rounded-full px-3 font-normal transition-colors";
+    "interactive-tertiary type-body-md inline-flex h-7 items-center justify-center rounded-full px-3 font-normal text-[var(--label-secondary)] transition-colors hover:text-[var(--accent-primary)] active:text-[var(--accent-primary)]";
   const shouldShowLikeCount = !isReply && likeCount > 0;
 
   return (
-    <div className={cn("flex min-h-7 w-full items-center gap-1 pt-3", className)}>
+    <div data-comment-actions-row className={cn("flex min-h-7 w-full items-center gap-1", className)}>
       <div className="flex items-center gap-2">
         <HoverTooltip label={liked ? "Больше не нравится" : "Нравится"}>
           <ToggleButton

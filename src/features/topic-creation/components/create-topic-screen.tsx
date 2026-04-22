@@ -1,6 +1,6 @@
 "use client";
 
-import { FieldError, Surface, TextArea, TextField } from "@heroui/react";
+import { FieldError, TextArea, TextField } from "@heroui/react";
 import {
   startTransition,
   useCallback,
@@ -11,6 +11,7 @@ import {
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
+import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
 import { Button } from "@/components/ui/button";
 import {
   markPublishedPostForHighlight,
@@ -339,18 +340,18 @@ export function CreateTopicScreen() {
   }, [syncTitleFieldHeight, title]);
 
   return (
-    <div className="surface-primary text-label-primary min-h-dvh">
+    <div className="surface-primary text-label-primary min-h-[100svh] min-[721px]:min-h-dvh">
       <AppHeader />
 
       <div className="min-[721px]:pt-[var(--app-header-height)]">
-        <main className="mx-auto w-full px-4 sm:px-6 lg:max-w-[var(--app-shell-max-width)] lg:px-5">
-          <section className="mx-auto min-h-[calc(100dvh-var(--app-header-height))] w-full lg:max-w-[672px]">
-            <form onSubmit={handlePublish} className="pb-20">
-              <div className="flex items-start justify-between gap-6 pt-6">
-                <div className="flex min-w-0 items-center gap-4">
+        <DesktopAppShell centerClassName="min-w-0">
+          <section className="min-w-0">
+            <div className="surface-primary border-separator relative z-30 px-4 py-3">
+              <div className="relative z-40 flex items-center justify-between gap-4 text-sm">
+                <div className="flex min-w-0 items-center gap-0">
                   <BackNavigationButton onClick={handleBack} />
 
-                  <h1 className="min-w-0 text-[22px] font-bold leading-7 tracking-normal">
+                  <h1 className="min-w-0 text-[20px] font-bold leading-6 tracking-normal min-[481px]:text-[22px] min-[481px]:leading-7">
                     Новое обсуждение
                   </h1>
                 </div>
@@ -364,133 +365,134 @@ export function CreateTopicScreen() {
                   Черновики
                 </Button>
               </div>
+            </div>
 
-              <Surface
-                variant="default"
-                className="mt-6 flex flex-col gap-6 overflow-hidden rounded-[28px] p-6"
-              >
-                <TopicFormatSwitch
-                  value={intent}
-                  onChange={(nextIntent) => {
-                    setIntent(nextIntent);
-                    setPublishMessage("");
-                  }}
-                />
+            <div className="px-2 pb-8 min-[481px]:px-4 min-[481px]:pb-12 md:px-6 min-[721px]:pb-24 lg:px-0">
+              <form onSubmit={handlePublish}>
+                <div className="surface-card feed-card-surface surface--default flex flex-col gap-6 px-3 py-4 min-[481px]:px-5 sm:px-6">
+                  <TopicFormatSwitch
+                    value={intent}
+                    onChange={(nextIntent) => {
+                      setIntent(nextIntent);
+                      setPublishMessage("");
+                    }}
+                  />
 
-                <div>
-                  <TextField className="relative w-full" isInvalid={titleError}>
-                    <TextArea
-                      ref={titleFieldRef}
-                      id="topic-title"
-                      rows={1}
-                      maxLength={TOPIC_TITLE_MAX_LENGTH}
-                      placeholder="Что хотите обсудить?"
-                      value={title}
-                      onChange={(event) => {
-                        const nextTitle = event.target.value;
+                  <div>
+                    <TextField className="relative w-full" isInvalid={titleError}>
+                      <TextArea
+                        ref={titleFieldRef}
+                        id="topic-title"
+                        rows={1}
+                        maxLength={TOPIC_TITLE_MAX_LENGTH}
+                        placeholder="Что хотите обсудить?"
+                        value={title}
+                        onChange={(event) => {
+                          const nextTitle = event.target.value;
 
-                        setTitle(nextTitle);
+                          setTitle(nextTitle);
+                          setPublishMessage("");
+
+                          if (nextTitle.trim().length > 0) {
+                            setTitleHadValue(true);
+                          }
+
+                          if (
+                            !hasMeaningfulTopicDraft({
+                              content,
+                              title: nextTitle,
+                            })
+                          ) {
+                            resetSavedDraftState();
+                          }
+
+                          event.currentTarget.style.height = "0px";
+                          event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+                        }}
+                        className="min-h-[54px] w-full resize-none overflow-hidden rounded-[16px] py-4 pl-5 pr-12 text-[16px] leading-6"
+                      />
+                      <div className="pointer-events-none absolute top-0 right-5 flex items-start">
+                        <TitleProgressIndicator
+                          currentLength={titleLength}
+                          maxLength={TOPIC_TITLE_MAX_LENGTH}
+                        />
+                      </div>
+                      <FieldError>
+                        Заголовок обязателен. Он поможет людям быстрее понять тему.
+                      </FieldError>
+                    </TextField>
+                  </div>
+
+                  <div>
+                    <TopicEditor
+                      content={content}
+                      errorMessage="Добавьте текст темы, чтобы людям было на что откликнуться."
+                      invalid={contentError}
+                      placeholder="Опишите подробнее"
+                      onChange={(nextContent) => {
+                        const nextHasBody = hasTopicBodyContent(nextContent);
+
+                        setContent(nextContent);
                         setPublishMessage("");
 
-                        if (nextTitle.trim().length > 0) {
-                          setTitleHadValue(true);
+                        if (nextHasBody) {
+                          setContentHadValue(true);
                         }
 
                         if (
                           !hasMeaningfulTopicDraft({
-                            content,
-                            title: nextTitle,
+                            content: nextContent,
+                            title,
                           })
                         ) {
                           resetSavedDraftState();
                         }
-
-                        event.currentTarget.style.height = "0px";
-                        event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
                       }}
-                      className="min-h-[54px] w-full resize-none overflow-hidden rounded-[16px] py-4 pl-5 pr-12 text-[16px] leading-6"
                     />
-                    <div className="pointer-events-none absolute top-0 right-5 flex items-start">
-                      <TitleProgressIndicator
-                        currentLength={titleLength}
-                        maxLength={TOPIC_TITLE_MAX_LENGTH}
-                      />
-                    </div>
-                    <FieldError>
-                      Заголовок обязателен. Он поможет людям быстрее понять тему.
-                    </FieldError>
-                  </TextField>
-                </div>
-
-                <div>
-                  <TopicEditor
-                    content={content}
-                    errorMessage="Добавьте текст темы, чтобы людям было на что откликнуться."
-                    invalid={contentError}
-                    placeholder="Опишите подробнее"
-                    onChange={(nextContent) => {
-                      const nextHasBody = hasTopicBodyContent(nextContent);
-
-                      setContent(nextContent);
-                      setPublishMessage("");
-
-                      if (nextHasBody) {
-                        setContentHadValue(true);
-                      }
-
-                      if (
-                        !hasMeaningfulTopicDraft({
-                          content: nextContent,
-                          title,
-                        })
-                      ) {
-                        resetSavedDraftState();
-                      }
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <TopicPicker
-                    value={topic}
-                    onChange={(nextTopic) => {
-                      setTopic(nextTopic);
-                      setPublishMessage("");
-                    }}
-                  />
-                </div>
-
-                {publishMessage ? (
-                  <div>
-                    <p className="text-label-secondary text-[14px] leading-6">
-                      {publishMessage}
-                    </p>
                   </div>
-                ) : null}
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    onClick={() => saveCurrentDraft()}
-                    className="cursor-pointer rounded-[24px] px-5 py-3 text-[14px] leading-5 text-[var(--label-primary)]"
-                  >
-                    Сохранить черновик
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="lg"
-                    disabled={!canPublish}
-                    className="rounded-[24px] px-5 py-3 text-[14px] leading-5"
-                  >
-                    Опубликовать
-                  </Button>
+                  <div>
+                    <TopicPicker
+                      value={topic}
+                      onChange={(nextTopic) => {
+                        setTopic(nextTopic);
+                        setPublishMessage("");
+                      }}
+                    />
+                  </div>
+
+                  {publishMessage ? (
+                    <div>
+                      <p className="text-label-secondary text-[14px] leading-6">
+                        {publishMessage}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => saveCurrentDraft()}
+                      className="cursor-pointer rounded-[24px] px-5 py-3 text-[14px] leading-5 text-[var(--label-primary)]"
+                    >
+                      Сохранить черновик
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="lg"
+                      disabled={!canPublish}
+                      className="rounded-[24px] px-5 py-3 text-[14px] leading-5"
+                    >
+                      Опубликовать
+                    </Button>
+                  </div>
                 </div>
-              </Surface>
-            </form>
+              </form>
+            </div>
           </section>
-        </main>
+        </DesktopAppShell>
       </div>
     </div>
   );

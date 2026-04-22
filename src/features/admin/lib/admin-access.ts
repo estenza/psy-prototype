@@ -1,15 +1,10 @@
 import "server-only";
 
 import { notFound, redirect } from "next/navigation";
-import {
-  canAccessAdminConsole,
-  getConfiguredAdminAccessKey,
-  isValidAdminAccessKey,
-} from "@/features/admin/lib/admin-console";
+import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
 import { logAdminAccessAttempt } from "@/features/admin/lib/admin-audit";
 import { buildAdminRateLimitKey, consumeAdminRateLimit } from "@/features/admin/lib/admin-rate-limit";
 import {
-  getAdminAccessKey,
   getRequestHost,
   getRequestIp,
   getRequestUserAgent,
@@ -33,16 +28,13 @@ export async function requireModeratorUser() {
   const requestHost = await getRequestHost();
   const requestIp = await getRequestIp();
   const userAgent = await getRequestUserAgent();
-  const adminAccessKey = await getAdminAccessKey();
   const adminConsoleRequest = await isAdminConsoleRequest();
 
   if (!currentUser) {
     if (adminConsoleRequest) {
       const rateLimitState = consumeAdminRateLimit(
         "admin-access",
-        buildAdminRateLimitKey({
-          ip: requestIp,
-        }),
+        buildAdminRateLimitKey({ ip: requestIp }),
       );
       logAdminAccessAttempt({
         host: requestHost,
@@ -63,32 +55,10 @@ export async function requireModeratorUser() {
     throw new AdminAccessError("Access denied", 404);
   }
 
-  if (!isValidAdminAccessKey(adminAccessKey)) {
-    const rateLimitState = consumeAdminRateLimit(
-      "admin-access",
-      buildAdminRateLimitKey({
-        ip: requestIp,
-        email: currentUser.email,
-      }),
-    );
-    logAdminAccessAttempt({
-      email: currentUser.email,
-      host: requestHost,
-      ip: requestIp,
-      userAgent,
-      result: "forbidden",
-    });
-
-    throw new AdminAccessError("Access denied", rateLimitState.allowed ? 403 : 429);
-  }
-
   if (!canAccessModeratorActions(currentUser) || !canAccessAdminConsole(currentUser)) {
     const rateLimitState = consumeAdminRateLimit(
       "admin-access",
-      buildAdminRateLimitKey({
-        ip: requestIp,
-        email: currentUser.email,
-      }),
+      buildAdminRateLimitKey({ ip: requestIp, email: currentUser.email }),
     );
     logAdminAccessAttempt({
       email: currentUser.email,
@@ -97,6 +67,7 @@ export async function requireModeratorUser() {
       userAgent,
       result: "forbidden",
     });
+
     throw new AdminAccessError("Access denied", rateLimitState.allowed ? 403 : 429);
   }
 
@@ -116,17 +87,13 @@ export async function requireModeratorPageAccess() {
   const requestHost = await getRequestHost();
   const requestIp = await getRequestIp();
   const userAgent = await getRequestUserAgent();
-  const adminAccessKey = await getAdminAccessKey();
   const adminConsoleRequest = await isAdminConsoleRequest();
-  const configuredAdminAccessKey = getConfiguredAdminAccessKey();
 
   if (!currentUser) {
     if (adminConsoleRequest) {
       consumeAdminRateLimit(
         "admin-access",
-        buildAdminRateLimitKey({
-          ip: requestIp,
-        }),
+        buildAdminRateLimitKey({ ip: requestIp }),
       );
       logAdminAccessAttempt({
         host: requestHost,
@@ -134,10 +101,6 @@ export async function requireModeratorPageAccess() {
         userAgent,
         result: "forbidden",
       });
-      if (configuredAdminAccessKey) {
-        redirect("/access?next=%2Fadmin%2Fusers");
-      }
-
       redirect("/sign-in");
     }
 
@@ -148,36 +111,10 @@ export async function requireModeratorPageAccess() {
     notFound();
   }
 
-  if (!isValidAdminAccessKey(adminAccessKey)) {
-    const rateLimitState = consumeAdminRateLimit(
-      "admin-access",
-      buildAdminRateLimitKey({
-        ip: requestIp,
-        email: currentUser.email,
-      }),
-    );
-    logAdminAccessAttempt({
-      email: currentUser.email,
-      host: requestHost,
-      ip: requestIp,
-      userAgent,
-      result: "forbidden",
-    });
-
-    if (!rateLimitState.allowed) {
-      notFound();
-    }
-
-    redirect("/sign-in?next=%2Fadmin%2Fusers");
-  }
-
   if (!canAccessModeratorActions(currentUser) || !canAccessAdminConsole(currentUser)) {
     const rateLimitState = consumeAdminRateLimit(
       "admin-access",
-      buildAdminRateLimitKey({
-        ip: requestIp,
-        email: currentUser.email,
-      }),
+      buildAdminRateLimitKey({ ip: requestIp, email: currentUser.email }),
     );
     logAdminAccessAttempt({
       email: currentUser.email,

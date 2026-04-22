@@ -33,10 +33,7 @@ export function TopicFormatSwitch({
       className="flex flex-col gap-4"
     >
       <Tabs.ListContainer>
-        <Tabs.List
-          aria-label="Формат публикации"
-          className="bg-[var(--background-primary)]"
-        >
+        <Tabs.List aria-label="Формат публикации">
           {(Object.keys(TOPIC_FORMAT_OPTIONS) as PostIntent[]).map((mode, index) => (
             <Tabs.Tab
               key={mode}

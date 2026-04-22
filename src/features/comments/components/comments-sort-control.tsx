@@ -38,6 +38,7 @@ export function CommentsSortControl({
 
       <Dropdown.Popover placement="bottom end" className="min-w-[182px]">
         <Dropdown.Menu
+          className="dropdown-menu-default"
           selectionMode="single"
           selectedKeys={new Set([value])}
           onAction={(key) => onChange(String(key) as CommentsSortValue)}

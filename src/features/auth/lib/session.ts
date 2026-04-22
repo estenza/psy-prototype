@@ -17,8 +17,13 @@ export function buildSessionExpiresAt() {
   return new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
 }
 
+function getSessionCookieDomain() {
+  return process.env.SESSION_COOKIE_DOMAIN?.trim() || undefined;
+}
+
 function getSessionCookieConfig(expiresAt?: string) {
   return {
+    domain: getSessionCookieDomain(),
     expires: expiresAt ? new Date(expiresAt) : new Date(0),
     httpOnly: true,
     maxAge: expiresAt ? SESSION_MAX_AGE_SECONDS : 0,

@@ -1,8 +1,14 @@
-import { formatRelativeDate } from "@/features/comments/lib/comment-format";
+import { formatRelativeDate, formatRelativeDateCompact } from "@/features/comments/lib/comment-format";
 import type { ApiPostRecord, Post } from "@/features/feed/types";
 
 function formatPostPublishedAtLabel(createdAtIso: string) {
   return formatRelativeDate(
+    Math.floor(new Date(createdAtIso).getTime() / 1000),
+  );
+}
+
+function formatPostCompactPublishedAtLabel(createdAtIso: string) {
+  return formatRelativeDateCompact(
     Math.floor(new Date(createdAtIso).getTime() / 1000),
   );
 }
@@ -21,6 +27,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
     },
     activity: {
       publishedAtLabel: formatPostPublishedAtLabel(record.created_at_iso),
+      compactPublishedAtLabel: formatPostCompactPublishedAtLabel(record.created_at_iso),
       lastCommentAtLabel: record.timeline.last_comment_at_label,
       lastCommentAuthor: record.timeline.last_comment_author,
     },

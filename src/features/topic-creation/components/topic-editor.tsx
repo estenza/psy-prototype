@@ -2,7 +2,7 @@
 
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
-import { Button as HeroButton, FieldError } from "@heroui/react";
+import { Button as HeroButton, FieldError, ScrollShadow } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -564,72 +564,79 @@ export function TopicEditor({
         className="topic-editor-shell relative overflow-visible rounded-[16px]"
         data-invalid={invalid || undefined}
       >
-        <div className="flex flex-wrap items-center gap-0 px-3 py-2">
-          <ToolbarButton
-            label="Жирный"
-            icon={<TopicEditorBoldIcon />}
-            disabled={editor ? !editor.can().chain().focus().toggleBold().run() : false}
-            active={editor?.isActive("bold")}
-            onClick={() => editor?.chain().focus().toggleBold().run()}
-          />
-          <ToolbarButton
-            label="Зачеркнутый"
-            icon={<TopicEditorStrikethroughIcon />}
-            disabled={editor ? !editor.can().chain().focus().toggleStrike().run() : false}
-            active={editor?.isActive("strike")}
-            onClick={() => editor?.chain().focus().toggleStrike().run()}
-          />
-          <ToolbarButton
-            label="Цитата"
-            icon={<TopicEditorQuoteIcon />}
-            active={editor?.isActive("blockquote")}
-            onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-          />
-          <ToolbarButton
-            label="Ссылка"
-            icon={<TopicEditorLinkIcon />}
-            active={editor?.isActive("link")}
-            onClick={handleLink}
-          />
-          <div ref={emojiTriggerRef} className="relative">
-            <div aria-label="Эмодзи">
-              <ToolbarButton
-                label="Эмодзи"
-                icon={<TopicEditorEmojiIcon />}
-                active={isEmojiPickerOpen}
-                onClick={() => setIsEmojiPickerOpen((currentValue) => !currentValue)}
-              />
+        <ScrollShadow
+          orientation="horizontal"
+          hideScrollBar
+          size={48}
+          className="px-3 py-2"
+        >
+          <div className="flex w-max min-w-full flex-nowrap items-center gap-0 min-[721px]:w-auto min-[721px]:min-w-0 min-[721px]:flex-wrap">
+            <ToolbarButton
+              label="Жирный"
+              icon={<TopicEditorBoldIcon />}
+              disabled={editor ? !editor.can().chain().focus().toggleBold().run() : false}
+              active={editor?.isActive("bold")}
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+            />
+            <ToolbarButton
+              label="Зачеркнутый"
+              icon={<TopicEditorStrikethroughIcon />}
+              disabled={editor ? !editor.can().chain().focus().toggleStrike().run() : false}
+              active={editor?.isActive("strike")}
+              onClick={() => editor?.chain().focus().toggleStrike().run()}
+            />
+            <ToolbarButton
+              label="Цитата"
+              icon={<TopicEditorQuoteIcon />}
+              active={editor?.isActive("blockquote")}
+              onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+            />
+            <ToolbarButton
+              label="Ссылка"
+              icon={<TopicEditorLinkIcon />}
+              active={editor?.isActive("link")}
+              onClick={handleLink}
+            />
+            <div ref={emojiTriggerRef} className="relative">
+              <div aria-label="Эмодзи">
+                <ToolbarButton
+                  label="Эмодзи"
+                  icon={<TopicEditorEmojiIcon />}
+                  active={isEmojiPickerOpen}
+                  onClick={() => setIsEmojiPickerOpen((currentValue) => !currentValue)}
+                />
+              </div>
             </div>
+            <ToolbarButton
+              label="Изображение"
+              icon={<TopicEditorImageIcon />}
+              onClick={handleImage}
+            />
+            <ToolbarButton
+              label="Видео"
+              icon={<TopicEditorVideoIcon />}
+              onClick={handleVideo}
+            />
+            <ToolbarButton
+              label="Спойлер"
+              icon={<TopicEditorSpoilerIcon />}
+              active={editor?.isActive("spoiler")}
+              onClick={() => editor?.chain().focus().toggleSpoiler().run()}
+            />
+            <ToolbarButton
+              label="Нумерованный список"
+              icon={<TopicEditorOrderedListIcon />}
+              active={editor?.isActive("orderedList")}
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+            />
+            <ToolbarButton
+              label="Маркированный список"
+              icon={<TopicEditorBulletListIcon />}
+              active={editor?.isActive("bulletList")}
+              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+            />
           </div>
-          <ToolbarButton
-            label="Изображение"
-            icon={<TopicEditorImageIcon />}
-            onClick={handleImage}
-          />
-          <ToolbarButton
-            label="Видео"
-            icon={<TopicEditorVideoIcon />}
-            onClick={handleVideo}
-          />
-          <ToolbarButton
-            label="Спойлер"
-            icon={<TopicEditorSpoilerIcon />}
-            active={editor?.isActive("spoiler")}
-            onClick={() => editor?.chain().focus().toggleSpoiler().run()}
-          />
-          <ToolbarButton
-            label="Нумерованный список"
-            icon={<TopicEditorOrderedListIcon />}
-            active={editor?.isActive("orderedList")}
-            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          />
-          <ToolbarButton
-            label="Маркированный список"
-            icon={<TopicEditorBulletListIcon />}
-            active={editor?.isActive("bulletList")}
-            onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          />
-        </div>
+        </ScrollShadow>
 
         <div className="topic-editor-content relative">
           {isEditorEmpty ? (

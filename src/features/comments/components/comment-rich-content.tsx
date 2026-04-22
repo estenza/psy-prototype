@@ -1,20 +1,36 @@
 "use client";
 
+import { buildPublicProfilePathFromHandle } from "@/features/auth/lib/profile";
+
 type CommentRichContentProps = {
   html: string;
-  clamped?: boolean;
 };
+
+const COMMENT_MENTION_PATTERN = /@\[([^[\]|]+)(?:\|([^[\]|]+))?\]/g;
+
+function decorateCommentHtml(html: string) {
+  return html.replace(
+    COMMENT_MENTION_PATTERN,
+    (_match, mentionLabel: string) => {
+    const profilePath = buildPublicProfilePathFromHandle(`@${mentionLabel}`);
+
+    if (!profilePath) {
+      return `@${mentionLabel}`;
+    }
+
+    return `<a href="${profilePath}">@${mentionLabel}</a>`;
+    },
+  );
+}
 
 export function CommentRichContent({
   html,
-  clamped = false,
 }: CommentRichContentProps) {
   return (
     <div
       className="comment-rich-content text-label-primary w-full text-[16px] leading-6"
-      data-clamped={clamped ? "true" : "false"}
       dangerouslySetInnerHTML={{
-        __html: html,
+        __html: decorateCommentHtml(html),
       }}
     />
   );

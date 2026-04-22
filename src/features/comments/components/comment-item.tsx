@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { AuthorInline } from "@/components/ui/author-inline";
-import { COMMENT_PREVIEW_CHARACTER_LIMIT } from "@/features/comments/constants";
+import Link from "next/link";
+import { useLayoutEffect, useRef, useState } from "react";
+import { UserAvatarAction } from "@/components/ui/user-avatar-action";
 import { CommentActions } from "@/features/comments/components/comment-actions";
 import { CommentsComposer } from "@/features/comments/components/comments-composer";
 import { CommentMoreMenu } from "@/features/comments/components/comment-more-menu";
 import { CommentReplies } from "@/features/comments/components/comment-replies";
 import { CommentRichContent } from "@/features/comments/components/comment-rich-content";
-import { formatReplyCount } from "@/features/comments/lib/comment-format";
+import {
+  COMMENT_AVATAR_SIZE,
+  COMMENT_BRANCH_ACCENT,
+  COMMENT_BRANCH_ELBOW_RADIUS,
+  COMMENT_BRANCH_REPLY_CENTER,
+  COMMENT_BRANCH_X,
+  CommentThreadElbow,
+} from "@/features/comments/components/comment-thread-primitives";
 import { buildPublicProfilePathFromHandle } from "@/features/auth/lib/profile";
+import { formatReplyCount } from "@/features/comments/lib/comment-format";
 import type { CommentNode, CommentsViewer } from "@/features/comments/types";
 
 type CommentItemProps = {
@@ -29,6 +37,67 @@ type CommentItemProps = {
   onReport: (commentId: string) => void;
 };
 
+type CommentBranchGeometry = {
+  targetCenters: number[];
+  endOffset: number;
+};
+
+function CommentBranchLayer({
+  targetCenters,
+  endOffset,
+  onToggle,
+  expanded,
+  branchHighlighted = false,
+  onBranchHoverChange,
+}: {
+  targetCenters: number[];
+  endOffset: number;
+  onToggle: () => void;
+  expanded: boolean;
+  branchHighlighted?: boolean;
+  onBranchHoverChange?: (hovered: boolean) => void;
+}) {
+  const lineTop = COMMENT_AVATAR_SIZE;
+  const height = Math.max(lineTop, Math.round(endOffset));
+
+  return (
+    <div className="absolute left-0 top-0 z-10 w-12" style={{ height: `${height}px` }}>
+      <button
+        type="button"
+        className="absolute inset-0 cursor-pointer rounded-none border-0 bg-transparent p-0"
+        onClick={onToggle}
+        onMouseEnter={() => onBranchHoverChange?.(true)}
+        onMouseLeave={() => onBranchHoverChange?.(false)}
+        onFocus={() => onBranchHoverChange?.(true)}
+        onBlur={() => onBranchHoverChange?.(false)}
+        aria-label={expanded ? "Свернуть ответы" : "Развернуть ответы"}
+      >
+        <span
+          className="absolute w-px transition-colors"
+          style={{
+            left: `${COMMENT_BRANCH_X}px`,
+            top: `${lineTop}px`,
+            bottom: 0,
+            backgroundColor: branchHighlighted ? COMMENT_BRANCH_ACCENT : "var(--separator-primary)",
+          }}
+        />
+        {targetCenters.map((replyCenter) => (
+          <CommentThreadElbow
+            key={replyCenter}
+            className="right-0"
+            highlighted={branchHighlighted}
+            style={{
+              left: `${COMMENT_BRANCH_X}px`,
+              top: `${replyCenter - COMMENT_BRANCH_ELBOW_RADIUS}px`,
+              height: `${COMMENT_BRANCH_ELBOW_RADIUS}px`,
+            }}
+          />
+        ))}
+      </button>
+    </div>
+  );
+}
+
 export function CommentItem({
   comment,
   viewer,
@@ -45,34 +114,174 @@ export function CommentItem({
   onBlock,
   onReport,
 }: CommentItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isReplyComposerOpen, setIsReplyComposerOpen] = useState(false);
-  const [areRepliesVisible, setAreRepliesVisible] = useState(true);
+  const [areRepliesCollapsed, setAreRepliesCollapsed] = useState(false);
+  const [areExtraRepliesVisible, setAreExtraRepliesVisible] = useState(false);
+  const [isRepliesBranchHovered, setIsRepliesBranchHovered] = useState(false);
+  const [branchGeometry, setBranchGeometry] = useState<CommentBranchGeometry>({
+    targetCenters: [],
+    endOffset: COMMENT_AVATAR_SIZE,
+  });
+  const articleRef = useRef<HTMLElement | null>(null);
+  const replyAnchorRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const hiddenRepliesButtonRef = useRef<HTMLButtonElement | null>(null);
+  const collapsedRepliesButtonRef = useRef<HTMLButtonElement | null>(null);
   const canLike = isViewerAuthenticated
     ? comment.capabilities.canVote
     : true;
   const canReplyToComment = canPostReply && comment.capabilities.canReply;
   const canStartReply = isViewerAuthenticated ? canReplyToComment : true;
+  const profileHref = buildPublicProfilePathFromHandle(comment.author.handle);
+  const hasReplies = comment.replyCount > 0;
+  const visibleReplies = areExtraRepliesVisible ? comment.replies : comment.replies.slice(0, 3);
+  const hiddenRepliesCount = Math.max(comment.replies.length - visibleReplies.length, 0);
+  const hasHiddenReplies = hiddenRepliesCount > 0;
 
-  const shouldClamp = comment.bodyText.length > COMMENT_PREVIEW_CHARACTER_LIMIT;
-  const commentContent = (
-    <article className="flex w-full min-w-0 flex-col pl-1 pt-2 pb-1">
-      <div className="flex w-full min-w-0 items-center pb-2">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <AuthorInline
-            avatarUrl={comment.author.avatarUrl}
-            handle={comment.author.handle}
-            name={comment.author.name}
-            meta={comment.relativeDate}
-            profileHref={buildPublicProfilePathFromHandle(comment.author.handle)}
-            avatarSize="comment-md"
-            showStatusDot
-            className="min-w-0 flex-1"
-          />
+  const collapseReplies = () => {
+    setIsRepliesBranchHovered(false);
+    setAreRepliesCollapsed(true);
+  };
+
+  const expandReplies = () => {
+    setAreRepliesCollapsed(false);
+  };
+
+  useLayoutEffect(() => {
+    if (!hasReplies || !articleRef.current) {
+      return;
+    }
+
+    const updateBranchGeometry = () => {
+      if (!articleRef.current) {
+        return;
+      }
+
+      const articleRect = articleRef.current.getBoundingClientRect();
+
+      const nextReplyCenters = areRepliesCollapsed
+        ? (() => {
+            if (!collapsedRepliesButtonRef.current) {
+              return [];
+            }
+
+            const buttonRect = collapsedRepliesButtonRef.current.getBoundingClientRect();
+            return [Math.round(buttonRect.top - articleRect.top + buttonRect.height / 2)];
+          })()
+        : replyAnchorRefs.current
+            .slice(0, visibleReplies.length)
+            .map((anchor) => {
+              if (!anchor) {
+                return null;
+              }
+
+              const anchorRect = anchor.getBoundingClientRect();
+              return Math.round(anchorRect.top - articleRect.top + COMMENT_BRANCH_REPLY_CENTER);
+            })
+            .filter((center): center is number => center !== null);
+
+      if (!areRepliesCollapsed && hasHiddenReplies && hiddenRepliesButtonRef.current) {
+        const buttonRect = hiddenRepliesButtonRef.current.getBoundingClientRect();
+        nextReplyCenters.push(
+          Math.round(buttonRect.top - articleRect.top + buttonRect.height / 2),
+        );
+      }
+
+      const nextEndOffset =
+        (nextReplyCenters.at(-1) ?? COMMENT_AVATAR_SIZE) - COMMENT_BRANCH_ELBOW_RADIUS;
+
+      setBranchGeometry({
+        targetCenters: nextReplyCenters,
+        endOffset: nextEndOffset,
+      });
+    };
+
+    updateBranchGeometry();
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => updateBranchGeometry())
+      : null;
+
+    if (resizeObserver) {
+      resizeObserver.observe(articleRef.current);
+      if (areRepliesCollapsed && collapsedRepliesButtonRef.current) {
+        resizeObserver.observe(collapsedRepliesButtonRef.current);
+      }
+      replyAnchorRefs.current.forEach((anchor) => {
+        if (anchor) {
+          resizeObserver.observe(anchor);
+        }
+      });
+      if (hasHiddenReplies && hiddenRepliesButtonRef.current) {
+        resizeObserver.observe(hiddenRepliesButtonRef.current);
+      }
+    } else {
+      window.addEventListener("resize", updateBranchGeometry);
+    }
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener("resize", updateBranchGeometry);
+      }
+    };
+  }, [hasReplies, areRepliesCollapsed, visibleReplies.length, hasHiddenReplies]);
+
+  return (
+    <article ref={articleRef} className="relative flex w-full min-w-0">
+      {hasReplies ? (
+        <CommentBranchLayer
+          targetCenters={branchGeometry.targetCenters}
+          endOffset={branchGeometry.endOffset}
+          onToggle={areRepliesCollapsed ? expandReplies : collapseReplies}
+          expanded={!areRepliesCollapsed}
+          branchHighlighted={isRepliesBranchHovered}
+          onBranchHoverChange={setIsRepliesBranchHovered}
+        />
+      ) : null}
+
+      <div className="flex w-9 shrink-0 flex-col items-center self-stretch">
+        <UserAvatarAction
+          avatarUrl={comment.author.avatarUrl}
+          fallbackText={comment.author.initials}
+          name={comment.author.name}
+          showStatusDot={comment.viewerOwnsComment}
+          size="comment-md"
+          href={profileHref ?? null}
+          ariaLabel={`Открыть профиль ${comment.author.name}`}
+        />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col pl-3">
+        <div className="flex min-w-0 items-center gap-2 pl-1">
+          <div className="flex min-w-0 flex-1 items-center">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+              {profileHref ? (
+                <Link
+                  href={profileHref}
+                  className="rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4"
+                >
+                  {comment.author.name}
+                </Link>
+              ) : (
+                <span className="text-[14px] leading-5 font-medium text-[var(--label-primary)]">
+                  {comment.author.name}
+                </span>
+              )}
+              <span className="min-w-0 truncate text-[14px] leading-5 text-[var(--label-tertiary)]">
+                {comment.author.handle}
+              </span>
+              <span aria-hidden="true" className="text-[14px] leading-5 text-[var(--label-tertiary)]">•</span>
+              <span className="flex items-center text-[14px] leading-5 text-[var(--label-tertiary)]">
+                <span className="min-[480px]:hidden">{comment.compactRelativeDate}</span>
+                <span className="hidden min-[480px]:inline">{comment.relativeDate}</span>
+              </span>
+            </div>
+          </div>
 
           {!isEditing ? (
-            <div className="ml-auto shrink-0">
+            <div className="shrink-0">
               <CommentMoreMenu
                 actionRow
                 canReport={comment.capabilities.canReport}
@@ -93,16 +302,14 @@ export function CommentItem({
             </div>
           ) : null}
         </div>
-      </div>
 
-      <div className="min-w-0">
-        {isEditing ? (
-          <div className="pt-1">
+        <div className="min-w-0 pl-1 pt-1 pb-3">
+          {isEditing ? (
             <CommentsComposer
               viewer={viewer}
               placeholder="Обновить комментарий..."
               submitLabel="Сохранить"
-              initialValue={comment.bodyText}
+              initialValue={comment.bodyHtml}
               showInlineCancel
               submitDisabled={false}
               compact
@@ -119,32 +326,14 @@ export function CommentItem({
                 })
               }
             />
-          </div>
-        ) : (
-          <>
+          ) : (
             <div className="min-w-0">
-              <CommentRichContent
-                html={comment.bodyHtml}
-                clamped={shouldClamp && !isExpanded}
-              />
+              <CommentRichContent html={comment.bodyHtml} />
             </div>
+          )}
+        </div>
 
-            {shouldClamp ? (
-              <button
-                type="button"
-                className="interactive-tertiary type-body-md-medium text-label-secondary mt-[3px] inline-flex rounded-[3px]"
-                onClick={() => setIsExpanded((currentState) => !currentState)}
-              >
-                {isExpanded ? "Свернуть" : "Читать дальше"}
-              </button>
-            ) : null}
-          </>
-        )}
-
-      </div>
-
-      {!isEditing ? (
-        <div className="min-w-0">
+        {!isEditing ? (
           <CommentActions
             isReply={isReply}
             liked={comment.userVote === "up"}
@@ -167,79 +356,92 @@ export function CommentItem({
 
               setIsReplyComposerOpen((currentState) => !currentState);
             }}
-            repliesToggleLabel={!isReply && comment.replyCount > 0
-              ? (areRepliesVisible ? "Скрыть ответы" : formatReplyCount(comment.replyCount))
-              : null}
-            repliesToggleOpen={!isReply && areRepliesVisible}
-            onRepliesToggle={!isReply && comment.replyCount > 0
-              ? () => setAreRepliesVisible((currentState) => !currentState)
-              : undefined}
           />
-        </div>
-      ) : null}
+        ) : null}
 
-      {isReplyComposerOpen ? (
-        <div className="min-w-0 pt-4">
-          <CommentsComposer
-            viewer={viewer}
-            placeholder="Ответить..."
-            submitLabel="Отправить"
-            showInlineCancel
-            submitDisabled={!canReplyToComment}
-            editorDisabled={!isViewerAuthenticated}
-            disabledReason={canReplyToComment ? null : postDisabledReason}
-            compact
-            autoFocus
-            submitting={submittingTarget === comment.id}
-            onCancel={() => setIsReplyComposerOpen(false)}
-            onSubmit={(body) =>
-              onSubmitReply(body, comment.id).then((result) => {
-                if (result) {
-                  setIsReplyComposerOpen(false);
-                }
-
-                return result;
-              })
-            }
-          />
-        </div>
-      ) : null}
-    </article>
-  );
-
-  if (isReply) {
-    return commentContent;
-  }
-
-  return (
-    <div className="flex w-full flex-col gap-4">
-      {commentContent}
-
-      {comment.replyCount > 0 ? (
-        <CommentReplies
-          isOpen={areRepliesVisible}
-        >
-          {comment.replies.map((reply) => (
-            <CommentItem
-              key={reply.id}
-              comment={reply}
+        {isReplyComposerOpen ? (
+          <div className="min-w-0 pt-5">
+            <CommentsComposer
               viewer={viewer}
-              canPostReply={canPostReply}
-              isViewerAuthenticated={isViewerAuthenticated}
-              onRequireAuth={onRequireAuth}
-              postDisabledReason={postDisabledReason}
-              submittingTarget={submittingTarget}
-              isReply
-              onDeleteComment={onDeleteComment}
-              onEditComment={onEditComment}
-              onSubmitReply={onSubmitReply}
-              onVote={onVote}
-              onBlock={onBlock}
-              onReport={onReport}
+              placeholder="Ответить..."
+              submitLabel="Отправить"
+              showInlineCancel
+              submitDisabled={!canReplyToComment}
+              editorDisabled={!isViewerAuthenticated}
+              disabledReason={canReplyToComment ? null : postDisabledReason}
+              compact
+              autoFocus
+              submitting={submittingTarget === comment.id}
+              onCancel={() => setIsReplyComposerOpen(false)}
+              onSubmit={(body) =>
+                onSubmitReply(body, comment.id).then((result) => {
+                  if (result) {
+                    setIsReplyComposerOpen(false);
+                  }
+
+                  return result;
+                })
+              }
             />
-          ))}
-        </CommentReplies>
-      ) : null}
-    </div>
+          </div>
+        ) : null}
+
+        {hasReplies && areRepliesCollapsed ? (
+          <div className="min-w-0 pt-5">
+            <button
+              ref={collapsedRepliesButtonRef}
+              type="button"
+              className="w-fit rounded-full pl-1 text-[14px] leading-5 font-medium text-[var(--accent-primary)] transition-colors hover:text-[var(--accent-primary)]"
+              onClick={expandReplies}
+            >
+              {formatReplyCount(comment.replyCount)}
+            </button>
+          </div>
+        ) : null}
+
+        {hasReplies && !areRepliesCollapsed ? (
+          <div className="min-w-0 pt-5">
+            <CommentReplies isOpen>
+              {visibleReplies.map((reply, index) => (
+                <div
+                  key={reply.id}
+                  ref={(node) => {
+                    replyAnchorRefs.current[index] = node;
+                  }}
+                  className="min-w-0"
+                >
+                  <CommentItem
+                    comment={reply}
+                    viewer={viewer}
+                    canPostReply={canPostReply}
+                    isViewerAuthenticated={isViewerAuthenticated}
+                    onRequireAuth={onRequireAuth}
+                    postDisabledReason={postDisabledReason}
+                    submittingTarget={submittingTarget}
+                    isReply
+                    onDeleteComment={onDeleteComment}
+                    onEditComment={onEditComment}
+                    onSubmitReply={onSubmitReply}
+                    onVote={onVote}
+                    onBlock={onBlock}
+                    onReport={onReport}
+                  />
+                </div>
+              ))}
+              {hasHiddenReplies ? (
+                <button
+                  ref={hiddenRepliesButtonRef}
+                  type="button"
+                  className="w-fit rounded-full pl-1 text-[14px] leading-5 font-medium text-[var(--accent-primary)] transition-colors hover:text-[var(--accent-primary)]"
+                  onClick={() => setAreExtraRepliesVisible(true)}
+                >
+                  {`Еще ${formatReplyCount(hiddenRepliesCount)}`}
+                </button>
+              ) : null}
+            </CommentReplies>
+          </div>
+        ) : null}
+      </div>
+    </article>
   );
 }

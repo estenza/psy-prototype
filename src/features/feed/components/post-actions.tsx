@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ToggleButton, cn, toast } from "@heroui/react";
 import {
   ChatIcon,
@@ -21,10 +21,11 @@ export function PostActions({
   className,
   onToggleLike,
 }: PostActionsProps) {
+  const router = useRouter();
   const likedActionClassName =
     "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)]";
   const tertiaryActionClassName =
-    "interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors";
+    "interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors active:scale-[0.96]";
   const tertiaryIconOnlyActionClassName = cn(
     tertiaryActionClassName,
     "button--icon-only w-9 px-0",
@@ -85,10 +86,14 @@ export function PostActions({
       </HoverTooltip>
 
       <HoverTooltip label="Ответить">
-        <Link
-          href={`/discussions/${post.id}`}
+        <button
+          type="button"
           aria-label="Ответить"
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            router.push(`/discussions/${post.id}`);
+          }}
           className={cn(
             tertiaryActionClassName,
             "pointer-events-auto",
@@ -101,7 +106,7 @@ export function PostActions({
           {post.stats.comments > 0 ? (
             <span className="flex items-center leading-5">{post.stats.comments}</span>
           ) : null}
-        </Link>
+        </button>
       </HoverTooltip>
 
       <HoverTooltip label="Поделиться">

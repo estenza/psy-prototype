@@ -9,6 +9,7 @@ export type Post = {
   author: UserSummary;
   activity: {
     publishedAtLabel: string;
+    compactPublishedAtLabel: string;
     lastCommentAtLabel: string;
     lastCommentAuthor: string;
   };

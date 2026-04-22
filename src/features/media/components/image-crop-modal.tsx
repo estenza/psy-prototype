@@ -69,9 +69,14 @@ export function ImageCropModal({
 
   return (
     <Modal.Backdrop
-      className="overlay-scrim-strong fixed inset-0 z-[260]"
+      variant="opaque"
+      className="fixed inset-0 z-[260]"
       isDismissable
-      onClick={onClose}
+      onClick={(event) => {
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        if (target?.closest('[data-slot="modal-dialog"]')) return;
+        onClose();
+      }}
     >
       <Modal.Container className="flex min-h-dvh items-center justify-center p-4">
       <Modal.Dialog

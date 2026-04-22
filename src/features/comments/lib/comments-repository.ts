@@ -7,9 +7,13 @@ import { canDeleteOwnComment, canModerateContent } from "@/features/auth/lib/per
 import { getUserHandle } from "@/features/auth/lib/profile";
 import type { SessionUser } from "@/features/auth/types";
 import {
+  buildCommentHtml,
+  escapeHtml,
   formatRelativeDate,
+  formatRelativeDateCompact,
+  getCommentContentTextLength,
   getInitials,
-  plainTextToHtml,
+  hasCommentBodyContent,
   stripHtml,
 } from "@/features/comments/lib/comment-format";
 import type {
@@ -66,6 +70,11 @@ type DiscussionCommentBaseRow = {
   status: CommentStatus;
 };
 
+type CommentAuthorMentionRow = {
+  display_name: string;
+  nickname: string | null;
+};
+
 type DiscussionCommentReportRow = {
   id: string;
   status: CommentReportStatus;
@@ -108,8 +117,10 @@ type ModerateDiscussionCommentInput = {
 };
 
 const COMMENT_BODY_MAX_LENGTH = 5000;
+const COMMENT_BODY_HTML_MAX_LENGTH = 300_000;
 const COMMENT_REPORT_REASON_MAX_LENGTH = 500;
 const COMMENT_EDIT_WINDOW_MS = 15 * 60 * 1000;
+const COMMENT_MAX_THREAD_DEPTH = 2;
 
 const PG_DISCUSSION_COMMENT_COLUMNS = `
   discussion_comments.id,
@@ -180,14 +191,29 @@ function normalizeCommentBody(value: string) {
     throw new CommentsRepositoryError("Введите текст комментария.", 400);
   }
 
-  if (trimmedValue.length > COMMENT_BODY_MAX_LENGTH) {
+  const bodyHtml = buildCommentHtml(trimmedValue);
+
+  if (!hasCommentBodyContent(bodyHtml)) {
+    throw new CommentsRepositoryError("Введите текст комментария.", 400);
+  }
+
+  const bodyTextLength = getCommentContentTextLength(bodyHtml);
+
+  if (bodyTextLength > COMMENT_BODY_MAX_LENGTH) {
     throw new CommentsRepositoryError(
       `Комментарий должен быть не длиннее ${COMMENT_BODY_MAX_LENGTH} символов.`,
       400,
     );
   }
 
-  return trimmedValue;
+  if (bodyHtml.length > COMMENT_BODY_HTML_MAX_LENGTH) {
+    throw new CommentsRepositoryError(
+      "Комментарий получился слишком тяжёлым. Попробуйте изображение меньшего размера.",
+      400,
+    );
+  }
+
+  return bodyHtml;
 }
 
 function normalizeReportReason(value: string | null | undefined) {
@@ -205,6 +231,55 @@ function normalizeReportReason(value: string | null | undefined) {
   }
 
   return trimmedValue;
+}
+
+function getCommentMentionLabel(params: {
+  displayName: string;
+  nickname: string | null;
+}) {
+  return getUserHandle({
+    displayName: params.displayName,
+    nickname: params.nickname,
+  }).replace(/^@/, "");
+}
+
+function prependCommentMention(
+  bodyHtml: string,
+  mentionLabel: string,
+  targetCommentId?: string | null,
+) {
+  const trimmedLabel = mentionLabel.trim();
+
+  if (!trimmedLabel) {
+    return bodyHtml;
+  }
+
+  const mentionToken = targetCommentId
+    ? `@[${trimmedLabel}|${targetCommentId}]`
+    : `@[${trimmedLabel}]`;
+  const escapedMention = `${escapeHtml(mentionToken)} `;
+
+  if (bodyHtml.startsWith("<p>")) {
+    return bodyHtml.replace("<p>", `<p>${escapedMention}`);
+  }
+
+  return `<p>${escapedMention}</p>${bodyHtml}`;
+}
+
+function extractCommentMentionMeta(bodyHtml: string) {
+  const mentionMatch = bodyHtml.match(/@\[([^[\]|]+)(?:\|([^[\]|]+))?\]/);
+
+  if (!mentionMatch) {
+    return {
+      label: null,
+      targetCommentId: null,
+    };
+  }
+
+  return {
+    label: mentionMatch[1] ?? null,
+    targetCommentId: mentionMatch[2] ?? null,
+  };
 }
 
 async function queryPgRows<T extends Record<string, unknown>>(query: string, values: unknown[] = []) {
@@ -282,8 +357,19 @@ function buildCommentNode(params: {
   currentUser: SessionUser | null;
   replies: CommentNode[];
   row: DiscussionCommentRow;
+  depth: number;
+  bodyHtml?: string;
+  bodyText?: string;
 }): CommentNode {
-  const { capabilities, currentUser, replies, row } = params;
+  const {
+    capabilities,
+    currentUser,
+    replies,
+    row,
+    depth,
+    bodyHtml = row.body_html,
+    bodyText = row.body_text,
+  } = params;
   const viewerOwnsComment = Boolean(currentUser && row.author_user_id === currentUser.id);
   const currentUserCanInteract = Boolean(currentUser && !currentUser.isBanned);
   const canEditComment = canActorEditComment(currentUser, {
@@ -300,7 +386,7 @@ function buildCommentNode(params: {
     id: row.id,
     parentId: row.parent_comment_id,
     rootId: row.root_comment_id ?? row.id,
-    depth: row.depth,
+    depth,
     author: mapCommentAuthor({
       avatarUrl: row.author_avatar_url,
       displayName: row.author_display_name,
@@ -309,8 +395,11 @@ function buildCommentNode(params: {
     }),
     createdAt: Math.floor(new Date(row.created_at).getTime() / 1000),
     relativeDate: formatRelativeDate(Math.floor(new Date(row.created_at).getTime() / 1000)),
-    bodyHtml: row.body_html,
-    bodyText: row.body_text,
+    compactRelativeDate: formatRelativeDateCompact(
+      Math.floor(new Date(row.created_at).getTime() / 1000),
+    ),
+    bodyHtml,
+    bodyText,
     upvotes: row.likes_count,
     downvotes: 0,
     isEdited: Boolean(row.edited_at),
@@ -318,7 +407,7 @@ function buildCommentNode(params: {
     isLoved: false,
     userVote: readBoolean(row.viewer_liked) ? "up" : null,
     viewerOwnsComment,
-    replyCount: replies.length,
+    replyCount: Math.max(replies.length, row.replies_count),
     replies,
     capabilities: {
       canReply: capabilities.canReply && row.status === "published",
@@ -355,6 +444,37 @@ function sortReplies(comments: DiscussionCommentRow[]) {
   );
 }
 
+function sortFlattenedRepliesByMentionTarget(comments: DiscussionCommentRow[]) {
+  const sortedComments = sortReplies(comments);
+  const commentsById = new Map(sortedComments.map((comment) => [comment.id, comment]));
+  const commentsByMentionTargetId = new Map<string, DiscussionCommentRow[]>();
+  const rootComments: DiscussionCommentRow[] = [];
+
+  sortedComments.forEach((comment) => {
+    const { targetCommentId } = extractCommentMentionMeta(comment.body_html);
+
+    if (!targetCommentId || !commentsById.has(targetCommentId)) {
+      rootComments.push(comment);
+      return;
+    }
+
+    const currentTargetReplies = commentsByMentionTargetId.get(targetCommentId) ?? [];
+    currentTargetReplies.push(comment);
+    commentsByMentionTargetId.set(targetCommentId, currentTargetReplies);
+  });
+
+  const expandComment = (comment: DiscussionCommentRow): DiscussionCommentRow[] => [
+    comment,
+    ...(commentsByMentionTargetId.get(comment.id) ?? []).flatMap(expandComment),
+  ];
+
+  return rootComments.flatMap(expandComment);
+}
+
+function countCommentNodes(comments: CommentNode[]): number {
+  return comments.reduce((total, comment) => total + 1 + countCommentNodes(comment.replies), 0);
+}
+
 function buildCommentsSection(params: {
   capabilities: CommentsCapabilities;
   currentUser: SessionUser | null;
@@ -363,23 +483,77 @@ function buildCommentsSection(params: {
   sort: CommentsSortValue;
   viewer: CommentsViewer;
 }): CommentsSectionData {
-  const repliesByRootCommentId = new Map<string, DiscussionCommentRow[]>();
+  const repliesByParentCommentId = new Map<string, DiscussionCommentRow[]>();
 
   params.rows.forEach((row) => {
-    if (!row.parent_comment_id) {
+    const parentId = row.parent_comment_id;
+
+    if (!parentId) {
       return;
     }
 
-    const rootId = row.root_comment_id ?? row.parent_comment_id;
-
-    if (!rootId) {
-      return;
-    }
-
-    const currentReplies = repliesByRootCommentId.get(rootId) ?? [];
+    const currentReplies = repliesByParentCommentId.get(parentId) ?? [];
     currentReplies.push(row);
-    repliesByRootCommentId.set(rootId, currentReplies);
+    repliesByParentCommentId.set(parentId, currentReplies);
   });
+
+  const buildFlattenedReplies = (
+    parentId: string,
+    mentionTargetRow: DiscussionCommentRow,
+    depth: number,
+  ): CommentNode[] =>
+    sortReplies(repliesByParentCommentId.get(parentId) ?? []).flatMap((replyRow) => {
+      const prefixedBodyHtml = prependCommentMention(
+        replyRow.body_html,
+        getCommentMentionLabel({
+          displayName: mentionTargetRow.author_display_name,
+          nickname: mentionTargetRow.author_nickname,
+        }),
+        mentionTargetRow.id,
+      );
+
+      return [
+        buildCommentNode({
+          capabilities: params.capabilities,
+          currentUser: params.currentUser,
+          replies: [],
+          row: replyRow,
+          depth,
+          bodyHtml: prefixedBodyHtml,
+          bodyText: stripHtml(prefixedBodyHtml),
+        }),
+        ...buildFlattenedReplies(replyRow.id, replyRow, depth),
+      ];
+    });
+
+  const buildRepliesTree = (parentId: string, depth: number): CommentNode[] =>
+    (depth >= COMMENT_MAX_THREAD_DEPTH
+      ? sortFlattenedRepliesByMentionTarget(repliesByParentCommentId.get(parentId) ?? [])
+      : sortReplies(repliesByParentCommentId.get(parentId) ?? []))
+      .flatMap((replyRow) => {
+      if (depth >= COMMENT_MAX_THREAD_DEPTH) {
+        return [
+          buildCommentNode({
+            capabilities: params.capabilities,
+            currentUser: params.currentUser,
+            replies: [],
+            row: replyRow,
+            depth,
+          }),
+          ...buildFlattenedReplies(replyRow.id, replyRow, depth),
+        ];
+      }
+
+      return [
+        buildCommentNode({
+          capabilities: params.capabilities,
+          currentUser: params.currentUser,
+          replies: buildRepliesTree(replyRow.id, depth + 1),
+          row: replyRow,
+          depth,
+        }),
+      ];
+      });
 
   const topLevelComments = sortTopLevelComments(
     params.rows.filter((row) => !row.parent_comment_id),
@@ -387,27 +561,16 @@ function buildCommentsSection(params: {
   );
 
   const mappedComments = topLevelComments.map((row) => {
-    const replies = sortReplies(repliesByRootCommentId.get(row.id) ?? []).map((replyRow) =>
-      buildCommentNode({
-        capabilities: params.capabilities,
-        currentUser: params.currentUser,
-        replies: [],
-        row: replyRow,
-      }),
-    );
-
     return buildCommentNode({
       capabilities: params.capabilities,
       currentUser: params.currentUser,
-      replies,
+      replies: buildRepliesTree(row.id, 1),
       row,
+      depth: 0,
     });
   });
 
-  const totalCount = mappedComments.reduce(
-    (total, comment) => total + 1 + comment.replies.length,
-    0,
-  );
+  const totalCount = countCommentNodes(mappedComments);
 
   return {
     pageId: params.pageId,
@@ -479,6 +642,41 @@ async function findDiscussionCommentBaseById(commentId: string) {
     .get(commentId);
 
   return (row as DiscussionCommentBaseRow | undefined) ?? null;
+}
+
+async function findCommentAuthorMentionByUserId(userId: string) {
+  if (isPostgresAuthEnabled()) {
+    return (await queryPgOne<CommentAuthorMentionRow>(
+      `SELECT display_name, nickname
+       FROM users
+       WHERE id = $1
+       LIMIT 1`,
+      [userId],
+    )) as CommentAuthorMentionRow | null;
+  }
+
+  const row = getDatabase()
+    .prepare(
+      `SELECT display_name, nickname
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+    )
+    .get(userId);
+
+  return (row as CommentAuthorMentionRow | undefined) ?? null;
+}
+
+async function listCommentAncestorChain(comment: DiscussionCommentBaseRow) {
+  const chain = [comment];
+  let currentComment = comment;
+
+  while (currentComment.parent_comment_id) {
+    currentComment = await assertCommentExists(currentComment.parent_comment_id);
+    chain.unshift(currentComment);
+  }
+
+  return chain;
 }
 
 async function listPublishedCommentRows(discussionId: string, viewerUserId?: string | null) {
@@ -722,9 +920,6 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
   assertCanCreateComment(input.actor);
   await assertDiscussionExists(input.discussionId);
 
-  const normalizedBody = normalizeCommentBody(input.body);
-  const bodyHtml = plainTextToHtml(normalizedBody);
-  const bodyText = stripHtml(bodyHtml);
   const parentComment = input.parentId
     ? await assertCommentExists(input.parentId)
     : null;
@@ -739,12 +934,41 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
     }
   }
 
+  let bodyHtml = normalizeCommentBody(input.body);
+  let effectiveParentComment = parentComment;
+
+  if (parentComment) {
+    const ancestorChain = await listCommentAncestorChain(parentComment);
+    const targetDepth = ancestorChain.length - 1;
+
+    if (targetDepth >= COMMENT_MAX_THREAD_DEPTH) {
+      const branchParentComment = ancestorChain[COMMENT_MAX_THREAD_DEPTH - 1] ?? parentComment;
+      const mentionAuthor = await findCommentAuthorMentionByUserId(parentComment.author_user_id);
+
+      if (mentionAuthor) {
+        bodyHtml = prependCommentMention(
+          bodyHtml,
+          getCommentMentionLabel({
+            displayName: mentionAuthor.display_name,
+            nickname: mentionAuthor.nickname,
+          }),
+          parentComment.id,
+        );
+      }
+
+      effectiveParentComment = branchParentComment;
+    }
+  }
+
+  const bodyText = stripHtml(bodyHtml);
+
   const id = randomUUID();
   const timestamp = new Date().toISOString();
-  const rootCommentId = parentComment ? parentComment.root_comment_id ?? parentComment.id : null;
-  const parentCommentId = parentComment
-    ? (parentComment.depth === 0 ? parentComment.id : rootCommentId)
+  const rootCommentId = effectiveParentComment
+    ? effectiveParentComment.root_comment_id ?? effectiveParentComment.id
     : null;
+  const parentCommentId = effectiveParentComment?.id ?? null;
+  const commentDepth = effectiveParentComment ? 1 : 0;
 
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
@@ -768,7 +992,7 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
         input.actor.id,
         parentCommentId,
         rootCommentId,
-        parentComment ? 1 : 0,
+        commentDepth,
         bodyHtml,
         bodyText,
         timestamp,
@@ -799,7 +1023,7 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
         input.actor.id,
         parentCommentId,
         rootCommentId,
-        parentComment ? 1 : 0,
+        commentDepth,
         bodyHtml,
         bodyText,
         timestamp,
@@ -984,8 +1208,7 @@ export async function updateDiscussionComment(input: UpdateDiscussionCommentInpu
     );
   }
 
-  const normalizedBody = normalizeCommentBody(input.body);
-  const bodyHtml = plainTextToHtml(normalizedBody);
+  const bodyHtml = normalizeCommentBody(input.body);
   const bodyText = stripHtml(bodyHtml);
   const timestamp = new Date().toISOString();
 

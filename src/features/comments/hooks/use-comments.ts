@@ -73,6 +73,22 @@ export function useComments(pageId: string) {
     void loadComments(sort);
   }, [loadComments, pageId, sort]);
 
+  useEffect(() => {
+    const refreshComments = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void loadComments(sort);
+    };
+
+    const intervalId = window.setInterval(refreshComments, 15_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [loadComments, sort]);
+
   async function submitComment({
     body,
     parentId = null,
@@ -245,10 +261,6 @@ export function useComments(pageId: string) {
         throw new Error(payload.error ?? "Не удалось удалить комментарий.");
       }
 
-      setFeedback({
-        kind: "success",
-        message: "Комментарий удалён.",
-      });
       await loadComments(sort);
     } catch (actionError) {
       setFeedback({

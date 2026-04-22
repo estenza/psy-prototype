@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { APP_THEME_COOKIE_MAX_AGE, APP_THEME_COOKIE_NAME } from "@/components/theme/theme-constants";
+
 export type AppTheme = "light" | "dark";
 
 const APP_THEME_STORAGE_KEY = "psy-prototype:theme";
@@ -56,6 +58,8 @@ export function AppThemeProvider({
     } catch {
       // If localStorage is unavailable, keep the current theme only for this session.
     }
+
+    document.cookie = `${APP_THEME_COOKIE_NAME}=${theme};path=/;max-age=${APP_THEME_COOKIE_MAX_AGE};SameSite=Lax`;
   }, [theme]);
 
   useEffect(() => {

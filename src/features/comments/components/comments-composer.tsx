@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CommentEditor } from "@/features/comments/components/comment-editor";
+import { hasCommentBodyContent } from "@/features/comments/lib/comment-format";
 import type { CommentsViewer } from "@/features/comments/types";
 
 type CommentsComposerProps = {
@@ -37,11 +38,13 @@ export function CommentsComposer({
   onSubmit,
 }: CommentsComposerProps) {
   const [draft, setDraft] = useState(initialValue);
-  const [isActive, setIsActive] = useState(autoFocus || initialValue.trim().length > 0);
+  const [isActive, setIsActive] = useState(
+    autoFocus || hasCommentBodyContent(initialValue),
+  );
   void viewer;
 
-  const trimmedDraft = draft.trim();
-  const hasDraft = trimmedDraft.length > 0;
+  const hasDraft = hasCommentBodyContent(draft);
+  const showEditorTools = isActive || hasDraft || showInlineCancel;
   const canSubmit =
     !editorDisabled && !submitDisabled && hasDraft && !submitting;
 
@@ -50,7 +53,7 @@ export function CommentsComposer({
       return;
     }
 
-    const isSuccessful = await onSubmit(trimmedDraft);
+    const isSuccessful = await onSubmit(draft);
 
     if (!isSuccessful) {
       return;
@@ -85,37 +88,37 @@ export function CommentsComposer({
           disabled={submitting || editorDisabled}
           compact={compact}
           autoFocus={autoFocus && !editorDisabled}
+          showToolbar={showEditorTools}
+          actions={
+            showInlineCancel || hasDraft ? (
+              <>
+                {showInlineCancel ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="type-caption-medium !rounded-full !px-4 !py-2 font-semibold"
+                    onClick={onCancel}
+                    disabled={submitting}
+                  >
+                    Отменить
+                  </Button>
+                ) : null}
+
+                {hasDraft ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="!rounded-full !px-4 !py-2 !text-[14px] !leading-5 font-semibold"
+                    onClick={handleSubmit}
+                    disabled={!canSubmit}
+                  >
+                    {submitting ? "Отправка..." : submitLabel}
+                  </Button>
+                ) : null}
+              </>
+            ) : null
+          }
         />
-
-        {showInlineCancel || hasDraft ? (
-          <div className="pointer-events-none absolute bottom-3 right-3 flex items-center">
-            <div className="flex items-center gap-2">
-              {showInlineCancel ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="pointer-events-auto type-caption-medium !rounded-full !px-4 !py-2 font-semibold"
-                  onClick={onCancel}
-                  disabled={submitting}
-                >
-                  Отменить
-                </Button>
-              ) : null}
-
-              {hasDraft ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="pointer-events-auto type-caption-medium !rounded-full !px-4 !py-2 font-semibold"
-                  onClick={handleSubmit}
-                  disabled={!canSubmit}
-                >
-                  {submitting ? "Отправка..." : submitLabel}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
       </div>
 
       {submitDisabled && disabledReason ? (

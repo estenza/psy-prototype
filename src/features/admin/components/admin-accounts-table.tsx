@@ -209,11 +209,14 @@ function DetailsModal({
   return (
     <Modal.Backdrop
       isOpen
+      variant="opaque"
       isDismissable
-      onOpenChange={(open) => {
-        if (!open) onClose();
+      onClick={(event) => {
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        if (target?.closest('[data-slot="modal-dialog"]')) return;
+        onClose();
       }}
-      className="overlay-scrim-strong fixed inset-0 z-[260]"
+      className="fixed inset-0 z-[260]"
     >
       <Modal.Container
         scroll="outside"

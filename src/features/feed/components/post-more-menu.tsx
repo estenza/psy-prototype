@@ -70,17 +70,14 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
   }, [isOwnedByCurrentUser, onAction, post.id, post.viewer.bookmarked]);
 
   return (
-    <div
-      className="pointer-events-auto relative z-30 shrink-0"
-      onClickCapture={(event) => event.stopPropagation()}
-    >
-      <Dropdown>
+    <div className="pointer-events-auto relative z-30 shrink-0">
+      <Dropdown.Root>
         <Button
           isIconOnly
           variant="ghost"
           size="sm"
           aria-label="Еще"
-          className="!inline-flex text-[var(--label-primary)]"
+          className="interactive-tertiary button--blur-no-focus button--icon-only !inline-flex h-9 w-9 min-w-9 rounded-full px-0 text-[var(--label-primary)]"
         >
           <MoreHorizontalIcon aria-hidden />
         </Button>
@@ -89,6 +86,7 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
           <Dropdown.Menu
             aria-label="Меню публикации"
             selectionMode="none"
+            className="dropdown-menu-default"
           >
             {actions.map((action) => (
               <Dropdown.Item
@@ -98,16 +96,7 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
                 variant={action.tone === "danger" ? "danger" : undefined}
                 onAction={action.onSelect}
               >
-                <div className="flex w-full items-center justify-between gap-3">
-                  <Label
-                    className={
-                      action.id === "save" && post.viewer.bookmarked
-                        ? "min-w-0 flex-1 truncate font-medium text-[var(--label-primary)]"
-                        : "min-w-0 flex-1 truncate"
-                    }
-                  >
-                    {action.label}
-                  </Label>
+                <div className="flex w-full items-center gap-3">
                   <span
                     className={
                       action.tone === "danger"
@@ -117,12 +106,21 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
                   >
                     {action.icon}
                   </span>
+                  <Label
+                    className={
+                      action.id === "save" && post.viewer.bookmarked
+                        ? "min-w-0 flex-1 truncate text-[var(--label-primary)]"
+                        : "min-w-0 flex-1 truncate"
+                    }
+                  >
+                    {action.label}
+                  </Label>
                 </div>
               </Dropdown.Item>
             ))}
           </Dropdown.Menu>
         </Dropdown.Popover>
-      </Dropdown>
+      </Dropdown.Root>
     </div>
   );
 }

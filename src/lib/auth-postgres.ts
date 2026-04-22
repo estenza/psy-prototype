@@ -317,6 +317,20 @@ async function initializePostgresSchema() {
     CREATE INDEX IF NOT EXISTS discussion_comment_reports_status_idx
       ON discussion_comment_reports (status, created_at DESC);
 
+    CREATE TABLE IF NOT EXISTS auth_otp_codes (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      purpose TEXT NOT NULL CHECK(purpose IN ('sign-in', 'sign-up')),
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS auth_otp_codes_email_idx
+      ON auth_otp_codes(email, expires_at);
+
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_source_url TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_card_url TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_description TEXT;

@@ -5,7 +5,7 @@ import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/li
 import { getDatabase } from "@/lib/db";
 import { isPostIntent, isPostTopic } from "@/constants/post-taxonomy";
 import type { SessionUser } from "@/features/auth/types";
-import { formatRelativeDate } from "@/features/comments/lib/comment-format";
+import { formatRelativeDate, formatRelativeDateCompact } from "@/features/comments/lib/comment-format";
 import { TOPIC_TITLE_MAX_LENGTH } from "@/features/topic-creation/constants";
 import { hasTopicBodyContent } from "@/features/topic-creation/lib/draft-storage";
 import type { Post } from "@/features/feed/types";
@@ -156,6 +156,12 @@ function formatPublishedAtLabel(createdAtIso: string) {
   );
 }
 
+function formatCompactPublishedAtLabel(createdAtIso: string) {
+  return formatRelativeDateCompact(
+    Math.floor(new Date(createdAtIso).getTime() / 1000),
+  );
+}
+
 function readBoolean(value: boolean | number | null | undefined) {
   if (typeof value === "boolean") {
     return value;
@@ -181,6 +187,7 @@ function mapDiscussion(row: DiscussionRow, currentUser: SessionUser | null): Pos
     author,
     activity: {
       publishedAtLabel: formatPublishedAtLabel(row.created_at),
+      compactPublishedAtLabel: formatCompactPublishedAtLabel(row.created_at),
       lastCommentAtLabel:
         row.comments_count > 0 ? "Есть ответы" : "Без ответов",
       lastCommentAuthor:

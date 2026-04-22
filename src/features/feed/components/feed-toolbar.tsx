@@ -41,7 +41,7 @@ export function FeedToolbar({
   const chevronClassName = "flex h-3 w-3 flex-none items-center justify-center";
 
   return (
-    <div className="surface-primary border-separator relative z-30 px-4 py-3">
+    <div className="surface-primary border-separator relative z-30 px-2 py-3 min-[481px]:px-3 min-[721px]:px-0">
       <div className="relative z-40 flex items-center justify-start gap-0 text-sm">
         <Dropdown.Root>
           <Dropdown.Trigger
@@ -61,6 +61,7 @@ export function FeedToolbar({
           </Dropdown.Trigger>
           <Dropdown.Popover placement="bottom start" className="min-w-56">
             <Dropdown.Menu
+              className="dropdown-menu-default"
               selectionMode="single"
               selectedKeys={new Set([activeTopic])}
               onAction={(key) => onTopicChange(String(key) as FeedTopicFilter)}
@@ -93,6 +94,7 @@ export function FeedToolbar({
           </Dropdown.Trigger>
           <Dropdown.Popover placement="bottom start" className="min-w-44">
             <Dropdown.Menu
+              className="dropdown-menu-default"
               selectionMode="single"
               selectedKeys={new Set([sortMode])}
               onAction={(key) => onSortModeChange(String(key) as FeedSortMode)}
@@ -127,6 +129,7 @@ export function FeedToolbar({
           </Dropdown.Trigger>
           <Dropdown.Popover placement="bottom start" className="min-w-44">
             <Dropdown.Menu
+              className="dropdown-menu-default"
               selectionMode="single"
               selectedKeys={new Set([viewMode])}
               onAction={(key) => onViewModeChange(String(key) as ViewMode)}

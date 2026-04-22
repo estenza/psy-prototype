@@ -141,6 +141,25 @@ export function EyeOffIcon() {
   );
 }
 
+export function EyeIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path
+        d="M3.5 12C5.7 8.3 8.6 6.4 12 6.4C15.4 6.4 18.3 8.3 20.5 12C18.3 15.7 15.4 17.6 12 17.6C8.6 17.6 5.7 15.7 3.5 12Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function FlagIcon() {
   return (
     <svg

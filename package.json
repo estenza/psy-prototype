@@ -5,7 +5,7 @@
   "packageManager": "yarn@4.13.0",
   "scripts": {
     "dev": "next dev",
-    "dev:admin-local": "node scripts/dev-admin-local.mjs",
+    "dev:admin-local": "yarn dev",
     "build": "next build",
     "check:icons": "node scripts/check-icon-exports.mjs",
     "migrate:auth:postgres": "node scripts/migrate-auth-sqlite-to-postgres.mjs",

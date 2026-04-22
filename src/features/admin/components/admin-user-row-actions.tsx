@@ -30,11 +30,14 @@ function ConfirmDialog({
   return (
     <Modal.Backdrop
       isOpen
+      variant="opaque"
       isDismissable={!isLoading}
-      onOpenChange={(open) => {
-        if (!open && !isLoading) onClose();
+      onClick={(event) => {
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        if (target?.closest('[data-slot="modal-dialog"]')) return;
+        if (!isLoading) onClose();
       }}
-      className="overlay-scrim-strong fixed inset-0 z-[320]"
+      className="fixed inset-0 z-[320]"
     >
       <Modal.Container scroll="outside" className="!p-4">
         <Modal.Dialog
@@ -253,6 +256,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
             <Dropdown.Menu
               aria-label="Действия с аккаунтом"
               selectionMode="none"
+              className="dropdown-menu-default"
               onAction={(key) => {
                 const action = String(key);
 

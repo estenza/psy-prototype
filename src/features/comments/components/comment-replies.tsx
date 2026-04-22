@@ -38,12 +38,8 @@ export function CommentReplies({ isOpen, children }: CommentRepliesProps) {
   }
 
   return (
-    <div ref={containerRef} className="flex w-full items-stretch">
-      <div className="comment-branch flex w-6 shrink-0 justify-center" role="presentation">
-        <div className="h-full w-0.5 rounded-full bg-[var(--separator-primary)]" />
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
+    <div ref={containerRef} className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-5">
         {children}
       </div>
     </div>

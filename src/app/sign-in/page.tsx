@@ -1,15 +1,7 @@
 import { redirect } from "next/navigation";
-import { AdminBrowserRedirect } from "@/features/admin/components/admin-browser-redirect";
-import {
-  canAccessAdminConsole,
-  getConfiguredAdminAccessKey,
-  isValidAdminAccessKey,
-  normalizeAdminNextPath,
-} from "@/features/admin/lib/admin-console";
-import {
-  getAdminAccessKey,
-  isAdminConsoleRequest,
-} from "@/features/admin/lib/admin-console-request";
+import { AdminOtpSignIn } from "@/features/admin/components/admin-otp-sign-in";
+import { canAccessAdminConsole, normalizeAdminNextPath } from "@/features/admin/lib/admin-console";
+import { isAdminConsoleRequest } from "@/features/admin/lib/admin-console-request";
 import { AuthPageShell } from "@/features/auth/components/auth-page-shell";
 import { AuthForm } from "@/features/auth/components/auth-form";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
@@ -24,7 +16,6 @@ export default async function SignInPage({
 }) {
   const adminConsoleRequest = await isAdminConsoleRequest();
   const currentUser = await getCurrentUser();
-  const adminAccessKey = await getAdminAccessKey();
   const resolvedSearchParams = await searchParams;
   const nextPath = adminConsoleRequest
     ? normalizeAdminNextPath(resolvedSearchParams.next)
@@ -34,11 +25,7 @@ export default async function SignInPage({
     if (adminConsoleRequest && !canAccessAdminConsole(currentUser)) {
       return (
         <AuthPageShell homeHref="/sign-in" showAdminLabel>
-          <AuthForm
-            mode="sign-in"
-            context="admin"
-            defaultNextPath={nextPath}
-          />
+          <AdminOtpSignIn redirectPath={nextPath} />
         </AuthPageShell>
       );
     }
@@ -50,19 +37,19 @@ export default async function SignInPage({
     );
   }
 
-  if (
-    adminConsoleRequest
-    && getConfiguredAdminAccessKey()
-    && !isValidAdminAccessKey(adminAccessKey)
-  ) {
-    return <AdminBrowserRedirect href={`/access?next=${encodeURIComponent(nextPath)}`} />;
+  if (adminConsoleRequest) {
+    return (
+      <AuthPageShell homeHref="/sign-in" showAdminLabel>
+        <AdminOtpSignIn redirectPath={nextPath} />
+      </AuthPageShell>
+    );
   }
 
   return (
-    <AuthPageShell homeHref={adminConsoleRequest ? "/sign-in" : "/"} showAdminLabel={adminConsoleRequest}>
+    <AuthPageShell homeHref="/">
       <AuthForm
         mode="sign-in"
-        context={adminConsoleRequest ? "admin" : "default"}
+        context="default"
         defaultNextPath={nextPath}
       />
     </AuthPageShell>

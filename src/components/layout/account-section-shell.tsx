@@ -1,7 +1,5 @@
 import { AppHeader } from "@/components/layout/app-header";
-import { LeftNav } from "@/components/layout/left-nav";
-import { LegalSidebar } from "@/components/layout/legal-sidebar";
-import { DEFAULT_ACTIVE_SECTION, navItems } from "@/constants/navigation";
+import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
 
 export function AccountSectionShell({
   children,
@@ -17,13 +15,8 @@ export function AccountSectionShell({
       <AppHeader />
 
       <div className="min-[721px]:pt-[var(--app-header-height)]">
-        <main className="mx-auto grid w-full grid-cols-1 gap-0 px-0 sm:px-0 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-0 min-[1441px]:max-w-[var(--app-shell-max-width)] min-[1441px]:px-5">
-          <LeftNav
-            items={navItems}
-            activeSection={DEFAULT_ACTIVE_SECTION}
-          />
-
-          <section className="min-w-0 py-6 sm:py-8 lg:px-[var(--app-shell-rail-gap)]">
+        <DesktopAppShell centerClassName="min-w-0">
+          <section className="min-w-0 py-6 sm:py-8">
             <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6">
               <header className="px-1 sm:px-0">
                 <h1 className="type-page-title-lg text-[var(--label-primary)]">
@@ -37,9 +30,7 @@ export function AccountSectionShell({
               {children}
             </div>
           </section>
-
-          <LegalSidebar />
-        </main>
+        </DesktopAppShell>
       </div>
     </div>
   );

@@ -241,6 +241,24 @@ function createSessionsTable(database: DatabaseSync) {
   `);
 }
 
+function createOtpCodesTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS auth_otp_codes (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      purpose TEXT NOT NULL CHECK(purpose IN ('sign-in', 'sign-up')),
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS auth_otp_codes_email_idx
+      ON auth_otp_codes(email, expires_at);
+  `);
+}
+
 function createPasswordResetTokensTable(database: DatabaseSync) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -379,6 +397,7 @@ function initializeDatabase(database: DatabaseSync) {
   createDiscussionCommentsTables(database);
   createSessionsTable(database);
   createPasswordResetTokensTable(database);
+  createOtpCodesTable(database);
   repairLegacySessionsForeignKey(database);
 }
 
