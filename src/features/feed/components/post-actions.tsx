@@ -14,18 +14,21 @@ type PostActionsProps = {
   post: Post;
   className: string;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
+  discussionHref?: string;
 };
 
 export function PostActions({
   post,
   className,
   onToggleLike,
+  discussionHref,
 }: PostActionsProps) {
   const router = useRouter();
+  const resolvedDiscussionHref = discussionHref ?? `/discussions/${post.id}`;
   const likedActionClassName =
-    "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)]";
+    "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)] active:text-[var(--danger)] data-[pressed=true]:text-[var(--danger)]";
   const tertiaryActionClassName =
-    "interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors active:scale-[0.96]";
+    "interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors active:text-[var(--label-secondary)] data-[pressed=true]:text-[var(--label-secondary)]";
   const tertiaryIconOnlyActionClassName = cn(
     tertiaryActionClassName,
     "button--icon-only w-9 px-0",
@@ -92,7 +95,7 @@ export function PostActions({
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            router.push(`/discussions/${post.id}`);
+            router.push(resolvedDiscussionHref);
           }}
           className={cn(
             tertiaryActionClassName,

@@ -69,9 +69,9 @@ function ToolbarButton({
         isDisabled={disabled}
         onClick={onClick}
         aria-label={label}
-        className={`h-9 w-9 min-w-9 rounded-[24px] p-0 text-[var(--label-primary)] transition-colors hover:bg-[var(--color-accent-soft)] hover:text-[var(--accent-primary)] data-[hovered=true]:bg-[var(--color-accent-soft)] data-[hovered=true]:text-[var(--accent-primary)] ${
+        className={`h-9 w-9 min-w-9 rounded-[10px] bg-transparent p-0 text-[var(--label-secondary)] transition-colors hover:bg-transparent hover:text-[var(--accent-primary)] data-[hovered=true]:bg-transparent data-[hovered=true]:text-[var(--accent-primary)] ${
           active
-            ? "bg-[var(--color-accent-soft-hover)] text-[var(--accent-primary)]"
+            ? "text-[var(--accent-primary)]"
             : ""
         }`}
       >
@@ -122,7 +122,7 @@ export function TopicEditor({
       immediatelyRender: false,
       editorProps: {
         attributes: {
-          class: "min-h-[112px] px-5 pb-5 pt-2 text-[16px] leading-6",
+          class: "min-h-[112px] px-4 pb-5 pt-2 text-[16px] leading-6",
         },
         handleDOMEvents: {
           paste: () => {
@@ -568,7 +568,7 @@ export function TopicEditor({
           orientation="horizontal"
           hideScrollBar
           size={48}
-          className="px-3 py-2"
+          className="px-2 py-2"
         >
           <div className="flex w-max min-w-full flex-nowrap items-center gap-0 min-[721px]:w-auto min-[721px]:min-w-0 min-[721px]:flex-wrap">
             <ToolbarButton
@@ -642,7 +642,7 @@ export function TopicEditor({
           {isEditorEmpty ? (
             <p
               aria-hidden="true"
-              className="pointer-events-none absolute left-5 top-2 select-none text-[16px] leading-6 text-[var(--field-placeholder)]"
+              className="pointer-events-none absolute left-4 top-2 select-none text-[16px] leading-6 text-[var(--field-placeholder)]"
             >
               {placeholder}
             </p>
@@ -652,7 +652,7 @@ export function TopicEditor({
           ) : (
             <div
               aria-hidden="true"
-              className="ProseMirror min-h-[112px] px-5 pb-5 pt-2 text-[16px] leading-6"
+              className="ProseMirror min-h-[112px] px-4 pb-5 pt-2 text-[16px] leading-6"
             >
               {content ? (
                 <div dangerouslySetInnerHTML={{ __html: content }} />

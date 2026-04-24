@@ -52,10 +52,10 @@ function getCommentEditorToolbarItemClassName({
   active?: boolean;
   disabled?: boolean;
 }) {
-  return `flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--label-primary)] transition-colors ${
+  return `flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-transparent text-[var(--label-secondary)] transition-colors ${
     active
-      ? "bg-[var(--color-accent-soft-hover)] text-[var(--accent-primary)]"
-      : "hover:bg-[var(--color-accent-soft)] hover:text-[var(--accent-primary)]"
+      ? "text-[var(--accent-primary)]"
+      : "hover:bg-transparent hover:text-[var(--accent-primary)] data-[hovered=true]:bg-transparent data-[hovered=true]:text-[var(--accent-primary)]"
   } ${disabled ? "cursor-default opacity-40" : ""}`.trim();
 }
 
@@ -107,7 +107,7 @@ export function CommentEditor({
       immediatelyRender: false,
       editorProps: {
         attributes: {
-          class: `comment-editor-prosemirror min-h-0 px-3 pt-3 pb-2 text-[16px] leading-6 outline-none ${
+          class: `comment-editor-prosemirror min-h-0 pl-4 pr-3 pt-3 pb-2 text-[16px] leading-6 outline-none ${
             compact ? "min-h-[64px]" : "min-h-[72px]"
           }`.trim(),
         },
@@ -377,7 +377,7 @@ export function CommentEditor({
       {isEditorEmpty ? (
         <p
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-3 select-none text-[16px] leading-6 text-[var(--field-placeholder)]"
+          className="pointer-events-none absolute left-4 top-3 select-none text-[16px] leading-6 text-[var(--field-placeholder)]"
         >
           {placeholder}
         </p>
@@ -388,7 +388,7 @@ export function CommentEditor({
       ) : (
         <div
           aria-hidden="true"
-          className={`comment-editor-prosemirror min-h-0 px-3 pt-3 pb-2 text-[16px] leading-6 ${
+          className={`comment-editor-prosemirror min-h-0 pl-4 pr-3 pt-3 pb-2 text-[16px] leading-6 ${
             compact ? "min-h-[64px]" : "min-h-[72px]"
           }`.trim()}
           dangerouslySetInnerHTML={{ __html: value }}

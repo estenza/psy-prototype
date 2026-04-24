@@ -1,0 +1,351 @@
+"use client";
+
+import { InputOTP, REGEXP_ONLY_DIGITS } from "@heroui/react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { AuthField } from "@/features/auth/components/auth-field";
+import { buildPostAuthRedirectPath } from "@/features/auth/lib/profile";
+import type {
+  AuthErrorResponse,
+  AuthMessageResponse,
+  AuthSuccessResponse,
+} from "@/features/auth/types";
+
+type AuthOtpFlowProps = {
+  initialEmail?: string;
+  nextHref: string;
+  titleAs?: "h1" | "h2";
+};
+
+type FlowStep = "method" | "email" | "otp";
+type OtpPurpose = "sign-in" | "sign-up";
+
+const RESEND_COOLDOWN_SECONDS = 60;
+
+export function AuthOtpFlow({
+  initialEmail = "",
+  nextHref,
+  titleAs = "h2",
+}: AuthOtpFlowProps) {
+  const [step, setStep] = useState<FlowStep>(initialEmail.trim() ? "email" : "method");
+  const [purpose, setPurpose] = useState<OtpPurpose>("sign-in");
+  const [email, setEmail] = useState(initialEmail);
+  const [emailError, setEmailError] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [debugOtpCode, setDebugOtpCode] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const TitleTag = titleAs;
+
+  useEffect(() => {
+    if (step === "email") {
+      window.setTimeout(() => emailInputRef.current?.focus(), 50);
+    }
+  }, [step]);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  }, []);
+
+  function startResendCooldown() {
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
+
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    cooldownTimerRef.current = setInterval(() => {
+      setResendCooldown((previousValue) => {
+        if (previousValue <= 1) {
+          if (cooldownTimerRef.current) {
+            clearInterval(cooldownTimerRef.current);
+          }
+          return 0;
+        }
+
+        return previousValue - 1;
+      });
+    }, 1000);
+  }
+
+  async function sendOtp(targetEmail: string, targetPurpose: OtpPurpose) {
+    const response = await fetch("/api/auth/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: targetEmail, purpose: targetPurpose }),
+    });
+
+    const payload = (await response.json()) as AuthErrorResponse & AuthMessageResponse;
+
+    if (!response.ok) {
+      return { ok: false, error: payload.fieldErrors?.email || payload.error };
+    }
+
+    return { ok: true, error: null, debugOtpCode: payload.debugOtpCode ?? "" };
+  }
+
+  async function handleEmailSubmit(event: FormEvent) {
+    event.preventDefault();
+    setEmailError("");
+    setIsSubmitting(true);
+
+    try {
+      const result = await sendOtp(email, purpose);
+
+      if (!result.ok) {
+        setEmailError(result.error ?? "Не удалось отправить код.");
+        return;
+      }
+
+      setDebugOtpCode(result.debugOtpCode ?? "");
+      setOtp("");
+      setOtpError("");
+      setStep("otp");
+      startResendCooldown();
+    } catch {
+      setEmailError("Не удалось отправить код. Попробуйте ещё раз.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleOtpComplete(value: string) {
+    if (value.length !== 6 || isSubmitting) {
+      return;
+    }
+
+    setOtpError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: value, purpose }),
+      });
+
+      const payload = (await response.json()) as AuthSuccessResponse & AuthErrorResponse;
+
+      if (!response.ok) {
+        setOtpError(payload.error ?? "Неверный код.");
+        setOtp("");
+        return;
+      }
+
+      const redirectPath = buildPostAuthRedirectPath(payload.user, nextHref);
+      window.location.replace(redirectPath);
+    } catch {
+      setOtpError("Не удалось проверить код. Попробуйте ещё раз.");
+      setOtp("");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    if (resendCooldown > 0 || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setOtpError("");
+
+    try {
+      const result = await sendOtp(email, purpose);
+
+      if (!result.ok) {
+        setOtpError(result.error ?? "Не удалось отправить код.");
+        return;
+      }
+
+      setDebugOtpCode(result.debugOtpCode ?? "");
+      setOtp("");
+      startResendCooldown();
+    } catch {
+      setOtpError("Не удалось отправить код.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      {step === "method" && (
+        <div>
+          <div className="pr-10">
+            <TitleTag className="type-modal-title text-[var(--label-primary)]">
+              Войти или создать аккаунт
+            </TitleTag>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3">
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full !rounded-full"
+              onClick={() => {
+                setPurpose("sign-in");
+                setStep("email");
+              }}
+            >
+              Войти по почте
+            </Button>
+          </div>
+
+          <p className="type-body-relaxed mt-5 text-[var(--label-secondary)]">
+            Нет аккаунта?{" "}
+            <button
+              type="button"
+              className="font-semibold text-[var(--label-primary)] underline decoration-[var(--underline-primary)] underline-offset-4"
+              onClick={() => {
+                setPurpose("sign-up");
+                setStep("email");
+              }}
+            >
+              Зарегистрироваться
+            </button>
+          </p>
+        </div>
+      )}
+
+      {step === "email" && (
+        <div>
+          <button
+            type="button"
+            className="mb-4 flex items-center gap-1.5 text-[14px] text-[var(--label-secondary)] hover:text-[var(--label-primary)]"
+            onClick={() => setStep("method")}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Назад
+          </button>
+
+          <TitleTag className="type-modal-title text-[var(--label-primary)]">
+            {purpose === "sign-up" ? "Регистрация" : "Войти по почте"}
+          </TitleTag>
+          <p className="type-body-relaxed mt-1 text-[var(--label-tertiary)]">
+            Отправим код подтверждения на ваш email
+          </p>
+
+          <form className="mt-5 flex flex-col gap-4" onSubmit={handleEmailSubmit}>
+            <AuthField
+              name="email"
+              type="email"
+              label="Email"
+              value={email}
+              onChange={(value) => {
+                setEmail(value);
+                setEmailError("");
+              }}
+              placeholder="Введите email"
+              error={emailError}
+              autoComplete="email"
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="mt-1 w-full !rounded-full"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Отправляем..." : "Получить код"}
+            </Button>
+          </form>
+        </div>
+      )}
+
+      {step === "otp" && (
+        <div>
+          <button
+            type="button"
+            className="mb-4 flex items-center gap-1.5 text-[14px] text-[var(--label-secondary)] hover:text-[var(--label-primary)]"
+            onClick={() => {
+              setStep("email");
+              setOtp("");
+              setOtpError("");
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Назад
+          </button>
+
+          <TitleTag className="type-modal-title text-[var(--label-primary)]">
+            Введите код
+          </TitleTag>
+          <p className="type-body-relaxed mt-1 text-[var(--label-tertiary)]">
+            Отправили на <span className="font-medium text-[var(--label-secondary)]">{email}</span>
+          </p>
+
+          <div className="mt-5 flex flex-col gap-4">
+            <InputOTP
+              maxLength={6}
+              pattern={REGEXP_ONLY_DIGITS}
+              value={otp}
+              isInvalid={Boolean(otpError)}
+              isDisabled={isSubmitting}
+              onChange={(value) => {
+                setOtp(value);
+                setOtpError("");
+              }}
+              onComplete={handleOtpComplete}
+              autoFocus
+            >
+              <InputOTP.Group>
+                <InputOTP.Slot index={0} />
+                <InputOTP.Slot index={1} />
+                <InputOTP.Slot index={2} />
+              </InputOTP.Group>
+              <InputOTP.Separator />
+              <InputOTP.Group>
+                <InputOTP.Slot index={3} />
+                <InputOTP.Slot index={4} />
+                <InputOTP.Slot index={5} />
+              </InputOTP.Group>
+            </InputOTP>
+
+            {otpError ? (
+              <p className="type-caption text-[var(--danger)]">{otpError}</p>
+            ) : null}
+            {debugOtpCode ? (
+              <p className="type-caption rounded-2xl bg-[var(--fill-quaternary)] px-4 py-3 text-[var(--label-secondary)]">
+                Локальный код: <span className="font-semibold text-[var(--label-primary)]">{debugOtpCode}</span>
+              </p>
+            ) : null}
+            {isSubmitting ? (
+              <p className="type-caption text-[var(--label-tertiary)]">Проверяем код...</p>
+            ) : null}
+          </div>
+
+          <div className="mt-5 flex items-center gap-1.5">
+            <span className="type-body-relaxed text-[var(--label-secondary)]">Не получили код?</span>
+            {resendCooldown > 0 ? (
+              <span className="type-body-relaxed text-[var(--label-tertiary)]">
+                Повторить через {resendCooldown} с
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="type-body-relaxed font-semibold text-[var(--label-primary)] underline decoration-[var(--underline-primary)] underline-offset-4 disabled:opacity-50"
+                onClick={handleResend}
+                disabled={isSubmitting}
+              >
+                Отправить снова
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

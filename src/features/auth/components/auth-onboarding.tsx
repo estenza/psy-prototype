@@ -48,7 +48,7 @@ function OnboardingField({
   const id = `onboarding-field-${label}`;
 
   return (
-    <TextField isInvalid={Boolean(error)} className="flex flex-col gap-2">
+    <TextField isInvalid={Boolean(error)} className="field-surface-default flex flex-col gap-2">
       <Label htmlFor={id} className="type-body-md-medium text-[var(--label-primary)]">
         {label}
       </Label>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import { buildDiscussionErrorResponse } from "@/features/feed/lib/discussions-http";
 import {
+  deleteDiscussion,
   findDiscussionById,
   updateDiscussion,
 } from "@/features/feed/lib/discussions-repository";
@@ -78,6 +79,35 @@ export async function PATCH(
     return NextResponse.json<DiscussionMutationResponse>({
       ok: true,
       post,
+    });
+  } catch (error) {
+    return buildDiscussionErrorResponse(error);
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: DiscussionRouteProps,
+) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          error: "Нужно войти в аккаунт, чтобы удалить обсуждение.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const { postId } = await params;
+    await deleteDiscussion(postId, currentUser);
+
+    return NextResponse.json({
+      ok: true,
     });
   } catch (error) {
     return buildDiscussionErrorResponse(error);

@@ -28,6 +28,7 @@ export class CommentsServiceError extends Error {
     super(message);
     this.name = "CommentsServiceError";
     this.status = status;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 

@@ -2,7 +2,7 @@
 
 import { Badge, SearchField as HeroSearchField } from "@heroui/react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -19,11 +19,11 @@ import {
 } from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button-styles";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
-import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { AuthStatus } from "@/features/auth/components/auth-status";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
 import { AppBrand } from "@/components/layout/app-brand";
 import { LegalInfo } from "@/components/layout/legal-info";
+import { buildCreateTopicHref } from "@/features/topic-creation/lib/create-topic-navigation";
 import type { NavigationItemKey } from "@/types/navigation";
 
 type AppHeaderProps = {
@@ -47,6 +47,8 @@ const mobileMenuButtonClassName =
     size: "lg",
     variant: "tertiary",
   })} min-[721px]:hidden`;
+const desktopHeaderSearchInputId = "app-header-search-input-desktop";
+const mobileHeaderSearchInputId = "app-header-search-input-mobile";
 
 function NotificationButton() {
   return (
@@ -101,22 +103,24 @@ type CreateTopicButtonProps = {
   ariaLabel?: string;
   children?: ReactNode;
   className: string;
+  href: string;
   iconOnly?: boolean;
   onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
   variant?: "secondary" | "tertiary";
 };
 
 function CreateTopicButton({
-  ariaLabel = "Создать обсуждение",
+  ariaLabel = "Написать",
   children,
   className,
+  href,
   iconOnly = false,
   onClick,
   variant = "tertiary",
 }: CreateTopicButtonProps) {
   return (
     <Link
-      href="/create-topic"
+      href={href}
       onClick={onClick}
       aria-label={ariaLabel}
       className={buttonClassName({
@@ -128,7 +132,7 @@ function CreateTopicButton({
         <PlusCircleIcon />
       </span>
       {!iconOnly ? (
-        <span className="whitespace-nowrap">{children ?? "Создать обсуждение"}</span>
+        <span className="whitespace-nowrap">{children ?? "Написать"}</span>
       ) : null}
     </Link>
   );
@@ -158,14 +162,19 @@ export function AppHeader({
   showSearch = true,
 }: AppHeaderProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuthClient();
-  const { requireAuth } = useAuthRequiredAction();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeSection = resolveActiveSection(pathname);
   const isAdminHeader = adminMode;
   const homeHref = isAdminHeader ? "/admin/users" : "/";
   const isFeedHomePage = pathname === "/";
+  const currentSearch = searchParams.toString();
+  const currentPathWithSearch = pathname
+    ? `${pathname}${currentSearch ? `?${currentSearch}` : ""}`
+    : "/";
+  const createTopicHref = buildCreateTopicHref(currentPathWithSearch);
   const shouldShowSearch = showSearch && !isAdminHeader;
   const shouldShowMobileSearchField = shouldShowSearch && isFeedHomePage;
   const shouldShowMobileSearchButton = shouldShowSearch && !isFeedHomePage;
@@ -222,10 +231,6 @@ export function AppHeader({
       mediaQuery.removeEventListener("change", handleMediaQueryChange);
     };
   }, []);
-
-  async function handleCreateTopicClick(event: React.MouseEvent<HTMLAnchorElement>) {
-    await requireAuth(event);
-  }
 
   function handleNavigationItemClick(
     event: React.MouseEvent<HTMLAnchorElement>,
@@ -319,8 +324,10 @@ export function AppHeader({
             >
               <HeroSearchField.SearchIcon />
               <HeroSearchField.Input
+                id={desktopHeaderSearchInputId}
                 aria-label="Поиск по историям, темам, психологам"
                 placeholder="Поиск по историям, темам, психологам"
+                suppressHydrationWarning
                 className="!text-[14px] !leading-5"
               />
               <HeroSearchField.ClearButton aria-label="Очистить поиск" />
@@ -347,10 +354,10 @@ export function AppHeader({
               <>
                 {shouldShowMobileCreateIconOnly ? (
                   <CreateTopicButton
-                    ariaLabel="Создать обсуждение"
+                    ariaLabel="Написать"
                     className="button--icon-only h-10 w-10 px-0 min-[481px]:hidden"
+                    href={createTopicHref}
                     iconOnly
-                    onClick={handleCreateTopicClick}
                   />
                 ) : null}
 
@@ -358,12 +365,9 @@ export function AppHeader({
                   className={`h-10 px-3 text-[13px] min-[721px]:h-11 min-[721px]:px-4 min-[721px]:text-sm ${
                     shouldShowMobileCreateIconOnly ? "hidden min-[481px]:inline-flex" : ""
                   }`.trim()}
-                  onClick={handleCreateTopicClick}
+                  href={createTopicHref}
                 >
-                  <>
-                    <span className="inline min-[1025px]:hidden">Создать</span>
-                    <span className="hidden min-[1025px]:inline">Создать обсуждение</span>
-                  </>
+                  Написать
                 </CreateTopicButton>
               </>
             ) : null}
@@ -387,8 +391,10 @@ export function AppHeader({
             >
               <HeroSearchField.SearchIcon />
               <HeroSearchField.Input
+                id={mobileHeaderSearchInputId}
                 aria-label="Поиск по историям, темам, психологам"
                 placeholder="Поиск по историям, темам, психологам"
+                suppressHydrationWarning
                 className="!text-[16px] !leading-5"
               />
               <HeroSearchField.ClearButton aria-label="Очистить поиск" />
@@ -454,13 +460,13 @@ export function AppHeader({
               {showCreateAction ? (
                 <CreateTopicButton
                   className="h-12 w-full justify-center px-4 text-[15px]"
-                  onClick={async (event) => {
+                  href={createTopicHref}
+                  onClick={() => {
                     setIsMobileMenuOpen(false);
-                    await handleCreateTopicClick(event);
                   }}
                   variant="secondary"
                 >
-                  Создать обсуждение
+                  Написать
                 </CreateTopicButton>
               ) : null}
               <LegalInfo className={showCreateAction ? "mt-5 pt-5" : ""} />

@@ -15,7 +15,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
     ref,
   ) {
     return (
-      <div className={shellClassName}>
+      <div className={`field-surface-default ${shellClassName}`.trim()}>
         <Input
           ref={ref}
           data-invalid={invalid ? "true" : undefined}

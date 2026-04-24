@@ -15,6 +15,7 @@ type DiscussionRow = {
   id: string;
   author_user_id: string;
   author_avatar_url: string | null;
+  author_role: "user" | "specialist" | null;
   intent: PostIntent;
   topic: PostTopic | null;
   title: string;
@@ -57,13 +58,8 @@ const PG_DISCUSSION_COLUMNS = `
   discussions.updated_at::text AS updated_at,
   users.display_name AS author_display_name,
   users.nickname AS author_nickname,
-  users.avatar_url AS author_avatar_url
-`;
-
-const DISCUSSION_SELECT_BASE = `
-  SELECT ${PG_DISCUSSION_COLUMNS}
-  FROM discussions
-  INNER JOIN users ON users.id = discussions.author_user_id
+  users.avatar_url AS author_avatar_url,
+  users.role AS author_role
 `;
 
 const DISCUSSION_EXCERPT_LIMIT = 240;
@@ -176,6 +172,7 @@ function mapDiscussion(row: DiscussionRow, currentUser: SessionUser | null): Pos
     name: row.author_display_name,
     handle: row.author_nickname ? `@${row.author_nickname}` : row.author_display_name,
     avatarUrl: row.author_avatar_url,
+    role: row.author_role,
   };
   const isAuthor = Boolean(currentUser && row.author_user_id === currentUser.id);
 
@@ -308,6 +305,7 @@ export async function listDiscussions(currentUser: SessionUser | null) {
         users.display_name AS author_display_name,
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
+        users.role AS author_role,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
       FROM discussions
       INNER JOIN users ON users.id = discussions.author_user_id
@@ -318,6 +316,52 @@ export async function listDiscussions(currentUser: SessionUser | null) {
       ORDER BY discussions.created_at DESC`,
     )
     .all(currentUser?.id ?? null) as DiscussionRow[];
+
+  return rows.map((row) => mapDiscussion(row, currentUser));
+}
+
+export async function listDiscussionsByAuthorUserId(
+  authorUserId: string,
+  currentUser: SessionUser | null,
+) {
+  if (isPostgresAuthEnabled()) {
+    const rows = await queryPgRows<DiscussionRow>(
+      `SELECT
+        ${PG_DISCUSSION_COLUMNS},
+        CASE WHEN viewer_reaction.id IS NULL THEN FALSE ELSE TRUE END AS viewer_liked
+      FROM discussions
+      INNER JOIN users ON users.id = discussions.author_user_id
+      LEFT JOIN discussion_reactions AS viewer_reaction
+        ON viewer_reaction.discussion_id = discussions.id
+        AND viewer_reaction.user_id = $2
+        AND viewer_reaction.reaction_type = 'like'
+      WHERE discussions.author_user_id = $1
+      ORDER BY discussions.created_at DESC`,
+      [authorUserId, currentUser?.id ?? null],
+    );
+
+    return rows.map((row) => mapDiscussion(row, currentUser));
+  }
+
+  const rows = getDatabase()
+    .prepare(
+      `SELECT
+        discussions.*,
+        users.display_name AS author_display_name,
+        users.nickname AS author_nickname,
+        users.avatar_url AS author_avatar_url,
+        users.role AS author_role,
+        CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
+      FROM discussions
+      INNER JOIN users ON users.id = discussions.author_user_id
+      LEFT JOIN discussion_reactions AS viewer_reaction
+        ON viewer_reaction.discussion_id = discussions.id
+        AND viewer_reaction.user_id = ?
+        AND viewer_reaction.reaction_type = 'like'
+      WHERE discussions.author_user_id = ?
+      ORDER BY discussions.created_at DESC`,
+    )
+    .all(currentUser?.id ?? null, authorUserId) as DiscussionRow[];
 
   return rows.map((row) => mapDiscussion(row, currentUser));
 }
@@ -351,6 +395,7 @@ export async function findDiscussionById(postId: string, currentUser: SessionUse
         users.display_name AS author_display_name,
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
+        users.role AS author_role,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
       FROM discussions
       INNER JOIN users ON users.id = discussions.author_user_id
@@ -659,4 +704,36 @@ export async function updateDiscussion(postId: string, input: DiscussionMutation
   }
 
   return updatedDiscussion;
+}
+
+export async function deleteDiscussion(postId: string, actor: SessionUser) {
+  const existingDiscussion = await findDiscussionById(postId, actor);
+
+  if (!existingDiscussion) {
+    throw new DiscussionRepositoryError("Обсуждение не найдено.", {
+      status: 404,
+    });
+  }
+
+  if (existingDiscussion.author.id !== actor.id) {
+    throw new DiscussionRepositoryError("Удалять можно только свои обсуждения.", {
+      status: 403,
+    });
+  }
+
+  if (isPostgresAuthEnabled()) {
+    await execAuthPostgres(
+      `DELETE FROM discussions
+       WHERE id = $1`,
+      [postId],
+    );
+    return;
+  }
+
+  getDatabase()
+    .prepare(
+      `DELETE FROM discussions
+       WHERE id = ?`,
+    )
+    .run(postId);
 }

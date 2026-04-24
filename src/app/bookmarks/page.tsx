@@ -12,7 +12,7 @@ export default async function BookmarksPage() {
 
   return (
     <AccountSectionShell
-      title="Закладки"
+      title="Сохранённое"
       description="Здесь будет собираться ваша личная подборка сохранённых обсуждений."
     >
       <section className="surface-elevated border-separator rounded-[28px] border p-6">
@@ -20,7 +20,7 @@ export default async function BookmarksPage() {
           Раздел уже подготовлен под отдельную страницу
         </h2>
         <p className="mt-2 text-[14px] leading-6 text-[var(--label-secondary)]">
-          Следующим шагом сюда можно будет вывести список действительно сохранённых публикаций. Пока закладки остаются частью текущего прототипа ленты.
+          Следующим шагом сюда можно будет вывести список действительно сохранённых публикаций. Пока сохранённые материалы остаются частью текущего прототипа ленты.
         </p>
 
         <div className="mt-5">

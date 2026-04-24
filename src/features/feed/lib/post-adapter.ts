@@ -24,6 +24,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
       name: record.author.display_name,
       handle: record.author.username,
       avatarUrl: record.author.avatar_url,
+      role: record.author.role ?? null,
     },
     activity: {
       publishedAtLabel: formatPostPublishedAtLabel(record.created_at_iso),

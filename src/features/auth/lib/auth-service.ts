@@ -38,7 +38,9 @@ import {
 } from "@/features/auth/lib/password-reset-token";
 import {
   buildDisplayName,
+  isReservedProfilePathSegment,
   normalizeNickname,
+  RESERVED_NICKNAME_MESSAGE,
   sanitizeProfileText,
 } from "@/features/auth/lib/profile";
 import { hashPassword, verifyPassword } from "@/features/auth/lib/password";
@@ -216,6 +218,8 @@ function validateNicknameInput(input: CompleteUserProfileInput) {
     fieldErrors.nickname = `Ник должен быть не длиннее ${NICKNAME_MAX_LENGTH} символов.`;
   } else if (!NICKNAME_PATTERN.test(nickname)) {
     fieldErrors.nickname = "Недопустимые символы.";
+  } else if (isReservedProfilePathSegment(nickname)) {
+    fieldErrors.nickname = RESERVED_NICKNAME_MESSAGE;
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -334,6 +338,14 @@ export async function checkNicknameAvailability(rawNickname: string) {
       available: false,
       normalizedNickname: nickname,
       reason: "Недопустимые символы",
+    };
+  }
+
+  if (isReservedProfilePathSegment(nickname)) {
+    return {
+      available: false,
+      normalizedNickname: nickname,
+      reason: RESERVED_NICKNAME_MESSAGE,
     };
   }
 

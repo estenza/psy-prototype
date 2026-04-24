@@ -11,7 +11,8 @@ type CardPostItemProps = {
   post: Post;
   blockPointerEvents?: boolean;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
-  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
+  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => Promise<void> | void;
+  discussionHref?: string;
 };
 
 export function CardPostItem({
@@ -19,6 +20,7 @@ export function CardPostItem({
   blockPointerEvents = true,
   onToggleLike,
   onPostMenuAction,
+  discussionHref,
 }: CardPostItemProps) {
   return (
     <div className={`${blockPointerEvents ? "pointer-events-none" : ""} flex flex-col gap-3`.trim()}>
@@ -30,7 +32,7 @@ export function CardPostItem({
           meta={post.activity.publishedAtLabel}
           compactMeta={post.activity.compactPublishedAtLabel}
           profileHref={buildPublicProfilePathFromHandle(post.author.handle)}
-          showStatusDot={post.viewer.isAuthor}
+          showStatusDot={post.author.role === "specialist"}
         />
         <PostMoreMenu post={post} onAction={onPostMenuAction} />
       </div>
@@ -64,6 +66,7 @@ export function CardPostItem({
 
       <PostActions
         post={post}
+        discussionHref={discussionHref}
         onToggleLike={onToggleLike}
         className="relative z-10 flex flex-wrap items-center gap-2 pt-1"
       />

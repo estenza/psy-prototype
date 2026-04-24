@@ -10,13 +10,15 @@ import type { Post } from "@/features/feed/types";
 type CompactPostItemProps = {
   post: Post;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
-  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
+  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => Promise<void> | void;
+  discussionHref?: string;
 };
 
 export function CompactPostItem({
   post,
   onToggleLike,
   onPostMenuAction,
+  discussionHref,
 }: CompactPostItemProps) {
   return (
     <div className="pointer-events-none flex gap-4">
@@ -44,7 +46,7 @@ export function CompactPostItem({
             meta={post.activity.publishedAtLabel}
             compactMeta={post.activity.compactPublishedAtLabel}
             profileHref={buildPublicProfilePathFromHandle(post.author.handle)}
-            showStatusDot={post.viewer.isAuthor}
+            showStatusDot={post.author.role === "specialist"}
             className="min-w-0 flex-1"
             metaRowClassName="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 text-[14px] leading-5"
             handleClassName="text-label-tertiary inline-flex min-w-0 items-center self-center truncate"
@@ -70,6 +72,7 @@ export function CompactPostItem({
 
         <PostActions
           post={post}
+          discussionHref={discussionHref}
           onToggleLike={onToggleLike}
           className="relative z-10 mt-4 flex flex-wrap items-center gap-2 pt-1"
         />

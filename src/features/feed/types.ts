@@ -54,6 +54,7 @@ export type ApiPostRecord = {
     id?: string;
     avatar_url?: string | null;
     display_name: string;
+    role?: "user" | "specialist" | null;
     username: string;
   };
   timeline: {

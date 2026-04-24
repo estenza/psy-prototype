@@ -1,4 +1,27 @@
+import { NICKNAME_PATTERN } from "@/features/auth/constants";
 import type { AuthUser, OnboardingStep, UserRole } from "@/features/auth/types";
+
+const RESERVED_PROFILE_PATH_SEGMENTS = new Set([
+  "access",
+  "admin",
+  "api",
+  "bookmarks",
+  "complete-profile",
+  "create-topic",
+  "discussions",
+  "drafts",
+  "favicon.ico",
+  "forgot-password",
+  "profile",
+  "reset-password",
+  "robots.txt",
+  "settings",
+  "sign-in",
+  "sign-up",
+  "sitemap.xml",
+]);
+
+export const RESERVED_NICKNAME_MESSAGE = "Это имя аккаунта недоступно.";
 
 export function sanitizeProfileText(value: string | null | undefined) {
   return (value ?? "").trim().replace(/\s+/g, " ");
@@ -68,12 +91,36 @@ export function getUserHandle(user: Pick<AuthUser, "displayName" | "nickname">) 
   return user.nickname ? `@${user.nickname}` : user.displayName;
 }
 
-export function buildPublicProfilePathFromHandle(handle: string | null | undefined) {
-  const normalizedHandle = sanitizeProfileText(handle).replace(/^@+/, "");
+export function isReservedProfilePathSegment(value: string | null | undefined) {
+  const normalizedValue = normalizeNickname(value);
+  return normalizedValue ? RESERVED_PROFILE_PATH_SEGMENTS.has(normalizedValue) : false;
+}
 
-  if (!normalizedHandle) {
+export function buildProfilePathFromNickname(nickname: string | null | undefined) {
+  const normalizedNickname = normalizeNickname(nickname);
+
+  if (
+    !normalizedNickname
+    || !NICKNAME_PATTERN.test(normalizedNickname)
+    || isReservedProfilePathSegment(normalizedNickname)
+  ) {
     return null;
   }
 
-  return `/profile/${encodeURIComponent(normalizedHandle)}`;
+  return `/${encodeURIComponent(normalizedNickname)}`;
+}
+
+export function buildOwnProfilePath(user: Pick<AuthUser, "nickname">) {
+  return buildProfilePathFromNickname(user.nickname);
+}
+
+export function buildPublicProfilePathFromHandle(handle: string | null | undefined) {
+  const sanitizedHandle = sanitizeProfileText(handle);
+
+  if (!sanitizedHandle.startsWith("@")) {
+    return null;
+  }
+
+  const normalizedHandle = sanitizedHandle.replace(/^@+/, "");
+  return buildProfilePathFromNickname(normalizedHandle);
 }

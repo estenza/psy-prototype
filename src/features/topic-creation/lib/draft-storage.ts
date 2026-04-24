@@ -1,25 +1,99 @@
 import {
-  DEFAULT_TOPIC_INTENT,
+  DEFAULT_TOPIC_FORMAT,
   EMPTY_TOPIC_DRAFT,
+  EMPTY_TOPIC_DRAFT_FIELDS,
+  TOPIC_FORMAT_META,
 } from "@/features/topic-creation/constants";
 import { isPostIntent, isPostTopic } from "@/constants/post-taxonomy";
-import type { TopicDraft } from "@/features/topic-creation/types";
-import type { PostIntent } from "@/types/post-taxonomy";
+import type { TopicDraft, TopicDraftFields, TopicFormat } from "@/features/topic-creation/types";
+import type { PostIntent, PostTopic } from "@/types/post-taxonomy";
 
 const TOPIC_DRAFT_STORAGE_KEY = "psy-prototype:create-topic:draft";
 const TOPIC_DRAFT_RESTORE_REQUEST_KEY =
   "psy-prototype:create-topic:draft-restore-request";
 
-function normalizeStoredIntent(value: unknown): PostIntent {
+function stripHtmlToText(content: string) {
+  if (!content.trim()) {
+    return "";
+  }
+
+  if (typeof window !== "undefined") {
+    const document = new DOMParser().parseFromString(content, "text/html");
+    return document.body.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  }
+
+  return content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeStoredFormat(value: unknown, fallbackIntent?: unknown): TopicFormat {
+  if (
+    value === "opinions"
+    || value === "specialists"
+    || value === "vent"
+    || value === "demo-consultation"
+  ) {
+    return value;
+  }
+
+  if (fallbackIntent === "support") {
+    return "demo-consultation";
+  }
+
+  return DEFAULT_TOPIC_FORMAT;
+}
+
+function normalizeStoredIntent(value: unknown, format: TopicFormat): PostIntent {
   if (value === "experience") {
     return "discussion";
   }
 
-  return isPostIntent(value) ? value : DEFAULT_TOPIC_INTENT;
+  if (isPostIntent(value)) {
+    return value;
+  }
+
+  return TOPIC_FORMAT_META[format].legacyIntent;
+}
+
+function normalizeStoredFields(
+  value: unknown,
+  fallback: {
+    content?: string;
+    title?: string;
+  },
+): TopicDraftFields {
+  if (value && typeof value === "object") {
+    const candidate = value as Partial<Record<keyof TopicDraftFields, unknown>>;
+
+    return {
+      primary: typeof candidate.primary === "string" ? candidate.primary : "",
+      secondary: typeof candidate.secondary === "string" ? candidate.secondary : "",
+      tertiary: typeof candidate.tertiary === "string" ? candidate.tertiary : "",
+    };
+  }
+
+  return {
+    primary: fallback.title?.trim() ?? "",
+    secondary: fallback.content ? stripHtmlToText(fallback.content) : "",
+    tertiary: "",
+  };
+}
+
+function buildDraftTitle(fields: TopicDraftFields) {
+  return fields.primary.trim();
+}
+
+function buildDraftContent(fields: TopicDraftFields) {
+  return [fields.secondary, fields.tertiary]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export function createEmptyTopicDraft(): TopicDraft {
-  return { ...EMPTY_TOPIC_DRAFT };
+  return {
+    ...EMPTY_TOPIC_DRAFT,
+    fields: { ...EMPTY_TOPIC_DRAFT_FIELDS },
+  };
 }
 
 export function getTopicContentTextLength(content: string) {
@@ -33,19 +107,69 @@ export function hasTopicBodyContent(content: string) {
   );
 }
 
-export function hasMeaningfulTopicDraft(draft: Pick<TopicDraft, "content" | "title">) {
-  return draft.title.trim().length > 0 || hasTopicBodyContent(draft.content);
+export function hasMeaningfulTopicDraft(
+  draft:
+    | Pick<TopicDraft, "fields">
+    | Pick<TopicDraft, "content" | "title">,
+) {
+  if ("fields" in draft) {
+    return Object.values(draft.fields).some((value) => value.trim().length > 0);
+  }
+
+  return draft.title.trim().length > 0 || draft.content.trim().length > 0;
 }
 
 export function serializeTopicSnapshot(
-  draft: Pick<TopicDraft, "content" | "intent" | "title" | "topic">,
+  draft:
+    | Pick<TopicDraft, "fields" | "format" | "guestEmail" | "topic">
+    | Pick<TopicDraft, "content" | "intent" | "title" | "topic">,
 ) {
+  if ("fields" in draft) {
+    return JSON.stringify({
+      fields: draft.fields,
+      format: draft.format,
+      guestEmail: draft.guestEmail,
+      topic: draft.topic,
+    });
+  }
+
   return JSON.stringify({
     content: draft.content,
     intent: draft.intent,
     topic: draft.topic,
     title: draft.title,
   });
+}
+
+export function normalizeTopicDraft(
+  draft: Partial<TopicDraft> & {
+    content?: string;
+    fields?: TopicDraftFields;
+    format?: TopicFormat;
+    intent?: PostIntent;
+    title?: string;
+  },
+): TopicDraft {
+  const format = normalizeStoredFormat(draft.format, draft.intent);
+  const fields = normalizeStoredFields(draft.fields, {
+    content: draft.content,
+    title: draft.title,
+  });
+  const intent = normalizeStoredIntent(draft.intent, format);
+  const title = buildDraftTitle(fields);
+  const content = buildDraftContent(fields);
+
+  return {
+    content,
+    editingPostId: typeof draft.editingPostId === "string" ? draft.editingPostId : null,
+    fields,
+    format,
+    guestEmail: typeof draft.guestEmail === "string" ? draft.guestEmail : "",
+    intent,
+    topic: draft.topic ?? "free-topic",
+    title,
+    updatedAt: draft.updatedAt ?? null,
+  };
 }
 
 export function readStoredTopicDraft(): TopicDraft | null {
@@ -62,58 +186,59 @@ export function readStoredTopicDraft(): TopicDraft | null {
 
     const parsedDraft: unknown = JSON.parse(rawDraft);
 
-    if (
-      !parsedDraft ||
-      typeof parsedDraft !== "object" ||
-      !("content" in parsedDraft) ||
-      !("title" in parsedDraft)
-    ) {
+    if (!parsedDraft || typeof parsedDraft !== "object") {
       return null;
     }
 
-    const content =
-      typeof parsedDraft.content === "string" ? parsedDraft.content : "";
-    const title = typeof parsedDraft.title === "string" ? parsedDraft.title : "";
-    const intentSource =
-      "intent" in parsedDraft
-        ? parsedDraft.intent
-        : "format" in parsedDraft
-          ? parsedDraft.format
-          : undefined;
-    const intent = normalizeStoredIntent(intentSource);
+    const draftRecord = parsedDraft as Record<string, unknown>;
     const topic =
-      "topic" in parsedDraft && isPostTopic(parsedDraft.topic)
-        ? parsedDraft.topic
-        : null;
+      "topic" in draftRecord && isPostTopic(draftRecord.topic)
+        ? draftRecord.topic
+        : "free-topic";
     const updatedAt =
-      "updatedAt" in parsedDraft && typeof parsedDraft.updatedAt === "string"
-        ? parsedDraft.updatedAt
-        : null;
-    const editingPostId =
-      "editingPostId" in parsedDraft &&
-      typeof parsedDraft.editingPostId === "string"
-        ? parsedDraft.editingPostId
-        : null;
+      typeof draftRecord.updatedAt === "string" ? draftRecord.updatedAt : null;
 
-    return {
-      content,
-      editingPostId,
-      intent,
+    return normalizeTopicDraft({
+      content: typeof draftRecord.content === "string" ? draftRecord.content : "",
+      editingPostId:
+        typeof draftRecord.editingPostId === "string" ? draftRecord.editingPostId : null,
+      fields: "fields" in draftRecord
+        ? (draftRecord.fields as TopicDraftFields)
+        : undefined,
+      format: "format" in draftRecord
+        ? (draftRecord.format as TopicFormat)
+        : undefined,
+      guestEmail: typeof draftRecord.guestEmail === "string" ? draftRecord.guestEmail : "",
+      intent: "intent" in draftRecord
+        ? (draftRecord.intent as PostIntent)
+        : undefined,
+      title: typeof draftRecord.title === "string" ? draftRecord.title : "",
       topic,
-      title,
       updatedAt,
-    };
+    });
   } catch {
     return null;
   }
 }
 
-export function saveTopicDraft(draft: TopicDraft) {
+export function saveTopicDraft(
+  draft: Partial<TopicDraft> & {
+    content?: string;
+    fields?: TopicDraftFields;
+    format?: TopicFormat;
+    guestEmail?: string;
+    intent?: PostIntent;
+    topic?: PostTopic | null;
+    title?: string;
+  },
+) {
   if (typeof window === "undefined") {
     return;
   }
 
-  window.localStorage.setItem(TOPIC_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  const normalizedDraft = normalizeTopicDraft(draft);
+
+  window.localStorage.setItem(TOPIC_DRAFT_STORAGE_KEY, JSON.stringify(normalizedDraft));
 }
 
 export function clearTopicDraft() {

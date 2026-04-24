@@ -1,9 +1,9 @@
 "use client";
 
-import { Dropdown, Modal, toast } from "@heroui/react";
+import { Dropdown, toast } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MoreHorizontalIcon } from "@/components/ui/icons";
 import { AdminUserEditorModal } from "@/features/admin/components/admin-user-editor-modal";
 import type { AdminListedUser } from "@/features/admin/types";
@@ -11,73 +11,6 @@ import type { AdminListedUser } from "@/features/admin/types";
 type AdminUserRowActionsProps = {
   user: AdminListedUser;
 };
-
-function ConfirmDialog({
-  actionLabel,
-  errorMessage,
-  isLoading,
-  onClose,
-  onConfirm,
-  title,
-}: {
-  actionLabel: string;
-  errorMessage?: string | null;
-  isLoading: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-}) {
-  return (
-    <Modal.Backdrop
-      isOpen
-      variant="opaque"
-      isDismissable={!isLoading}
-      onClick={(event) => {
-        const target = event.target instanceof HTMLElement ? event.target : null;
-        if (target?.closest('[data-slot="modal-dialog"]')) return;
-        if (!isLoading) onClose();
-      }}
-      className="fixed inset-0 z-[320]"
-    >
-      <Modal.Container scroll="outside" className="!p-4">
-        <Modal.Dialog
-          aria-label={title}
-          className="modal-surface w-full max-w-[420px] p-5"
-        >
-          <Modal.Body className="p-0">
-            <h3 className="font-helvetica text-[24px] font-bold leading-8 text-[var(--label-primary)]">
-              {title}
-            </h3>
-            {errorMessage ? (
-              <p className="mt-3 text-sm text-[var(--danger)]">{errorMessage}</p>
-            ) : null}
-
-            <div className="mt-6 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="tertiary"
-                className="!min-w-[120px] !justify-center !rounded-full !px-5"
-                disabled={isLoading}
-                onClick={onClose}
-              >
-                Отменить
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                className="!min-w-[120px] !justify-center !rounded-full !px-5"
-                disabled={isLoading}
-                onClick={onConfirm}
-              >
-                {isLoading ? "Подождите..." : actionLabel}
-              </Button>
-            </div>
-          </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
-  );
-}
 
 export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
   const router = useRouter();
@@ -287,7 +220,6 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
                 key="delete"
                 id="delete"
                 textValue="Удалить аккаунт"
-                className="text-[var(--danger)]"
               >
                 Удалить аккаунт
               </Dropdown.Item>
@@ -304,7 +236,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
 
       {isBanDialogOpen ? (
         <ConfirmDialog
-          title={`Вы уверены, что хотите забанить пользователя ${accountName}?`}
+          title={`Забанить пользователя ${accountName}?`}
           actionLabel="Забанить"
           errorMessage={feedbackMessage}
           isLoading={isSubmitting}
@@ -322,7 +254,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
 
       {isDeleteDialogOpen ? (
         <ConfirmDialog
-          title={`Вы уверены, что хотите удалить пользователя ${accountName}?`}
+          title={`Удалить пользователя ${accountName}?`}
           actionLabel="Удалить"
           errorMessage={feedbackMessage}
           isLoading={isSubmitting}

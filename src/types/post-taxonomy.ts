@@ -1,6 +1,7 @@
 export type PostIntent = "support" | "discussion";
 
 export type PostTopic =
+  | "free-topic"
   | "relationships"
   | "emotions"
   | "self-esteem"

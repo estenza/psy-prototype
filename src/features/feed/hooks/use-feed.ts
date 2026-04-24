@@ -22,6 +22,10 @@ import {
   requestTopicDraftRestore,
   saveTopicDraft,
 } from "@/features/topic-creation/lib/draft-storage";
+import {
+  buildCreateTopicHref,
+  getCurrentPathWithSearchAndHash,
+} from "@/features/topic-creation/lib/create-topic-navigation";
 import type {
   FeedSortMode,
   FeedTopicFilter,
@@ -172,7 +176,7 @@ export function useFeed({
     );
   };
 
-  const handlePostMenuAction = (
+  const handlePostMenuAction = async (
     actionId: PostMenuActionId,
     postId: Post["id"],
   ) => {
@@ -189,7 +193,34 @@ export function useFeed({
         updatedAt: new Date().toISOString(),
       });
       requestTopicDraftRestore();
-      window.location.assign("/create-topic");
+      window.location.assign(
+        buildCreateTopicHref(getCurrentPathWithSearchAndHash()),
+      );
+      return;
+    }
+
+    if (actionId === "delete") {
+      const postToDelete = posts.find((post) => post.id === postId);
+
+      if (!postToDelete || !isPostOwnedByUser(postToDelete, user)) {
+        return;
+      }
+
+      await runIfAuthorized(async () => {
+        const response = await fetch(`/api/discussions/${postId}`, {
+          method: "DELETE",
+        });
+        const payload = (await response.json()) as {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Не удалось удалить обсуждение.");
+        }
+
+        setPosts((current) => current.filter((post) => post.id !== postId));
+        toast.success("Обсуждение удалено");
+      });
       return;
     }
 

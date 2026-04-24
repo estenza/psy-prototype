@@ -25,15 +25,16 @@ export const POST_INTENT_META: Record<
 };
 
 export const POST_TOPIC_OPTIONS = [
+  { value: "free-topic", label: "Свободная тема" },
   { value: "relationships", label: "Отношения" },
+  { value: "family", label: "Семья и близкие" },
   { value: "emotions", label: "Эмоции и состояния" },
   { value: "self-esteem", label: "Самооценка и личность" },
-  { value: "family", label: "Семья и близкие" },
-  { value: "work-money", label: "Работа и деньги" },
+  { value: "work-money", label: "Работа, деньги, учеба" },
   { value: "habits-addictions", label: "Привычки и зависимости" },
   { value: "crisis-loss", label: "Кризисы и утраты" },
-  { value: "self-development", label: "Саморазвитие" },
   { value: "social-situations", label: "Социальные ситуации" },
+  { value: "self-development", label: "Саморазвитие" },
   { value: "hard-states", label: "Тяжёлые состояния" },
 ] as const satisfies ReadonlyArray<{ label: string; value: PostTopic }>;
 

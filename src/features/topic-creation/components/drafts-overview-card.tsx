@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { buildCreateTopicHref, getCurrentPathWithSearchAndHash } from "@/features/topic-creation/lib/create-topic-navigation";
 import {
   formatDraftTimeLabel,
   hasMeaningfulTopicDraft,
@@ -64,11 +65,13 @@ export function DraftsOverviewCard() {
               requestTopicDraftRestore();
             }
 
-            router.push("/create-topic");
+            router.push(
+              buildCreateTopicHref(getCurrentPathWithSearchAndHash()),
+            );
           }}
           className="interactive-secondary inline-flex cursor-pointer items-center rounded-full px-4 py-2.5 text-sm font-semibold"
         >
-          {hasDraft ? "Открыть черновик" : "Создать обсуждение"}
+          {hasDraft ? "Открыть черновик" : "Написать"}
         </button>
       </div>
     </section>

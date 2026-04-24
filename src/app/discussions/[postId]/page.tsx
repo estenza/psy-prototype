@@ -7,6 +7,10 @@ type DiscussionPageProps = {
   params: Promise<{
     postId: string;
   }>;
+  searchParams: Promise<{
+    returnTo?: string;
+    commentId?: string;
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -14,10 +18,21 @@ export const metadata: Metadata = {
   description: "Экран просмотра обсуждения на платформе внутри.",
 };
 
-export default async function DiscussionPage({ params }: DiscussionPageProps) {
+export default async function DiscussionPage({
+  params,
+  searchParams,
+}: DiscussionPageProps) {
   const { postId } = await params;
+  const resolvedSearchParams = await searchParams;
   const currentUser = await getCurrentUser();
   const initialPost = await findDiscussionById(postId, currentUser);
 
-  return <DiscussionViewScreen key={postId} initialPost={initialPost} />;
+  return (
+    <DiscussionViewScreen
+      key={postId}
+      initialPost={initialPost}
+      initialReturnTo={resolvedSearchParams.returnTo ?? null}
+      initialHighlightedCommentId={resolvedSearchParams.commentId ?? null}
+    />
+  );
 }

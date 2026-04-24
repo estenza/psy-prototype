@@ -4,6 +4,7 @@
 
 :root {
   --app-header-height: calc(var(--spacing) * 16);
+  --field-focus-ring-width: 3px;
   --space-1: calc(var(--spacing) * 1);
   --space-2: calc(var(--spacing) * 2);
   --space-3: calc(var(--spacing) * 3);
@@ -122,6 +123,8 @@ a[href],
 
 input::placeholder,
 textarea::placeholder {
+  color: var(--label-quaternary);
+  opacity: 1;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -321,6 +324,10 @@ textarea:placeholder-shown::selection {
     background-color: var(--background-elevated);
   }
 
+  .tabs:not(.tabs--secondary) .tabs__list {
+    background-color: var(--background-secondary);
+  }
+
   .surface-card {
     background-color: var(--background-elevated);
     border-radius: 28px;
@@ -417,9 +424,9 @@ textarea:placeholder-shown::selection {
     --button-bg: color-mix(in oklab, var(--accent) 10%, transparent);
     --button-bg-hover: color-mix(in oklab, var(--accent) 18%, transparent);
     --button-bg-pressed: color-mix(in oklab, var(--accent) 22%, transparent);
-    --button-fg: var(--color-accent-soft-foreground);
+    --button-fg: var(--accent-primary);
     background-color: var(--button-bg) !important;
-    color: var(--color-accent-soft-foreground) !important;
+    color: var(--accent-primary) !important;
     transition:
       transform 250ms var(--ease-smooth),
       background-color 150ms var(--ease-smooth),
@@ -441,7 +448,7 @@ textarea:placeholder-shown::selection {
   .button.button--ghost {
     --button-bg-hover: color-mix(in oklab, var(--accent) 10%, transparent);
     --button-bg-pressed: color-mix(in oklab, var(--accent) 18%, transparent);
-    --button-fg-accent: var(--color-accent-soft-foreground);
+    --button-fg-accent: var(--accent-primary);
     transition:
       transform 250ms var(--ease-smooth),
       background-color 150ms var(--ease-smooth),
@@ -492,6 +499,11 @@ textarea:placeholder-shown::selection {
     padding: 2px 8px !important;
   }
 
+  .chip.moderator-role-chip {
+    padding: 0 8px !important;
+    background-color: color-mix(in oklab, var(--foreground) 8%, transparent) !important;
+  }
+
   .chip__label {
     padding-inline: 0 !important;
   }
@@ -523,13 +535,13 @@ textarea:placeholder-shown::selection {
   @media (hover: hover) {
     .interactive-tertiary:hover {
       background-color: color-mix(in oklab, var(--accent) 10%, transparent);
-      color: var(--color-accent-soft-foreground);
+      color: var(--accent-primary);
     }
   }
 
   .interactive-tertiary:active {
     background-color: color-mix(in oklab, var(--accent) 18%, transparent);
-    color: var(--color-accent-soft-foreground);
+    color: var(--accent-primary);
     transform: scale(0.97);
   }
 
@@ -552,12 +564,52 @@ textarea:placeholder-shown::selection {
     border-radius: 12px !important;
   }
 
+  .dropdown-menu-default {
+    gap: 0 !important;
+    row-gap: 0 !important;
+    column-gap: 0 !important;
+  }
+
   .dropdown-menu-default [data-slot="menu-item"] {
     font-weight: var(--font-weight-regular) !important;
+    transition: background-color 150ms var(--ease-smooth);
   }
 
   .dropdown-menu-default [data-slot="menu-item"] :is(label, span, p, .type-menu-label) {
     font-weight: var(--font-weight-regular) !important;
+  }
+
+  .dropdown-menu-profile [data-slot="menu-item"] .profile-summary-name {
+    font-weight: var(--font-weight-medium) !important;
+  }
+
+  .dropdown-menu-profile [data-slot="menu-item"] .profile-menu-chevron {
+    opacity: 0;
+    transition: opacity 150ms var(--ease-smooth);
+  }
+
+  @media (hover: hover) {
+    .dropdown-menu-profile [data-slot="menu-item"]:hover .profile-menu-chevron,
+    .dropdown-menu-profile [data-slot="menu-item"][data-hovered="true"] .profile-menu-chevron {
+      opacity: 1;
+    }
+  }
+
+  .dropdown-menu-profile [data-slot="menu-item"]:active .profile-menu-chevron,
+  .dropdown-menu-profile [data-slot="menu-item"][data-pressed="true"] .profile-menu-chevron {
+    opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .dropdown-menu-default [data-slot="menu-item"]:hover,
+    .dropdown-menu-default [data-slot="menu-item"][data-hovered="true"] {
+      background-color: color-mix(in oklab, var(--foreground) 4%, transparent) !important;
+    }
+  }
+
+  .dropdown-menu-default [data-slot="menu-item"]:active,
+  .dropdown-menu-default [data-slot="menu-item"][data-pressed="true"] {
+    background-color: color-mix(in oklab, var(--foreground) 7%, transparent) !important;
   }
 
   .search-field__group,
@@ -592,7 +644,7 @@ textarea:placeholder-shown::selection {
   }
 
   .interactive-solid {
-    background-color: var(--interactive-primary-fill);
+    background-color: var(--foreground);
     color: var(--label-inverse);
     cursor: pointer;
   }
@@ -747,6 +799,7 @@ textarea:placeholder-shown::selection {
   .interactive-action-soft[data-pressed="true"] {
     background-color: color-mix(in oklab, var(--foreground) 11%, transparent);
     color: var(--label-primary);
+    transform: scale(0.97);
   }
 
   .interactive-action-soft:disabled {
@@ -820,7 +873,7 @@ textarea:placeholder-shown::selection {
 
   .topic-editor-shell:focus-within {
     background-color: var(--color-field-focus);
-    border-color: var(--color-field-border-focus);
+    border-color: var(--field-focus-border);
     box-shadow:
       var(--tw-inset-shadow),
       var(--tw-inset-ring-shadow),
@@ -830,7 +883,7 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--focus);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
   }
 
   .topic-editor-shell[data-invalid="true"] {
@@ -850,7 +903,7 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--danger);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
   }
 
   .topic-editor-content .ProseMirror {
@@ -953,7 +1006,7 @@ textarea:placeholder-shown::selection {
 
   .comment-editor-shell:focus-within {
     background-color: var(--field-background);
-    border-color: var(--accent-primary);
+    border-color: var(--field-focus-border);
     box-shadow:
       var(--tw-inset-shadow),
       var(--tw-inset-ring-shadow),
@@ -963,7 +1016,7 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--color-accent-soft);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
   }
 
   .comment-editor-shell[data-disabled="true"],
@@ -1065,7 +1118,7 @@ textarea:placeholder-shown::selection {
     animation: comment-skeleton-shimmer 1.25s linear infinite;
   }
 
-  .surface--default :is([data-slot="input"], [data-slot="input-group"]) {
+  :where(.surface--default, .field-surface-default) :is([data-slot="input"], [data-slot="input-group"]) {
     background-color: var(--field-background);
     border: 1px solid var(--separator-primary);
     box-shadow: none;
@@ -1075,9 +1128,9 @@ textarea:placeholder-shown::selection {
       box-shadow 150ms var(--ease-out);
   }
 
-  .surface--default [data-slot="input"]:-webkit-autofill,
-  .surface--default [data-slot="input"]:-webkit-autofill:hover,
-  .surface--default [data-slot="input"]:-webkit-autofill:focus {
+  :where(.surface--default, .field-surface-default) [data-slot="input"]:-webkit-autofill,
+  :where(.surface--default, .field-surface-default) [data-slot="input"]:-webkit-autofill:hover,
+  :where(.surface--default, .field-surface-default) [data-slot="input"]:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0px 1000px var(--field-background) inset;
     -webkit-text-fill-color: var(--label-primary);
     caret-color: var(--label-primary);
@@ -1085,19 +1138,20 @@ textarea:placeholder-shown::selection {
   }
 
   @media (hover: hover) {
-    .surface--default [data-slot="input"]:hover:not(:focus):not(:focus-visible):not([data-invalid="true"]),
-    .surface--default [data-slot="input"][data-hovered="true"]:not([data-focused="true"]):not([data-invalid="true"]),
-    .surface--default [data-slot="input-group"]:has(input:hover):not(:focus-within):not([data-invalid="true"]) {
+    :where(.surface--default, .field-surface-default) [data-slot="input"]:hover:not(:focus):not(:focus-visible):not([data-invalid="true"]),
+    :where(.surface--default, .field-surface-default) [data-slot="input"][data-hovered="true"]:not([data-focused="true"]):not([data-invalid="true"]),
+    :where(.surface--default, .field-surface-default) [data-slot="input-group"]:has(input:hover):not(:focus-within):not([data-invalid="true"]) {
+      background-color: color-mix(in srgb, var(--field-background) 94%, var(--fill-quaternary));
       border-color: var(--separator-strong);
       box-shadow: none;
     }
   }
 
-  .surface--default [data-slot="input"]:focus,
-  .surface--default [data-slot="input"][data-focused="true"],
-  .surface--default [data-slot="input-group"]:focus-within {
+  :where(.surface--default, .field-surface-default) [data-slot="input"]:focus,
+  :where(.surface--default, .field-surface-default) [data-slot="input"][data-focused="true"],
+  :where(.surface--default, .field-surface-default) [data-slot="input-group"]:focus-within {
     background-color: var(--field-background);
-    border-color: var(--accent-primary);
+    border-color: var(--field-focus-border);
     box-shadow:
       var(--tw-inset-shadow),
       var(--tw-inset-ring-shadow),
@@ -1107,18 +1161,18 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--color-accent-soft);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
   }
 
-  .surface--default [data-slot="input"][data-invalid="true"],
-  .surface--default [data-slot="input-group"][data-invalid="true"] {
+  :where(.surface--default, .field-surface-default) [data-slot="input"][data-invalid="true"],
+  :where(.surface--default, .field-surface-default) [data-slot="input-group"][data-invalid="true"] {
     background-color: var(--field-background);
     border-color: var(--danger);
     box-shadow: none;
   }
 
-  .surface--default [data-slot="input"][data-invalid="true"]:focus,
-  .surface--default [data-slot="input-group"][data-invalid="true"]:focus-within {
+  :where(.surface--default, .field-surface-default) [data-slot="input"][data-invalid="true"]:focus,
+  :where(.surface--default, .field-surface-default) [data-slot="input-group"][data-invalid="true"]:focus-within {
     border-color: var(--danger);
     box-shadow:
       var(--tw-inset-shadow),
@@ -1129,11 +1183,11 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--danger);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
     outline: none;
   }
 
-  .surface--default :is([data-slot="textarea"], .topic-editor-shell) {
+  :where(.surface--default, .field-surface-default) :is([data-slot="textarea"], .topic-editor-shell) {
     background-color: var(--field-background);
     border: 1px solid var(--separator-primary);
     box-shadow: none;
@@ -1144,20 +1198,20 @@ textarea:placeholder-shown::selection {
   }
 
   @media (hover: hover) {
-    .surface--default [data-slot="textarea"]:hover:not(:focus):not(:focus-visible),
-    .surface--default [data-slot="textarea"][data-hovered="true"]:not([data-focused="true"]):not([data-focus-visible="true"]),
-    .surface--default .topic-editor-shell:hover:not(:focus-within) {
-      background-color: var(--field-background);
+    :where(.surface--default, .field-surface-default) [data-slot="textarea"]:hover:not(:focus):not(:focus-visible),
+    :where(.surface--default, .field-surface-default) [data-slot="textarea"][data-hovered="true"]:not([data-focused="true"]):not([data-focus-visible="true"]),
+    :where(.surface--default, .field-surface-default) .topic-editor-shell:hover:not(:focus-within) {
+      background-color: color-mix(in srgb, var(--field-background) 94%, var(--fill-quaternary));
       border-color: var(--separator-strong);
       box-shadow: none;
     }
   }
 
-  .surface--default [data-slot="textarea"]:focus,
-  .surface--default [data-slot="textarea"][data-focused="true"],
-  .surface--default .topic-editor-shell:focus-within {
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"]:focus,
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"][data-focused="true"],
+  :where(.surface--default, .field-surface-default) .topic-editor-shell:focus-within {
     background-color: var(--field-background);
-    border-color: var(--accent-primary);
+    border-color: var(--field-focus-border);
     box-shadow:
       var(--tw-inset-shadow),
       var(--tw-inset-ring-shadow),
@@ -1167,21 +1221,21 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--color-accent-soft);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
   }
 
-  .surface--default [data-slot="textarea"][data-invalid="true"],
-  .surface--default [data-slot="textarea"][aria-invalid="true"],
-  .surface--default .topic-editor-shell[data-invalid="true"] {
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"][data-invalid="true"],
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"][aria-invalid="true"],
+  :where(.surface--default, .field-surface-default) .topic-editor-shell[data-invalid="true"] {
     background-color: var(--field-background);
     border-color: var(--danger);
   }
 
-  .surface--default [data-slot="textarea"][data-invalid="true"]:focus,
-  .surface--default [data-slot="textarea"][aria-invalid="true"]:focus,
-  .surface--default [data-slot="textarea"][data-invalid="true"][data-focused="true"],
-  .surface--default [data-slot="textarea"][aria-invalid="true"][data-focused="true"],
-  .surface--default .topic-editor-shell[data-invalid="true"]:focus-within {
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"][data-invalid="true"]:focus,
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"][aria-invalid="true"]:focus,
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"][data-invalid="true"][data-focused="true"],
+  :where(.surface--default, .field-surface-default) [data-slot="textarea"][aria-invalid="true"][data-focused="true"],
+  :where(.surface--default, .field-surface-default) .topic-editor-shell[data-invalid="true"]:focus-within {
     background-color: var(--field-background);
     border-color: var(--danger);
     box-shadow:
@@ -1193,40 +1247,41 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--danger);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
     outline: none;
   }
 
-  .surface--default :is(.select__trigger, [data-slot="select-trigger"]) {
+  :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"]) {
     background-color: var(--field-background);
-    border: 1px solid transparent;
-    box-shadow: inset 0 0 0 1px var(--separator-primary);
+    border: 1px solid var(--separator-primary);
+    box-shadow: none;
+  }
+
+  :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"]):focus,
+  :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"])[data-focus="true"],
+  :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"])[data-focused="true"],
+  :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"])[data-focus-visible="true"] {
+    background-color: var(--field-background);
+    border-color: var(--separator-primary);
+    box-shadow: none;
   }
 
   @media (hover: hover) {
-    .surface--default :is(.select__trigger, [data-slot="select-trigger"]):hover,
-    .surface--default :is(.select__trigger, [data-slot="select-trigger"])[data-hovered="true"] {
-      background-color: var(--field-background);
-      border-color: transparent;
-      box-shadow: inset 0 0 0 1px var(--separator-strong);
+    :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"]):hover,
+    :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"])[data-hovered="true"],
+    :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"])[data-open="true"] {
+      background-color: color-mix(in srgb, var(--field-background) 94%, var(--fill-quaternary));
+      border-color: var(--separator-strong);
+      box-shadow: none;
     }
   }
 
-  .surface--default :is(.select__trigger, [data-slot="select-trigger"]):focus,
-  .surface--default :is(.select__trigger, [data-slot="select-trigger"])[data-focus="true"],
-  .surface--default :is(.select__trigger, [data-slot="select-trigger"])[data-focused="true"],
-  .surface--default :is(.select__trigger, [data-slot="select-trigger"])[data-focus-visible="true"] {
-    background-color: var(--field-background);
-    border-color: transparent;
-    box-shadow: inset 0 0 0 1px var(--separator-primary);
+  :where(.surface--default, .field-surface-default) :is(.select__trigger, [data-slot="select-trigger"])[data-invalid="true"] {
+    border-color: var(--danger);
+    box-shadow: none;
   }
 
-  .surface--default :is(.select__trigger, [data-slot="select-trigger"])[data-invalid="true"] {
-    border-color: transparent;
-    box-shadow: inset 0 0 0 1px var(--danger);
-  }
-
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]) {
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]) {
     background-color: var(--field-background);
     border: 1px solid var(--separator-primary);
     box-shadow: none;
@@ -1236,12 +1291,12 @@ textarea:placeholder-shown::selection {
       box-shadow 150ms var(--ease-out);
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group {
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group {
     position: relative;
     cursor: text;
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
       .search-field__clear-button,
       [data-slot="search-field-clear-button"]
     ) {
@@ -1253,7 +1308,7 @@ textarea:placeholder-shown::selection {
     transform: translateY(-50%);
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
       .search-field__input,
       [data-slot="search-field-input"]
     ) {
@@ -1261,21 +1316,21 @@ textarea:placeholder-shown::selection {
     padding-right: 8px;
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
       .search-field__input,
       [data-slot="search-field-input"]
     ):placeholder-shown {
     padding-right: 4px;
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group :is(
       .search-field__input,
       [data-slot="search-field-input"]
     ):not(:placeholder-shown) {
     padding-right: 44px;
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group:has(
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]).app-header-search-group:has(
       :is(.search-field__input, [data-slot="search-field-input"]):placeholder-shown
     )::after {
     content: "";
@@ -1296,18 +1351,18 @@ textarea:placeholder-shown::selection {
   }
 
   @media (hover: hover) {
-    .surface--default :is(.search-field__group, [data-slot="search-field-group"]):hover:not(:focus-within),
-    .surface--default :is(.search-field__group, [data-slot="search-field-group"])[data-hovered="true"]:not([data-focus-within="true"]) {
-      background-color: var(--field-background);
+    :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]):hover:not(:focus-within),
+    :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"])[data-hovered="true"]:not([data-focus-within="true"]) {
+      background-color: color-mix(in srgb, var(--field-background) 94%, var(--fill-quaternary));
       border-color: var(--separator-strong);
       box-shadow: none;
     }
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"]):focus-within,
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"])[data-focus-within="true"] {
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"]):focus-within,
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"])[data-focus-within="true"] {
     background-color: var(--field-background);
-    border-color: var(--accent-primary);
+    border-color: var(--field-focus-border);
     box-shadow:
       var(--tw-inset-shadow),
       var(--tw-inset-ring-shadow),
@@ -1317,22 +1372,22 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--color-accent-soft);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"])[data-invalid="true"],
-  .surface--default :is(.search-field, [data-slot="search-field"])[data-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]),
-  .surface--default :is(.search-field, [data-slot="search-field"])[aria-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]) {
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"])[data-invalid="true"],
+  :where(.surface--default, .field-surface-default) :is(.search-field, [data-slot="search-field"])[data-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]),
+  :where(.surface--default, .field-surface-default) :is(.search-field, [data-slot="search-field"])[aria-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]) {
     background-color: var(--field-background);
     border-color: var(--danger);
   }
 
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"])[data-invalid="true"]:focus-within,
-  .surface--default :is(.search-field, [data-slot="search-field"])[data-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]):focus-within,
-  .surface--default :is(.search-field, [data-slot="search-field"])[aria-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]):focus-within,
-  .surface--default :is(.search-field__group, [data-slot="search-field-group"])[data-invalid="true"][data-focus-within="true"],
-  .surface--default :is(.search-field, [data-slot="search-field"])[data-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"])[data-focus-within="true"],
-  .surface--default :is(.search-field, [data-slot="search-field"])[aria-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"])[data-focus-within="true"] {
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"])[data-invalid="true"]:focus-within,
+  :where(.surface--default, .field-surface-default) :is(.search-field, [data-slot="search-field"])[data-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]):focus-within,
+  :where(.surface--default, .field-surface-default) :is(.search-field, [data-slot="search-field"])[aria-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"]):focus-within,
+  :where(.surface--default, .field-surface-default) :is(.search-field__group, [data-slot="search-field-group"])[data-invalid="true"][data-focus-within="true"],
+  :where(.surface--default, .field-surface-default) :is(.search-field, [data-slot="search-field"])[data-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"])[data-focus-within="true"],
+  :where(.surface--default, .field-surface-default) :is(.search-field, [data-slot="search-field"])[aria-invalid="true"] :is(.search-field__group, [data-slot="search-field-group"])[data-focus-within="true"] {
     background-color: var(--field-background);
     border-color: var(--danger);
     box-shadow:
@@ -1344,7 +1399,7 @@ textarea:placeholder-shown::selection {
     --tw-ring-color: var(--danger);
     --tw-ring-offset-width: 0px;
     --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(var(--field-focus-ring-width) + var(--tw-ring-offset-width)) var(--tw-ring-color);
     outline: none;
   }
 }

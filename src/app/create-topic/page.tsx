@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Экран для создания нового обсуждения на платформе внутри.",
 };
 
-export default function CreateTopicPage() {
+export default async function CreateTopicPage() {
   return <CreateTopicEntry />;
 }
  

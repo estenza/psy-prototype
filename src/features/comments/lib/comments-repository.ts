@@ -21,6 +21,7 @@ import type {
   CommentAuthor,
   CommentNode,
   CommentsCapabilities,
+  ProfileCommentItem,
   CommentsSectionData,
   CommentsSortValue,
   CommentsViewer,
@@ -32,6 +33,22 @@ type CommentReportStatus = "open" | "reviewed" | "dismissed" | "resolved";
 type DiscussionSummaryRow = {
   id: string;
   title: string;
+};
+
+type ProfileCommentRow = {
+  id: string;
+  discussion_id: string;
+  discussion_title: string;
+  author_user_id: string;
+  author_display_name: string;
+  author_nickname: string | null;
+  author_avatar_url: string | null;
+  author_role: "user" | "specialist" | null;
+  body_html: string;
+  body_text: string;
+  created_at: string;
+  likes_count: number;
+  viewer_liked: boolean | number | null;
 };
 
 type DiscussionCommentRow = {
@@ -56,6 +73,7 @@ type DiscussionCommentRow = {
   author_display_name: string;
   author_nickname: string | null;
   author_avatar_url: string | null;
+  author_role: "user" | "specialist" | null;
   viewer_liked: boolean | number | null;
 };
 
@@ -120,7 +138,7 @@ const COMMENT_BODY_MAX_LENGTH = 5000;
 const COMMENT_BODY_HTML_MAX_LENGTH = 300_000;
 const COMMENT_REPORT_REASON_MAX_LENGTH = 500;
 const COMMENT_EDIT_WINDOW_MS = 15 * 60 * 1000;
-const COMMENT_MAX_THREAD_DEPTH = 2;
+const COMMENT_MAX_THREAD_DEPTH = 1;
 
 const PG_DISCUSSION_COMMENT_COLUMNS = `
   discussion_comments.id,
@@ -143,7 +161,8 @@ const PG_DISCUSSION_COMMENT_COLUMNS = `
   discussion_comments.deleted_at::text AS deleted_at,
   users.display_name AS author_display_name,
   users.nickname AS author_nickname,
-  users.avatar_url AS author_avatar_url
+  users.avatar_url AS author_avatar_url,
+  users.role AS author_role
 `;
 
 const SQLITE_DISCUSSION_COMMENT_COLUMNS = `
@@ -167,7 +186,8 @@ const SQLITE_DISCUSSION_COMMENT_COLUMNS = `
   discussion_comments.deleted_at,
   users.display_name AS author_display_name,
   users.nickname AS author_nickname,
-  users.avatar_url AS author_avatar_url
+  users.avatar_url AS author_avatar_url,
+  users.role AS author_role
 `;
 
 export class CommentsRepositoryError extends Error {
@@ -177,6 +197,7 @@ export class CommentsRepositoryError extends Error {
     super(message);
     this.name = "CommentsRepositoryError";
     this.status = status;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
@@ -254,6 +275,17 @@ function prependCommentMention(
     return bodyHtml;
   }
 
+  const existingMentionMatch = bodyHtml.match(/@\[([^[\]|]+)(?:\|([^[\]|]+))?\]/);
+  const existingMentionLabel = existingMentionMatch?.[1]?.trim() ?? null;
+  const existingTargetCommentId = existingMentionMatch?.[2] ?? null;
+
+  if (
+    (targetCommentId && existingTargetCommentId === targetCommentId)
+    || (!targetCommentId && existingMentionLabel === trimmedLabel)
+  ) {
+    return bodyHtml;
+  }
+
   const mentionToken = targetCommentId
     ? `@[${trimmedLabel}|${targetCommentId}]`
     : `@[${trimmedLabel}]`;
@@ -292,10 +324,35 @@ async function queryPgOne<T extends Record<string, unknown>>(query: string, valu
   return rows[0] ?? null;
 }
 
+function mapProfileComment(row: ProfileCommentRow): ProfileCommentItem {
+  const createdAtInSeconds = Math.floor(new Date(row.created_at).getTime() / 1000);
+
+  return {
+    id: row.id,
+    discussionId: row.discussion_id,
+    discussionTitle: row.discussion_title,
+    author: mapCommentAuthor({
+      avatarUrl: row.author_avatar_url,
+      displayName: row.author_display_name,
+      nickname: row.author_nickname,
+      role: row.author_role,
+      userId: row.author_user_id,
+    }),
+    bodyHtml: row.body_html,
+    bodyText: row.body_text,
+    createdAt: createdAtInSeconds,
+    relativeDate: formatRelativeDate(createdAtInSeconds),
+    compactRelativeDate: formatRelativeDateCompact(createdAtInSeconds),
+    upvotes: row.likes_count,
+    userVote: readBoolean(row.viewer_liked) ? "up" : null,
+  };
+}
+
 function mapCommentAuthor(params: {
   avatarUrl: string | null;
   displayName: string;
   nickname: string | null;
+  role?: "user" | "specialist" | null;
   userId: string;
 }): CommentAuthor {
   return {
@@ -306,6 +363,7 @@ function mapCommentAuthor(params: {
       nickname: params.nickname,
     }),
     avatarUrl: params.avatarUrl,
+    role: params.role ?? null,
     initials: getInitials(params.displayName),
     kind: "sso",
   };
@@ -387,13 +445,22 @@ function buildCommentNode(params: {
     parentId: row.parent_comment_id,
     rootId: row.root_comment_id ?? row.id,
     depth,
+    status: row.status,
     author: mapCommentAuthor({
       avatarUrl: row.author_avatar_url,
       displayName: row.author_display_name,
       nickname: row.author_nickname,
+      role: row.author_role,
       userId: row.author_user_id,
     }),
     createdAt: Math.floor(new Date(row.created_at).getTime() / 1000),
+    deletedAt: row.deleted_at ? Math.floor(new Date(row.deleted_at).getTime() / 1000) : null,
+    deletedRelativeDate: row.deleted_at
+      ? formatRelativeDate(Math.floor(new Date(row.deleted_at).getTime() / 1000))
+      : null,
+    deletedCompactRelativeDate: row.deleted_at
+      ? formatRelativeDateCompact(Math.floor(new Date(row.deleted_at).getTime() / 1000))
+      : null,
     relativeDate: formatRelativeDate(Math.floor(new Date(row.created_at).getTime() / 1000)),
     compactRelativeDate: formatRelativeDateCompact(
       Math.floor(new Date(row.created_at).getTime() / 1000),
@@ -605,6 +672,74 @@ async function findDiscussionSummaryById(discussionId: string) {
   return (row as DiscussionSummaryRow | undefined) ?? null;
 }
 
+export async function listPublishedCommentsByAuthorUserId(
+  authorUserId: string,
+  viewerUserId?: string | null,
+) {
+  if (isPostgresAuthEnabled()) {
+    const rows = await queryPgRows<ProfileCommentRow>(
+      `SELECT
+        discussion_comments.id,
+        discussion_comments.discussion_id,
+        discussions.title AS discussion_title,
+        discussion_comments.author_user_id,
+        users.display_name AS author_display_name,
+        users.nickname AS author_nickname,
+        users.avatar_url AS author_avatar_url,
+        users.role AS author_role,
+        discussion_comments.body_html,
+        discussion_comments.body_text,
+        discussion_comments.created_at::text AS created_at,
+        discussion_comments.likes_count,
+        CASE WHEN viewer_reaction.id IS NULL THEN FALSE ELSE TRUE END AS viewer_liked
+      FROM discussion_comments
+      INNER JOIN discussions ON discussions.id = discussion_comments.discussion_id
+      INNER JOIN users ON users.id = discussion_comments.author_user_id
+      LEFT JOIN discussion_comment_reactions AS viewer_reaction
+        ON viewer_reaction.comment_id = discussion_comments.id
+        AND viewer_reaction.user_id = $2
+        AND viewer_reaction.reaction_type = 'like'
+      WHERE discussion_comments.author_user_id = $1
+        AND discussion_comments.status = 'published'
+      ORDER BY discussion_comments.created_at DESC`,
+      [authorUserId, viewerUserId ?? null],
+    );
+
+    return rows.map((row) => mapProfileComment(row));
+  }
+
+  const rows = getDatabase()
+    .prepare(
+      `SELECT
+        discussion_comments.id,
+        discussion_comments.discussion_id,
+        discussions.title AS discussion_title,
+        discussion_comments.author_user_id,
+        users.display_name AS author_display_name,
+        users.nickname AS author_nickname,
+        users.avatar_url AS author_avatar_url,
+        users.role AS author_role,
+        discussion_comments.body_html,
+        discussion_comments.body_text,
+        discussion_comments.created_at,
+        discussion_comments.likes_count,
+        CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
+      FROM discussion_comments
+      INNER JOIN discussions ON discussions.id = discussion_comments.discussion_id
+      INNER JOIN users ON users.id = discussion_comments.author_user_id
+      LEFT JOIN discussion_comment_reactions AS viewer_reaction
+        ON viewer_reaction.comment_id = discussion_comments.id
+        AND viewer_reaction.user_id = ?
+        AND viewer_reaction.reaction_type = 'like'
+      WHERE discussion_comments.author_user_id = ?
+        AND discussion_comments.status = 'published'
+      ORDER BY discussion_comments.created_at DESC`,
+    )
+    .all(viewerUserId ?? null, authorUserId) as ProfileCommentRow[];
+
+  return rows.map((row) => mapProfileComment(row));
+}
+
 async function findDiscussionCommentBaseById(commentId: string) {
   if (isPostgresAuthEnabled()) {
     return (await queryPgOne<DiscussionCommentBaseRow>(
@@ -692,7 +827,7 @@ async function listPublishedCommentRows(discussionId: string, viewerUserId?: str
         AND viewer_reaction.user_id = $2
         AND viewer_reaction.reaction_type = 'like'
       WHERE discussion_comments.discussion_id = $1
-        AND discussion_comments.status = 'published'
+        AND discussion_comments.status IN ('published', 'deleted')
       ORDER BY discussion_comments.created_at ASC`,
       [discussionId, viewerUserId ?? null],
     );
@@ -712,7 +847,7 @@ async function listPublishedCommentRows(discussionId: string, viewerUserId?: str
         AND viewer_reaction.user_id = ?
         AND viewer_reaction.reaction_type = 'like'
       WHERE discussion_comments.discussion_id = ?
-        AND discussion_comments.status = 'published'
+        AND discussion_comments.status IN ('published', 'deleted')
       ORDER BY discussion_comments.created_at ASC`,
     )
     .all(viewerUserId ?? null, discussionId) as DiscussionCommentRow[];
@@ -728,14 +863,14 @@ async function syncDiscussionCommentsCount(discussionId: string) {
          SELECT COUNT(*)
          FROM discussion_comments
          WHERE discussion_id = $1
-           AND status = 'published'
+           AND status IN ('published', 'deleted')
            AND (
              parent_comment_id IS NULL
              OR EXISTS (
                SELECT 1
                FROM discussion_comments AS root_comments
                WHERE root_comments.id = discussion_comments.root_comment_id
-                 AND root_comments.status = 'published'
+                 AND root_comments.status IN ('published', 'deleted')
              )
            )
        )
@@ -752,14 +887,14 @@ async function syncDiscussionCommentsCount(discussionId: string) {
          SELECT COUNT(*)
          FROM discussion_comments
          WHERE discussion_id = ?
-           AND status = 'published'
+           AND status IN ('published', 'deleted')
            AND (
              parent_comment_id IS NULL
              OR EXISTS (
                SELECT 1
                FROM discussion_comments AS root_comments
                WHERE root_comments.id = discussion_comments.root_comment_id
-                 AND root_comments.status = 'published'
+                 AND root_comments.status IN ('published', 'deleted')
              )
            )
        )
@@ -776,7 +911,7 @@ async function syncRootCommentRepliesCount(rootCommentId: string) {
          SELECT COUNT(*)
          FROM discussion_comments AS child_comments
          WHERE child_comments.root_comment_id = $1
-           AND child_comments.status = 'published'
+           AND child_comments.status IN ('published', 'deleted')
        )
        WHERE id = $1`,
       [rootCommentId],
@@ -791,7 +926,7 @@ async function syncRootCommentRepliesCount(rootCommentId: string) {
          SELECT COUNT(*)
          FROM discussion_comments AS child_comments
          WHERE child_comments.root_comment_id = ?
-           AND child_comments.status = 'published'
+           AND child_comments.status IN ('published', 'deleted')
        )
        WHERE id = ?`,
     )

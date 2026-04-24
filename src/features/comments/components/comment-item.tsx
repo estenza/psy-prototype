@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { UserAvatarAction } from "@/components/ui/user-avatar-action";
 import { CommentActions } from "@/features/comments/components/comment-actions";
@@ -35,6 +36,13 @@ type CommentItemProps = {
   onVote: (commentId: string, type: "up" | "down" | null) => void;
   onBlock: (commentId: string) => void;
   onReport: (commentId: string) => void;
+  flat?: boolean;
+  showMenu?: boolean;
+  showActions?: boolean;
+  bodySurface?: boolean;
+  showReplyAction?: boolean;
+  highlightedCommentId?: string | null;
+  onOpen?: () => void;
 };
 
 type CommentBranchGeometry = {
@@ -98,6 +106,14 @@ function CommentBranchLayer({
   );
 }
 
+function commentTreeContainsId(comment: CommentNode, targetCommentId: string): boolean {
+  if (comment.id === targetCommentId) {
+    return true;
+  }
+
+  return comment.replies.some((reply) => commentTreeContainsId(reply, targetCommentId));
+}
+
 export function CommentItem({
   comment,
   viewer,
@@ -113,11 +129,21 @@ export function CommentItem({
   onVote,
   onBlock,
   onReport,
+  flat = false,
+  showMenu = true,
+  showActions = true,
+  bodySurface = false,
+  showReplyAction = true,
+  highlightedCommentId = null,
+  onOpen,
 }: CommentItemProps) {
+  const highlightedReplyIndex = highlightedCommentId
+    ? comment.replies.findIndex((reply) => commentTreeContainsId(reply, highlightedCommentId))
+    : -1;
   const [isEditing, setIsEditing] = useState(false);
   const [isReplyComposerOpen, setIsReplyComposerOpen] = useState(false);
   const [areRepliesCollapsed, setAreRepliesCollapsed] = useState(false);
-  const [areExtraRepliesVisible, setAreExtraRepliesVisible] = useState(false);
+  const [areExtraRepliesVisible, setAreExtraRepliesVisible] = useState(highlightedReplyIndex >= 3);
   const [isRepliesBranchHovered, setIsRepliesBranchHovered] = useState(false);
   const [branchGeometry, setBranchGeometry] = useState<CommentBranchGeometry>({
     targetCenters: [],
@@ -130,13 +156,28 @@ export function CommentItem({
   const canLike = isViewerAuthenticated
     ? comment.capabilities.canVote
     : true;
+  const isDeleted = comment.status === "deleted";
   const canReplyToComment = canPostReply && comment.capabilities.canReply;
   const canStartReply = isViewerAuthenticated ? canReplyToComment : true;
   const profileHref = buildPublicProfilePathFromHandle(comment.author.handle);
-  const hasReplies = comment.replyCount > 0;
+  const hasReplies = !flat && comment.replyCount > 0;
   const visibleReplies = areExtraRepliesVisible ? comment.replies : comment.replies.slice(0, 3);
   const hiddenRepliesCount = Math.max(comment.replies.length - visibleReplies.length, 0);
   const hasHiddenReplies = hiddenRepliesCount > 0;
+  const isHighlighted = highlightedCommentId === comment.id;
+
+  function shouldIgnoreOpenEvent(target: EventTarget | null) {
+    return target instanceof Element
+      && Boolean(target.closest("a, button, input, textarea, [role='button']"));
+  }
+
+  function handleOpen(event: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) {
+    if (!onOpen || shouldIgnoreOpenEvent(event.target)) {
+      return;
+    }
+
+    onOpen();
+  }
 
   const collapseReplies = () => {
     setIsRepliesBranchHovered(false);
@@ -229,7 +270,15 @@ export function CommentItem({
   }, [hasReplies, areRepliesCollapsed, visibleReplies.length, hasHiddenReplies]);
 
   return (
-    <article ref={articleRef} className="relative flex w-full min-w-0">
+    <article
+      ref={articleRef}
+      data-comment-id={comment.id}
+      className={`relative flex min-w-0 ${
+        bodySurface ? "inline-flex max-w-full w-auto items-end gap-3" : ""
+      } ${
+        onOpen ? "group cursor-pointer" : ""
+      }`.trim()}
+    >
       {hasReplies ? (
         <CommentBranchLayer
           targetCenters={branchGeometry.targetCenters}
@@ -241,46 +290,93 @@ export function CommentItem({
         />
       ) : null}
 
-      <div className="flex w-9 shrink-0 flex-col items-center self-stretch">
+      <div
+        className={`flex w-9 shrink-0 flex-col items-center ${
+          bodySurface ? "self-end" : "self-stretch"
+        }`.trim()}
+        style={bodySurface ? { justifyContent: "flex-end" } : undefined}
+      >
         <UserAvatarAction
           avatarUrl={comment.author.avatarUrl}
           fallbackText={comment.author.initials}
           name={comment.author.name}
-          showStatusDot={comment.viewerOwnsComment}
+          showStatusDot={comment.author.role === "specialist"}
           size="comment-md"
           href={profileHref ?? null}
           ariaLabel={`Открыть профиль ${comment.author.name}`}
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col pl-3">
+      <div
+        className={`flex min-w-0 flex-1 flex-col ${
+          bodySurface
+            ? "surface-card feed-card-surface relative w-fit max-w-[calc(100%-3rem)] flex-none rounded-[28px] pl-4 pr-6 py-4 group-hover:bg-[color-mix(in_oklab,var(--background-elevated)_96%,var(--default))]"
+            : "pl-3"
+        }`.trim()}
+        onClick={onOpen ? handleOpen : undefined}
+        onKeyDown={onOpen
+          ? (event) => {
+              if (event.key !== "Enter" && event.key !== " ") {
+                return;
+              }
+
+              event.preventDefault();
+              handleOpen(event);
+            }
+          : undefined}
+        role={onOpen ? "link" : undefined}
+        tabIndex={onOpen ? 0 : undefined}
+        aria-label={onOpen ? "Открыть обсуждение с этим ответом" : undefined}
+        style={isHighlighted
+          ? {
+              boxShadow: "0 0 0 3px var(--color-accent-soft)",
+            }
+          : undefined}
+      >
         <div className="flex min-w-0 items-center gap-2 pl-1">
           <div className="flex min-w-0 flex-1 items-center">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-              {profileHref ? (
-                <Link
-                  href={profileHref}
-                  className="rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4"
-                >
-                  {comment.author.name}
-                </Link>
-              ) : (
-                <span className="text-[14px] leading-5 font-medium text-[var(--label-primary)]">
-                  {comment.author.name}
+            {isDeleted ? (
+              <div className="flex min-h-10 min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="text-[14px] leading-5 font-normal text-[var(--label-tertiary)]">
+                  Ответ удален пользователем
                 </span>
-              )}
-              <span className="min-w-0 truncate text-[14px] leading-5 text-[var(--label-tertiary)]">
-                {comment.author.handle}
-              </span>
-              <span aria-hidden="true" className="text-[14px] leading-5 text-[var(--label-tertiary)]">•</span>
-              <span className="flex items-center text-[14px] leading-5 text-[var(--label-tertiary)]">
-                <span className="min-[480px]:hidden">{comment.compactRelativeDate}</span>
-                <span className="hidden min-[480px]:inline">{comment.relativeDate}</span>
-              </span>
-            </div>
+                <span aria-hidden="true" className="text-[14px] leading-5 text-[var(--label-tertiary)]">•</span>
+                <span className="flex items-center text-[14px] leading-5 text-[var(--label-tertiary)]">
+                  <span className="min-[480px]:hidden">
+                    {comment.deletedCompactRelativeDate ?? comment.compactRelativeDate}
+                  </span>
+                  <span className="hidden min-[480px]:inline">
+                    {comment.deletedRelativeDate ?? comment.relativeDate}
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                {profileHref ? (
+                  <Link
+                    href={profileHref}
+                    className="rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4"
+                  >
+                    {comment.author.name}
+                  </Link>
+                ) : (
+                  <span className="text-[14px] leading-5 font-medium text-[var(--label-primary)]">
+                    {comment.author.name}
+                  </span>
+                )}
+                <span className="min-w-0 truncate text-[14px] leading-5 text-[var(--label-tertiary)]">
+                  {comment.author.handle}
+                </span>
+                <span aria-hidden="true" className="text-[14px] leading-5 text-[var(--label-tertiary)]">•</span>
+                <span className="flex items-center text-[14px] leading-5 text-[var(--label-tertiary)]">
+                  <span className="min-[480px]:hidden">{comment.compactRelativeDate}</span>
+                  <span className="hidden min-[480px]:inline">{comment.relativeDate}</span>
+                </span>
+              </div>
+            )}
           </div>
 
-          {!isEditing ? (
+          {!isEditing && showMenu && !isDeleted ? (
             <div className="shrink-0">
               <CommentMoreMenu
                 actionRow
@@ -303,7 +399,7 @@ export function CommentItem({
           ) : null}
         </div>
 
-        <div className="min-w-0 pl-1 pt-1 pb-3">
+        <div className={`min-w-0 pl-1 ${isDeleted ? "py-0" : "pt-1 pb-3"}`.trim()}>
           {isEditing ? (
             <CommentsComposer
               viewer={viewer}
@@ -327,19 +423,22 @@ export function CommentItem({
               }
             />
           ) : (
-            <div className="min-w-0">
-              <CommentRichContent html={comment.bodyHtml} />
-            </div>
+            !isDeleted ? (
+              <div className="min-w-0">
+                <CommentRichContent html={comment.bodyHtml} />
+              </div>
+            ) : null
           )}
         </div>
 
-        {!isEditing ? (
+        {!isEditing && showActions && !isDeleted ? (
           <CommentActions
             isReply={isReply}
             liked={comment.userVote === "up"}
             likeCount={comment.upvotes}
             canLike={canLike}
-            canReply={canStartReply}
+            canReply={flat ? false : canStartReply}
+            showReplyAction={showReplyAction}
             onLike={() => {
               if (!isViewerAuthenticated) {
                 onRequireAuth();
@@ -349,6 +448,10 @@ export function CommentItem({
               onVote(comment.id, comment.userVote === "up" ? null : "up");
             }}
             onReply={() => {
+              if (flat) {
+                return;
+              }
+
               if (!isViewerAuthenticated) {
                 onRequireAuth();
                 return;
@@ -425,6 +528,7 @@ export function CommentItem({
                     onVote={onVote}
                     onBlock={onBlock}
                     onReport={onReport}
+                    highlightedCommentId={highlightedCommentId}
                   />
                 </div>
               ))}

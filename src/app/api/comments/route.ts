@@ -26,6 +26,24 @@ function buildCommentsErrorResponse(error: unknown, fallbackMessage: string) {
     );
   }
 
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    "status" in error &&
+    typeof error.status === "number"
+  ) {
+    return NextResponse.json(
+      {
+        error: error.message,
+      },
+      {
+        status: error.status,
+      },
+    );
+  }
+
   console.error("[api/comments]", error);
 
   return NextResponse.json(

@@ -4,10 +4,11 @@ import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
 import type { Post, ViewMode } from "@/features/feed/types";
 
 type PostFeedItemProps = {
-  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => void;
+  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => Promise<void> | void;
   post: Post;
   viewMode: ViewMode;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
+  discussionHref?: string;
 };
 
 export function PostFeedItem({
@@ -15,11 +16,13 @@ export function PostFeedItem({
   post,
   viewMode,
   onToggleLike,
+  discussionHref,
 }: PostFeedItemProps) {
   if (viewMode === "compact") {
     return (
       <CompactPostItem
         post={post}
+        discussionHref={discussionHref}
         onToggleLike={onToggleLike}
         onPostMenuAction={onPostMenuAction}
       />
@@ -29,6 +32,7 @@ export function PostFeedItem({
   return (
     <CardPostItem
       post={post}
+      discussionHref={discussionHref}
       onToggleLike={onToggleLike}
       onPostMenuAction={onPostMenuAction}
     />

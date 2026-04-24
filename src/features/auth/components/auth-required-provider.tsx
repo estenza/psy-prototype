@@ -14,7 +14,10 @@ import type { SessionUser } from "@/features/auth/types";
 type AuthRequiredModalContextValue = {
   closeAuthModal: () => void;
   nextHref: string;
-  openAuthModal: () => void;
+  openAuthModal: (options?: {
+    initialEmail?: string;
+    nextHref?: string;
+  }) => void;
   refreshAuthState: () => Promise<SessionUser | null>;
   status: "loading" | "authenticated" | "unauthenticated" | "error";
   user: SessionUser | null;
@@ -41,10 +44,15 @@ export function AuthRequiredProvider({
 }) {
   const { refresh, status, user } = useCurrentUser(initialUser);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialEmail, setInitialEmail] = useState("");
   const [nextHref, setNextHref] = useState("/");
 
-  const openAuthModal = useCallback(() => {
-    setNextHref(getCurrentLocationHref());
+  const openAuthModal = useCallback((options?: {
+    initialEmail?: string;
+    nextHref?: string;
+  }) => {
+    setInitialEmail(options?.initialEmail?.trim() ?? "");
+    setNextHref(options?.nextHref ?? getCurrentLocationHref());
     setIsModalOpen(true);
   }, []);
 
@@ -68,6 +76,7 @@ export function AuthRequiredProvider({
     <AuthRequiredModalContext.Provider value={value}>
       {children}
       <AuthRequiredModal
+        initialEmail={initialEmail}
         isOpen={isModalOpen}
         nextHref={nextHref}
         onClose={closeAuthModal}

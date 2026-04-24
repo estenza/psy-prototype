@@ -38,7 +38,13 @@ import {
   PROFILE_NAME_MAX_LENGTH,
 } from "@/features/auth/constants";
 import { hashPassword } from "@/features/auth/lib/password";
-import { buildDisplayName, normalizeNickname, sanitizeProfileText } from "@/features/auth/lib/profile";
+import {
+  buildDisplayName,
+  isReservedProfilePathSegment,
+  normalizeNickname,
+  RESERVED_NICKNAME_MESSAGE,
+  sanitizeProfileText,
+} from "@/features/auth/lib/profile";
 import type { SessionUser, UserRole } from "@/features/auth/types";
 
 const USER_PROFILE_DESCRIPTION_MAX_LENGTH = 250;
@@ -224,6 +230,12 @@ function normalizeUserAccountName(value: string | null | undefined) {
     });
   }
 
+  if (isReservedProfilePathSegment(normalizedValue)) {
+    throw new AdminServiceError(RESERVED_NICKNAME_MESSAGE, 400, {
+      nickname: RESERVED_NICKNAME_MESSAGE,
+    });
+  }
+
   return normalizedValue;
 }
 
@@ -236,6 +248,12 @@ async function ensureEmailAvailable(email: string, currentUserId?: string) {
 }
 
 async function ensureNicknameAvailable(nickname: string, currentUserId?: string) {
+  if (isReservedProfilePathSegment(nickname)) {
+    throw new AdminServiceError(RESERVED_NICKNAME_MESSAGE, 409, {
+      nickname: RESERVED_NICKNAME_MESSAGE,
+    });
+  }
+
   const existingUser = await findUserByNickname(nickname);
 
   if (existingUser && existingUser.id !== currentUserId) {
@@ -256,6 +274,11 @@ async function generateManagedNickname(email: string, currentUserId?: string) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const suffix = attempt === 0 ? "" : `.${randomBytes(2).toString("hex")}`;
     const candidate = `${safeBase.slice(0, Math.max(3, 20 - suffix.length))}${suffix}`;
+
+    if (isReservedProfilePathSegment(candidate)) {
+      continue;
+    }
+
     const existingUser = await findUserByNickname(candidate);
 
     if (!existingUser || existingUser.id === currentUserId) {

@@ -15,10 +15,9 @@ type UserAvatarActionProps = {
   interactive?: boolean;
 };
 
-const interactiveAvatarClassName = [
+const interactiveAvatarBaseClassName = [
   "inline-flex rounded-full p-0 no-highlight pointer-events-auto",
   "transition-transform duration-150 ease-out motion-reduce:transition-none",
-  "active:scale-[0.96]",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
   "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 ].join(" ");
@@ -35,6 +34,9 @@ export function UserAvatarAction({
   className = "",
   interactive = true,
 }: UserAvatarActionProps) {
+  const interactiveAvatarClassName = `${interactiveAvatarBaseClassName} ${
+    size === "header" ? "active:scale-[0.88]" : "active:scale-[0.96]"
+  }`;
   const resolvedClassName = `${interactive ? interactiveAvatarClassName : "inline-flex"} ${className}`.trim();
   const avatarNode = (
     <UserAvatar

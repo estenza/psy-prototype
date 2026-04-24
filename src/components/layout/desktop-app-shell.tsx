@@ -12,6 +12,10 @@ type DesktopAppShellProps = {
   children: ReactNode;
   activeSection?: NavigationItemKey;
   showRightSidebar?: boolean;
+  showMenuColumn?: boolean;
+  hideMenuContent?: boolean;
+  hideRightSidebarContent?: boolean;
+  menuContent?: ReactNode;
   centerClassName?: string;
   fitCenterToContent?: boolean;
 };
@@ -20,6 +24,10 @@ export function DesktopAppShell({
   children,
   activeSection = DEFAULT_ACTIVE_SECTION,
   showRightSidebar = true,
+  showMenuColumn = true,
+  hideMenuContent = false,
+  hideRightSidebarContent = false,
+  menuContent,
   centerClassName = "",
   fitCenterToContent = false,
 }: DesktopAppShellProps) {
@@ -76,7 +84,14 @@ export function DesktopAppShell({
 
   return (
     <div className="w-full min-w-0 min-[721px]:flex min-[721px]:h-[calc(100dvh-var(--app-header-height))] min-[721px]:overflow-x-hidden min-[721px]:overflow-y-visible">
-      <MenuColumn items={navItems} activeSection={activeSection} />
+      {showMenuColumn ? (
+        <MenuColumn
+          items={navItems}
+          activeSection={activeSection}
+          hideContent={hideMenuContent}
+          customContent={menuContent}
+        />
+      ) : null}
 
       <main
         ref={mainRef}
@@ -104,7 +119,9 @@ export function DesktopAppShell({
               }`.trim()}
             >
               <PrimaryColumn className={primaryColumnClassName}>{children}</PrimaryColumn>
-              {showRightSidebar ? <SidebarColumn /> : null}
+              {showRightSidebar ? (
+                <SidebarColumn hideContent={hideRightSidebarContent} />
+              ) : null}
             </div>
           </div>
         </div>

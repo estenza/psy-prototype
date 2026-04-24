@@ -8,6 +8,7 @@ import {
 } from "@/features/feed/constants/feed";
 import {
   CardModeIcon,
+  CheckIndicatorIcon,
   ChevronDownIcon,
   CompactModeIcon,
 } from "@/components/ui/icons";
@@ -69,7 +70,9 @@ export function FeedToolbar({
               {POST_TOPIC_FILTER_OPTIONS.map((option) => (
                 <Dropdown.Item key={option.value} id={option.value} textValue={option.label}>
                   <Label>{option.label}</Label>
-                  <Dropdown.ItemIndicator />
+                  <Dropdown.ItemIndicator className="text-[var(--accent-primary)]">
+                    {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
+                  </Dropdown.ItemIndicator>
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
@@ -102,7 +105,9 @@ export function FeedToolbar({
               {FEED_SORT_OPTIONS.map((option) => (
                 <Dropdown.Item key={option} id={option} textValue={option}>
                   <Label>{option}</Label>
-                  <Dropdown.ItemIndicator />
+                  <Dropdown.ItemIndicator className="text-[var(--accent-primary)]">
+                    {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
+                  </Dropdown.ItemIndicator>
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
@@ -144,7 +149,9 @@ export function FeedToolbar({
                     )}
                     <span>{option.label}</span>
                   </Label>
-                  <Dropdown.ItemIndicator />
+                  <Dropdown.ItemIndicator className="text-[var(--accent-primary)]">
+                    {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
+                  </Dropdown.ItemIndicator>
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>

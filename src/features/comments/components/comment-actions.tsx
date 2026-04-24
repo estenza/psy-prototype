@@ -10,6 +10,7 @@ type CommentActionsProps = {
   likeCount: number;
   canLike: boolean;
   canReply: boolean;
+  showReplyAction?: boolean;
   onLike: () => void;
   onReply: () => void;
   repliesToggleLabel?: string | null;
@@ -24,6 +25,7 @@ export function CommentActions({
   likeCount,
   canLike,
   canReply,
+  showReplyAction = true,
   onLike,
   onReply,
   repliesToggleLabel = null,
@@ -64,15 +66,17 @@ export function CommentActions({
           </ToggleButton>
         </HoverTooltip>
 
-        <button
-          type="button"
-          className={actionClassName}
-          onClick={onReply}
-          disabled={!canReply}
-          aria-label="Ответить"
-        >
-          <span className="type-body-md-medium flex items-center">Ответить</span>
-        </button>
+        {showReplyAction ? (
+          <button
+            type="button"
+            className={actionClassName}
+            onClick={onReply}
+            disabled={!canReply}
+            aria-label="Ответить"
+          >
+            <span className="type-body-md-medium flex items-center">Ответить</span>
+          </button>
+        ) : null}
       </div>
 
       {repliesToggleLabel && onRepliesToggle ? (

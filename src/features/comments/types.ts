@@ -29,6 +29,7 @@ export type CommentAuthor = {
   name: string;
   handle: string;
   avatarUrl: string | null;
+  role: "user" | "specialist" | null;
   initials: string;
   kind: "guest" | "sso" | "hyvor";
 };
@@ -38,8 +39,12 @@ export type CommentNode = {
   parentId: string | null;
   rootId: string;
   depth: number;
+  status: "published" | "hidden" | "deleted" | "pending";
   author: CommentAuthor;
   createdAt: number;
+  deletedAt: number | null;
+  deletedRelativeDate: string | null;
+  deletedCompactRelativeDate: string | null;
   relativeDate: string;
   compactRelativeDate: string;
   bodyHtml: string;
@@ -69,6 +74,20 @@ export type CommentsSectionData = {
   viewer: CommentsViewer;
   capabilities: CommentsCapabilities;
   comments: CommentNode[];
+};
+
+export type ProfileCommentItem = {
+  id: string;
+  discussionId: string;
+  discussionTitle: string;
+  author: CommentAuthor;
+  bodyHtml: string;
+  bodyText: string;
+  createdAt: number;
+  relativeDate: string;
+  compactRelativeDate: string;
+  upvotes: number;
+  userVote: "up" | "down" | null;
 };
 
 export type CommentsResponsePayload = {

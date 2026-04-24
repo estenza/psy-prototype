@@ -1,5 +1,6 @@
 export type PostMenuActionId =
   | "edit"
+  | "delete"
   | "follow"
   | "show-less"
   | "save"
@@ -12,8 +13,13 @@ export const OWN_POST_MENU_ACTIONS = [
     icon: "edit",
     label: "Редактировать",
   },
+  {
+    id: "delete",
+    icon: "delete",
+    label: "Удалить обсуждение",
+  },
 ] as const satisfies ReadonlyArray<{
-  icon: "edit";
+  icon: "delete" | "edit";
   id: PostMenuActionId;
   label: string;
 }>;
@@ -43,11 +49,9 @@ export const COMMUNITY_POST_MENU_ACTIONS = [
     id: "report",
     icon: "flag",
     label: "Пожаловаться",
-    tone: "danger",
   },
 ] as const satisfies ReadonlyArray<{
   icon: "bell" | "bookmark" | "eye-off" | "flag";
   id: PostMenuActionId;
   label: string;
-  tone?: "default" | "danger";
 }>;

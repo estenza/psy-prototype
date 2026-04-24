@@ -32,7 +32,7 @@
   --app-shell-rail-gap: calc(var(--spacing) * 6);
 
   /* Accents */
-  --accent-primary: var(--accent);
+  --accent-primary: var(--color-accent-hover);
   --accent-like: var(--danger);
 
   /* Backgrounds */
@@ -67,7 +67,6 @@
   --interactive-fill-inverse-fill: var(--fill-inverse-primary);
   --interactive-fill-inverse-hover-fill: var(--fill-inverse-secondary);
   --interactive-fill-inverse-pressed-fill: var(--fill-inverse-tertiary);
-  --interactive-primary-fill: var(--foreground);
   --interactive-primary-hover-fill: color-mix(in oklab, var(--foreground) 92%, var(--background-primary));
   --interactive-primary-pressed-fill: color-mix(in oklab, var(--foreground) 84%, var(--background-primary));
   --interactive-primary-disabled-fill: color-mix(in oklab, var(--foreground) 22%, transparent);
@@ -138,6 +137,11 @@
   /* Separators */
   --separator-primary: var(--separator);
   --separator-strong: color-mix(in oklab, var(--separator) 80%, var(--foreground) 20%);
+  --field-focus-border: color-mix(
+    in oklab,
+    var(--accent-primary) 82%,
+    var(--separator-primary)
+  );
 }
 
 .dark,

@@ -9,13 +9,14 @@ type UserAvatarProps = {
   fallbackText?: string;
   name: string;
   showStatusDot?: boolean;
-  size?: "comment-md" | "comment-sm" | "header" | "lg" | "md" | "sm";
+  size?: "comment-md" | "comment-sm" | "header" | "lg" | "md" | "profile-xl" | "sm";
 };
 
 const avatarSizeClasses = {
   header: "type-avatar-header h-9 w-9 shrink-0 rounded-full",
   lg: "type-avatar-lg h-20 w-20 shrink-0 rounded-full",
   md: "type-avatar-md h-11 w-11 shrink-0 rounded-full",
+  "profile-xl": "h-[136px] w-[136px] shrink-0 rounded-full text-[34px]",
   sm: "type-avatar-sm h-10 w-10 shrink-0 rounded-full lg:h-11 lg:w-11 lg:text-sm",
   "comment-md": "type-avatar-comment-md h-9 w-9 shrink-0 rounded-full",
   "comment-sm": "type-avatar-comment-sm h-6 w-6 shrink-0 rounded-full",
@@ -25,6 +26,7 @@ const statusDotClasses = {
   header: "bottom-0 right-0 h-2.5 w-2.5 border",
   lg: "bottom-1 right-1 h-3.5 w-3.5 border-2",
   md: "bottom-0.5 right-0.5 h-2.5 w-2.5 border",
+  "profile-xl": "bottom-2 right-2 h-5 w-5 border-2",
   sm: "bottom-0.5 right-0.5 h-2.5 w-2.5 border",
   "comment-md": "bottom-0 right-0 h-2.5 w-2.5 border",
   "comment-sm": "bottom-0 right-0 h-2.5 w-2.5 border",

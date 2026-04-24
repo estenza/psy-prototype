@@ -1,4 +1,8 @@
-import { normalizeNickname } from "@/features/auth/lib/profile";
+import {
+  isReservedProfilePathSegment,
+  normalizeNickname,
+  RESERVED_NICKNAME_MESSAGE,
+} from "@/features/auth/lib/profile";
 
 export const ADMIN_USER_NAME_MAX_LENGTH = 30;
 export const ADMIN_ACCOUNT_NAME_MIN_LENGTH = 3;
@@ -38,6 +42,10 @@ export function getAdminAccountNameError(value: string | null | undefined) {
     || !ADMIN_ACCOUNT_NAME_PATTERN.test(normalizedValue)
   ) {
     return ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE;
+  }
+
+  if (isReservedProfilePathSegment(normalizedValue)) {
+    return RESERVED_NICKNAME_MESSAGE;
   }
 
   return null;

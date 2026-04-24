@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@heroui/react";
 import {
   startTransition,
   useCallback,
@@ -45,26 +46,35 @@ export function useComments(pageId: string) {
       );
       setError(null);
 
-      const response = await fetch(
-        `/api/comments?pageId=${encodeURIComponent(pageId)}&sort=${encodeURIComponent(nextSort)}`,
-        {
-          cache: "no-store",
-        },
-      );
+      try {
+        const response = await fetch(
+          `/api/comments?pageId=${encodeURIComponent(pageId)}&sort=${encodeURIComponent(nextSort)}`,
+          {
+            cache: "no-store",
+          },
+        );
 
-      const payload = await readJsonResponse<CommentsResponsePayload>(response);
+        const payload = await readJsonResponse<CommentsResponsePayload>(response);
 
-      if ("data" in payload && payload.data) {
-        setData(payload.data);
-      }
+        if ("data" in payload && payload.data) {
+          setData(payload.data);
+        }
 
-      if (!response.ok) {
-        setError(payload.error ?? "Не удалось загрузить комментарии.");
+        if (!response.ok) {
+          setError(payload.error ?? "Не удалось загрузить комментарии.");
+          setStatus("error");
+          return;
+        }
+
+        setStatus("ready");
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Не удалось загрузить комментарии.",
+        );
         setStatus("error");
-        return;
       }
-
-      setStatus("ready");
     },
     [pageId],
   );
@@ -246,10 +256,6 @@ export function useComments(pageId: string) {
   async function deleteComment(commentId: string) {
     setFeedback(null);
 
-    if (!window.confirm("Удалить этот комментарий?")) {
-      return;
-    }
-
     try {
       const response = await fetch(`/api/comments/${commentId}`, {
         method: "DELETE",
@@ -262,6 +268,7 @@ export function useComments(pageId: string) {
       }
 
       await loadComments(sort);
+      toast.success("Ответ удален");
     } catch (actionError) {
       setFeedback({
         kind: "error",
@@ -270,6 +277,8 @@ export function useComments(pageId: string) {
             ? actionError.message
             : "Не удалось удалить комментарий.",
       });
+
+      throw actionError;
     }
   }
 

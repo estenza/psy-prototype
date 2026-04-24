@@ -1,7 +1,11 @@
 "use client";
 
 import { Dropdown, Label } from "@heroui/react";
-import { ChevronDownSmallIcon, SortCommentsIcon } from "@/components/ui/icons";
+import {
+  CheckIndicatorIcon,
+  ChevronDownSmallIcon,
+  SortCommentsIcon,
+} from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button-styles";
 import { COMMENTS_SORT_OPTIONS } from "@/features/comments/constants";
 import type { CommentsSortValue } from "@/features/comments/types";
@@ -46,7 +50,9 @@ export function CommentsSortControl({
           {COMMENTS_SORT_OPTIONS.map((option) => (
             <Dropdown.Item key={option.value} id={option.value} textValue={option.label}>
               <Label>{option.label}</Label>
-              <Dropdown.ItemIndicator />
+              <Dropdown.ItemIndicator className="text-[var(--accent-primary)]">
+                {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
+              </Dropdown.ItemIndicator>
             </Dropdown.Item>
           ))}
         </Dropdown.Menu>

@@ -1,12 +1,11 @@
-const relativeTimeFormatter = new Intl.RelativeTimeFormat("ru", {
-  numeric: "auto",
-});
-const relativeTimeFormatterNumeric = new Intl.RelativeTimeFormat("ru", {
-  numeric: "always",
-});
 const shortMonthFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
   month: "short",
+});
+const shortMonthWithYearFormatter = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
 });
 
 const russianPluralRules = new Intl.PluralRules("ru");
@@ -28,14 +27,6 @@ const repliesCountLabels: Record<Intl.LDMLPluralRule, string> = {
   many: "ответов",
   other: "ответов",
 };
-
-function capitalizeFirstLetter(value: string) {
-  if (!value) {
-    return value;
-  }
-
-  return value[0].toLocaleUpperCase("ru-RU") + value.slice(1);
-}
 
 export function escapeHtml(value: string) {
   return value
@@ -209,68 +200,42 @@ export function formatReplyCount(value: number) {
   return `${value} ${label}`;
 }
 
-export function formatRelativeDate(timestampInSeconds: number) {
-  const timestampInMilliseconds = timestampInSeconds * 1000;
-  const deltaInSeconds = Math.round(
-    (timestampInMilliseconds - Date.now()) / 1000,
-  );
-
-  if (Math.abs(deltaInSeconds) < 60) {
-    return "Только что";
+function formatShortAbsoluteDate(targetDate: Date, now: Date) {
+  if (targetDate.getFullYear() === now.getFullYear()) {
+    return shortMonthFormatter.format(targetDate);
   }
 
-  const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
-    ["year", 60 * 60 * 24 * 365],
-    ["month", 60 * 60 * 24 * 30],
-    ["week", 60 * 60 * 24 * 7],
-    ["day", 60 * 60 * 24],
-    ["hour", 60 * 60],
-    ["minute", 60],
-    ["second", 1],
-  ];
-
-  for (const [unit, unitInSeconds] of units) {
-    if (Math.abs(deltaInSeconds) >= unitInSeconds || unit === "second") {
-      const value = Math.round(deltaInSeconds / unitInSeconds);
-      const formatter = unit === "day" ? relativeTimeFormatterNumeric : relativeTimeFormatter;
-      return capitalizeFirstLetter(formatter.format(value, unit));
-    }
-  }
-
-  return capitalizeFirstLetter(relativeTimeFormatter.format(0, "second"));
+  return shortMonthWithYearFormatter.format(targetDate);
 }
 
-export function formatRelativeDateCompact(timestampInSeconds: number) {
+function formatShortRelativeDate(timestampInSeconds: number) {
   const timestampInMilliseconds = timestampInSeconds * 1000;
   const now = new Date();
   const targetDate = new Date(timestampInMilliseconds);
-  const deltaInSeconds = Math.max(0, Math.round((now.getTime() - timestampInMilliseconds) / 1000));
+  const deltaInSeconds = Math.max(
+    0,
+    Math.floor((now.getTime() - timestampInMilliseconds) / 1000),
+  );
 
   if (deltaInSeconds < 60) {
-    return "Только что";
+    return `${Math.max(1, deltaInSeconds)} с`;
   }
 
   if (deltaInSeconds < 60 * 60) {
-    return `${Math.max(1, Math.round(deltaInSeconds / 60))}м`;
+    return `${Math.max(1, Math.floor(deltaInSeconds / 60))} мин`;
   }
 
   if (deltaInSeconds < 60 * 60 * 24) {
-    return `${Math.max(1, Math.round(deltaInSeconds / (60 * 60)))}ч`;
+    return `${Math.max(1, Math.floor(deltaInSeconds / (60 * 60)))} ч`;
   }
 
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfTargetDay = new Date(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate(),
-  );
-  const deltaInDays = Math.round(
-    (startOfToday.getTime() - startOfTargetDay.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  return formatShortAbsoluteDate(targetDate, now);
+}
 
-  if (deltaInDays <= 2) {
-    return `${Math.max(1, deltaInDays)}д`;
-  }
+export function formatRelativeDate(timestampInSeconds: number) {
+  return formatShortRelativeDate(timestampInSeconds);
+}
 
-  return shortMonthFormatter.format(targetDate);
+export function formatRelativeDateCompact(timestampInSeconds: number) {
+  return formatShortRelativeDate(timestampInSeconds);
 }

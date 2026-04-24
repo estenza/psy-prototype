@@ -44,7 +44,7 @@ function countCommentNodes(comments: CommentNode[]): number {
   return comments.reduce((total, comment) => total + 1 + countCommentNodes(comment.replies), 0);
 }
 
-const COMMENT_MAX_THREAD_DEPTH = 2;
+const COMMENT_MAX_THREAD_DEPTH = 1;
 
 function prependCommentMention(
   bodyHtml: string,
@@ -54,6 +54,17 @@ function prependCommentMention(
   const trimmedLabel = mentionLabel.trim();
 
   if (!trimmedLabel) {
+    return bodyHtml;
+  }
+
+  const existingMentionMatch = bodyHtml.match(/@\[([^[\]|]+)(?:\|([^[\]|]+))?\]/);
+  const existingMentionLabel = existingMentionMatch?.[1]?.trim() ?? null;
+  const existingTargetCommentId = existingMentionMatch?.[2] ?? null;
+
+  if (
+    (targetCommentId && existingTargetCommentId === targetCommentId)
+    || (!targetCommentId && existingMentionLabel === trimmedLabel)
+  ) {
     return bodyHtml;
   }
 
@@ -113,6 +124,7 @@ function mapAuthor(comment: HyvorDataComment): CommentAuthor {
     name: comment.user.name,
     handle: normalizeCommentHandle(comment.user.username, comment.user.name),
     avatarUrl: comment.user.picture_url ?? null,
+    role: null,
     initials: getInitials(comment.user.name),
     kind: userKind,
   };
@@ -137,8 +149,12 @@ function mapComment(
     parentId,
     rootId,
     depth,
+    status: "published",
     author: mapAuthor(comment),
     createdAt: comment.created_at,
+    deletedAt: null,
+    deletedRelativeDate: null,
+    deletedCompactRelativeDate: null,
     relativeDate: formatRelativeDate(comment.created_at),
     compactRelativeDate: formatRelativeDateCompact(comment.created_at),
     bodyHtml,
