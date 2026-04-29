@@ -4,7 +4,8 @@
   "private": true,
   "packageManager": "yarn@4.13.0",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev --turbopack",
     "dev:admin-local": "yarn dev",
     "build": "next build",
     "check:icons": "node scripts/check-icon-exports.mjs",

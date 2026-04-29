@@ -80,16 +80,15 @@ type SendOTPEmailResult = {
 export async function sendOTPEmail({
   adminContext = false,
   code,
-  purpose,
   toEmail,
 }: SendOTPEmailInput): Promise<SendOTPEmailResult> {
   const config = getSmtpConfig();
-  const action = purpose === "sign-up" ? "регистрации" : "входа";
+  const action = "вход";
   const shouldAlsoSendToTelegram = adminContext && isTelegramConfigured();
   const emailText = [
     "Здравствуйте!",
     "",
-    `Ваш код для ${action} в приложении внутри:`,
+    "Ваш код для входа в приложении внутри:",
     "",
     code,
     "",
@@ -132,7 +131,7 @@ export async function sendOTPEmail({
 
   console.info("[auth/otp][preview]", {
     code,
-    purpose,
+    purpose: "sign-in",
     toEmail,
   });
 

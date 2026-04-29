@@ -4,6 +4,7 @@ import { Dropdown, toast } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import { MoreHorizontalIcon } from "@/components/ui/icons";
 import { AdminUserEditorModal } from "@/features/admin/components/admin-user-editor-modal";
 import type { AdminListedUser } from "@/features/admin/types";
@@ -185,7 +186,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
             <MoreHorizontalIcon />
           </Dropdown.Trigger>
 
-          <Dropdown.Popover placement="bottom end" className="min-w-[220px]">
+          <DropdownPopover placement="bottom end" className="min-w-[220px]">
             <Dropdown.Menu
               aria-label="Действия с аккаунтом"
               selectionMode="none"
@@ -224,7 +225,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
                 Удалить аккаунт
               </Dropdown.Item>
             </Dropdown.Menu>
-          </Dropdown.Popover>
+          </DropdownPopover>
         </Dropdown.Root>
       </div>
 

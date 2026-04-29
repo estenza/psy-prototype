@@ -1,25 +1,73 @@
 "use client";
 
 import { Modal } from "@heroui/react";
-import { useEffect } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { AuthOnboarding } from "@/features/auth/components/auth-onboarding";
 import { AuthOtpFlow } from "@/features/auth/components/auth-otp-flow";
+import { resolveOnboardingStep } from "@/features/auth/lib/profile";
+import type { AuthUser, SessionUser } from "@/features/auth/types";
 
 type AuthRequiredModalProps = {
   initialEmail?: string;
   isOpen: boolean;
+  methodTitle?: string;
   nextHref: string;
+  onAuthStateChanged: () => Promise<SessionUser | null>;
   onClose: () => void;
 };
 
 export function AuthRequiredModal({
   initialEmail,
   isOpen,
+  methodTitle,
   nextHref,
+  onAuthStateChanged,
   onClose,
 }: AuthRequiredModalProps) {
-  useEffect(() => {
-  }, [isOpen]);
+  const [onboardingUser, setOnboardingUser] = useState<AuthUser | null>(null);
+  const onboardingCloseHandlerRef = useRef<(() => Promise<void>) | null>(null);
+
+  const closeAndReset = useCallback(() => {
+    onboardingCloseHandlerRef.current = null;
+    setOnboardingUser(null);
+    onClose();
+  }, [onClose]);
+
+  const finishAuth = useCallback(async () => {
+    await onAuthStateChanged();
+    onboardingCloseHandlerRef.current = null;
+    setOnboardingUser(null);
+    onClose();
+  }, [onAuthStateChanged, onClose]);
+
+  const handleAuthenticated = useCallback(async (user: AuthUser) => {
+    await onAuthStateChanged();
+
+    if (resolveOnboardingStep(user) === "complete") {
+      closeAndReset();
+      return;
+    }
+
+    setOnboardingUser(user);
+  }, [closeAndReset, onAuthStateChanged]);
+
+  const handleBackdropClick = useCallback((event: React.MouseEvent) => {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+
+    if (target?.closest('[data-slot="modal-dialog"]')) {
+      return;
+    }
+
+    const closeOnboarding = onboardingCloseHandlerRef.current;
+
+    if (closeOnboarding) {
+      void closeOnboarding();
+      return;
+    }
+
+    closeAndReset();
+  }, [closeAndReset]);
 
   if (!isOpen) {
     return null;
@@ -30,33 +78,50 @@ export function AuthRequiredModal({
       isOpen
       variant="opaque"
       isDismissable
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      onClickCapture={(event) => {
-        const target = event.target instanceof HTMLElement ? event.target : null;
-        if (target?.closest('[data-slot="modal-dialog"]')) return;
-        onClose();
-      }}
+      onClickCapture={handleBackdropClick}
       className="fixed inset-0 z-[200]"
     >
       <Modal.Container className="flex min-h-dvh items-center justify-center p-4">
+      {onboardingUser ? (
+        <Modal.Dialog
+          aria-label="Завершить вход"
+          className="contents"
+        >
+          <AuthOnboarding
+            closeHref={nextHref}
+            currentUser={onboardingUser}
+            nextPath={nextHref}
+            onCancel={closeAndReset}
+            onCloseHandlerChange={(handler) => {
+              onboardingCloseHandlerRef.current = handler;
+            }}
+            onComplete={finishAuth}
+          />
+        </Modal.Dialog>
+      ) : (
       <Modal.Dialog
         aria-labelledby="auth-modal-title"
-        className="modal-surface surface-elevated surface--default relative w-full max-w-[420px] px-5 py-6 sm:px-6"
+        className="modal-surface surface-elevated relative w-full max-w-[420px] px-5 py-6 min-[481px]:px-6"
       >
         <button
           type="button"
           aria-label="Закрыть"
-          onClick={onClose}
+          onClick={closeAndReset}
           className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)]"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
             <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
           </svg>
         </button>
-        <AuthOtpFlow initialEmail={initialEmail} nextHref={nextHref} titleAs="h2" />
+        <AuthOtpFlow
+          initialEmail={initialEmail}
+          methodTitle={methodTitle}
+          nextHref={nextHref}
+          onAuthenticated={handleAuthenticated}
+          titleAs="h2"
+        />
       </Modal.Dialog>
+      )}
       </Modal.Container>
     </Modal.Backdrop>,
     document.body,

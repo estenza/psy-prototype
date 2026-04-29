@@ -23,11 +23,14 @@ const themeInitializationScript = `
         return match ? decodeURIComponent(match[2]) : null;
       }
       var saved = getCookie(cookieName) || window.localStorage.getItem("psy-prototype:theme");
-      var theme = saved === "dark" ? "dark" : "light";
+      var preference = saved === "dark" || saved === "light" || saved === "system" ? saved : "light";
+      var systemTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      var theme = preference === "system" ? systemTheme : preference;
       document.documentElement.classList.remove("light", "dark");
       document.documentElement.classList.add(theme);
       document.documentElement.classList.toggle("theme-dark", theme === "dark");
       document.documentElement.dataset.theme = theme;
+      document.documentElement.dataset.themePreference = preference;
       document.documentElement.style.colorScheme = theme;
     } catch (e) {}
   })();
@@ -39,20 +42,31 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const appEnvironment = getAppEnvironment();
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUser({
+    completeSkippableUserOnboarding: false,
+  });
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get(APP_THEME_COOKIE_NAME)?.value;
-  const initialTheme = themeCookie === "dark" ? "dark" : "light";
+  const initialThemePreference =
+    themeCookie === "dark" || themeCookie === "light" || themeCookie === "system"
+      ? themeCookie
+      : "light";
+  const initialTheme = initialThemePreference === "dark" ? "dark" : "light";
 
   return (
     <html
       lang="ru"
       data-app-env={appEnvironment}
       data-theme={initialTheme}
+      data-theme-preference={initialThemePreference}
       className={initialTheme}
       suppressHydrationWarning
     >
       <head>
+        <link rel="preconnect" href="https://yastatic.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://autofill.yandex.ru" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://yastatic.net" />
+        <link rel="dns-prefetch" href="https://autofill.yandex.ru" />
         <script
           dangerouslySetInnerHTML={{
             __html: themeInitializationScript,
@@ -65,7 +79,9 @@ export default async function RootLayout({
           <AuthRequiredProvider initialUser={currentUser}>
             {children}
           </AuthRequiredProvider>
-          <AppToastProvider />
+          <div className="app-shell-layer">
+            <AppToastProvider />
+          </div>
         </AppThemeProvider>
       </body>
     </html>

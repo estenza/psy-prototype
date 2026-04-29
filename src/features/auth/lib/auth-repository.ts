@@ -290,6 +290,26 @@ export async function findUserByNickname(nickname: string) {
   return row ? mapUser(row) : null;
 }
 
+export async function findUserByDisplayName(displayName: string) {
+  if (isPostgresAuthEnabled()) {
+    const row = readUserRow(
+      await queryPgOne<UserRow>(
+        `SELECT ${PG_USER_COLUMNS} FROM users WHERE display_name = $1 LIMIT 1`,
+        [displayName],
+      ),
+    );
+
+    return row ? mapUser(row) : null;
+  }
+
+  const result = getDatabase()
+    .prepare("SELECT * FROM users WHERE display_name = ? LIMIT 1")
+    .get(displayName);
+
+  const row = readUserRow(result);
+  return row ? mapUser(row) : null;
+}
+
 export async function findUserById(id: string) {
   if (isPostgresAuthEnabled()) {
     const row = readUserRow(

@@ -13,6 +13,7 @@ import {
   CompactModeIcon,
 } from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button-styles";
+import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import type {
   FeedSortMode,
   FeedTopicFilter,
@@ -42,7 +43,7 @@ export function FeedToolbar({
   const chevronClassName = "flex h-3 w-3 flex-none items-center justify-center";
 
   return (
-    <div className="surface-primary border-separator relative z-30 px-2 py-3 min-[481px]:px-3 min-[721px]:px-0">
+    <div className="surface-primary border-separator relative z-30 px-0 py-3">
       <div className="relative z-40 flex items-center justify-start gap-0 text-sm">
         <Dropdown.Root>
           <Dropdown.Trigger
@@ -60,7 +61,7 @@ export function FeedToolbar({
               </span>
             </span>
           </Dropdown.Trigger>
-          <Dropdown.Popover placement="bottom start" className="min-w-56">
+          <DropdownPopover placement="bottom start" className="min-w-56">
             <Dropdown.Menu
               className="dropdown-menu-default"
               selectionMode="single"
@@ -76,7 +77,7 @@ export function FeedToolbar({
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
-          </Dropdown.Popover>
+          </DropdownPopover>
         </Dropdown.Root>
 
         <Dropdown.Root>
@@ -95,7 +96,7 @@ export function FeedToolbar({
               </span>
             </span>
           </Dropdown.Trigger>
-          <Dropdown.Popover placement="bottom start" className="min-w-44">
+          <DropdownPopover placement="bottom start" className="min-w-44">
             <Dropdown.Menu
               className="dropdown-menu-default"
               selectionMode="single"
@@ -111,7 +112,7 @@ export function FeedToolbar({
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
-          </Dropdown.Popover>
+          </DropdownPopover>
         </Dropdown.Root>
 
         <Dropdown.Root>
@@ -132,7 +133,7 @@ export function FeedToolbar({
               </span>
             </span>
           </Dropdown.Trigger>
-          <Dropdown.Popover placement="bottom start" className="min-w-44">
+          <DropdownPopover placement="bottom start" className="min-w-44">
             <Dropdown.Menu
               className="dropdown-menu-default"
               selectionMode="single"
@@ -155,7 +156,7 @@ export function FeedToolbar({
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
-          </Dropdown.Popover>
+          </DropdownPopover>
         </Dropdown.Root>
       </div>
     </div>

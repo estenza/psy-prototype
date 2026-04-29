@@ -16,6 +16,7 @@ export type TopicDraft = {
   fields: TopicDraftFields;
   format: TopicFormat;
   guestEmail: string;
+  subtopics: string[];
   intent: PostIntent;
   topic: PostTopic | null;
   title: string;

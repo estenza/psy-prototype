@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".claude/**",
+    ".codex/**",
+    ".local-backups/**",
+    ".vscode/**",
+    "data/**",
+    "tsconfig.tsbuildinfo",
   ]),
 ]);
 

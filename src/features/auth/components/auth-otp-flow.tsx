@@ -5,31 +5,37 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthField } from "@/features/auth/components/auth-field";
+import { YandexIdButton } from "@/features/auth/components/yandex-id-button";
 import { buildPostAuthRedirectPath } from "@/features/auth/lib/profile";
+import { publishStoredTopicDraftAfterAuth } from "@/features/topic-creation/lib/publish-stored-topic-draft";
 import type {
   AuthErrorResponse,
   AuthMessageResponse,
   AuthSuccessResponse,
+  AuthUser,
 } from "@/features/auth/types";
 
 type AuthOtpFlowProps = {
   initialEmail?: string;
+  methodTitle?: string;
   nextHref: string;
+  onAuthenticated?: (user: AuthUser) => Promise<void> | void;
   titleAs?: "h1" | "h2";
 };
 
 type FlowStep = "method" | "email" | "otp";
-type OtpPurpose = "sign-in" | "sign-up";
+type OtpPurpose = "sign-in";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export function AuthOtpFlow({
   initialEmail = "",
+  methodTitle = "Войти",
   nextHref,
+  onAuthenticated,
   titleAs = "h2",
 }: AuthOtpFlowProps) {
   const [step, setStep] = useState<FlowStep>(initialEmail.trim() ? "email" : "method");
-  const [purpose, setPurpose] = useState<OtpPurpose>("sign-in");
   const [email, setEmail] = useState(initialEmail);
   const [emailError, setEmailError] = useState("");
   const [otp, setOtp] = useState("");
@@ -40,6 +46,7 @@ export function AuthOtpFlow({
   const emailInputRef = useRef<HTMLInputElement>(null);
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const TitleTag = titleAs;
+  const isPublishingFlow = initialEmail.trim().length > 0;
 
   useEffect(() => {
     if (step === "email") {
@@ -85,10 +92,19 @@ export function AuthOtpFlow({
     const payload = (await response.json()) as AuthErrorResponse & AuthMessageResponse;
 
     if (!response.ok) {
-      return { ok: false, error: payload.fieldErrors?.email || payload.error };
+      return {
+        ok: false,
+        error: payload.fieldErrors?.email || payload.error,
+        status: response.status,
+      };
     }
 
-    return { ok: true, error: null, debugOtpCode: payload.debugOtpCode ?? "" };
+    return {
+      ok: true,
+      error: null,
+      status: response.status,
+      debugOtpCode: payload.debugOtpCode ?? "",
+    };
   }
 
   async function handleEmailSubmit(event: FormEvent) {
@@ -97,7 +113,7 @@ export function AuthOtpFlow({
     setIsSubmitting(true);
 
     try {
-      const result = await sendOtp(email, purpose);
+      const result = await sendOtp(email, "sign-in");
 
       if (!result.ok) {
         setEmailError(result.error ?? "Не удалось отправить код.");
@@ -128,7 +144,7 @@ export function AuthOtpFlow({
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: value, purpose }),
+        body: JSON.stringify({ email, code: value, purpose: "sign-in" }),
       });
 
       const payload = (await response.json()) as AuthSuccessResponse & AuthErrorResponse;
@@ -136,6 +152,17 @@ export function AuthOtpFlow({
       if (!response.ok) {
         setOtpError(payload.error ?? "Неверный код.");
         setOtp("");
+        return;
+      }
+
+      if (isPublishingFlow) {
+        await publishStoredTopicDraftAfterAuth();
+        window.location.replace("/");
+        return;
+      }
+
+      if (onAuthenticated) {
+        await onAuthenticated(payload.user);
         return;
       }
 
@@ -158,7 +185,7 @@ export function AuthOtpFlow({
     setOtpError("");
 
     try {
-      const result = await sendOtp(email, purpose);
+      const result = await sendOtp(email, "sign-in");
 
       if (!result.ok) {
         setOtpError(result.error ?? "Не удалось отправить код.");
@@ -181,7 +208,7 @@ export function AuthOtpFlow({
         <div>
           <div className="pr-10">
             <TitleTag className="type-modal-title text-[var(--label-primary)]">
-              Войти или создать аккаунт
+              {methodTitle}
             </TitleTag>
           </div>
 
@@ -191,48 +218,43 @@ export function AuthOtpFlow({
               size="lg"
               className="w-full !rounded-full"
               onClick={() => {
-                setPurpose("sign-in");
                 setStep("email");
               }}
             >
               Войти по почте
             </Button>
+            <YandexIdButton
+              isPublishingFlow={isPublishingFlow}
+              nextHref={nextHref}
+            />
           </div>
-
-          <p className="type-body-relaxed mt-5 text-[var(--label-secondary)]">
-            Нет аккаунта?{" "}
-            <button
-              type="button"
-              className="font-semibold text-[var(--label-primary)] underline decoration-[var(--underline-primary)] underline-offset-4"
-              onClick={() => {
-                setPurpose("sign-up");
-                setStep("email");
-              }}
-            >
-              Зарегистрироваться
-            </button>
-          </p>
         </div>
       )}
 
       {step === "email" && (
         <div>
-          <button
-            type="button"
-            className="mb-4 flex items-center gap-1.5 text-[14px] text-[var(--label-secondary)] hover:text-[var(--label-primary)]"
-            onClick={() => setStep("method")}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Назад
-          </button>
+          {!isPublishingFlow ? (
+            <button
+              type="button"
+              className="mb-4 flex items-center gap-1.5 text-[14px] text-[var(--label-secondary)] hover:text-[var(--label-primary)]"
+              onClick={() => setStep("method")}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Назад
+            </button>
+          ) : null}
 
           <TitleTag className="type-modal-title text-[var(--label-primary)]">
-            {purpose === "sign-up" ? "Регистрация" : "Войти по почте"}
+            {isPublishingFlow
+              ? "Посту нужен автор"
+              : "Войти по почте"}
           </TitleTag>
           <p className="type-body-relaxed mt-1 text-[var(--label-tertiary)]">
-            Отправим код подтверждения на ваш email
+            {isPublishingFlow
+              ? "Войдите по почте, чтобы опубликовать ваш первый пост. Можно использовать псевдоним и изменить его позже."
+              : "Отправим код подтверждения на ваш email"}
           </p>
 
           <form className="mt-5 flex flex-col gap-4" onSubmit={handleEmailSubmit}>

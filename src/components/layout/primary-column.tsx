@@ -12,7 +12,7 @@ export function PrimaryColumn({
   return (
     <div
       data-testid="primaryColumn"
-      className={`min-w-0 min-[721px]:shrink-0 min-[721px]:pr-4 min-[1040px]:pr-0 ${className}`.trim()}
+      className={`min-w-0 px-3 min-[481px]:shrink-0 min-[481px]:px-4 ${className}`.trim()}
     >
       {children}
     </div>

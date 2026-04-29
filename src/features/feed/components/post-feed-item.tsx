@@ -7,22 +7,25 @@ type PostFeedItemProps = {
   onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => Promise<void> | void;
   post: Post;
   viewMode: ViewMode;
+  onToggleBookmark: (postId: Post["id"]) => void;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
-  discussionHref?: string;
+  postHref?: string;
 };
 
 export function PostFeedItem({
   onPostMenuAction,
   post,
   viewMode,
+  onToggleBookmark,
   onToggleLike,
-  discussionHref,
+  postHref,
 }: PostFeedItemProps) {
   if (viewMode === "compact") {
     return (
       <CompactPostItem
         post={post}
-        discussionHref={discussionHref}
+        postHref={postHref}
+        onToggleBookmark={onToggleBookmark}
         onToggleLike={onToggleLike}
         onPostMenuAction={onPostMenuAction}
       />
@@ -32,7 +35,8 @@ export function PostFeedItem({
   return (
     <CardPostItem
       post={post}
-      discussionHref={discussionHref}
+      postHref={postHref}
+      onToggleBookmark={onToggleBookmark}
       onToggleLike={onToggleLike}
       onPostMenuAction={onPostMenuAction}
     />

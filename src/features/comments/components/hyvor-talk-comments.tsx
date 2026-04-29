@@ -41,7 +41,7 @@ export function HyvorTalkComments({
   const pathname = usePathname();
   const commentsRef = useRef<HyvorTalkElement | null>(null);
   const resolvedPageId =
-    pageId.trim() || pathname || "discussion:current-page";
+    pageId.trim() || pathname || "post:current-page";
 
   useEffect(() => {
     const commentsElement = commentsRef.current;

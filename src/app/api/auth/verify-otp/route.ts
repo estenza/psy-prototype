@@ -1,7 +1,11 @@
-import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { buildAuthErrorResponse } from "@/features/auth/lib/auth-http";
-import { AuthServiceError } from "@/features/auth/lib/auth-service";
+import {
+  AuthServiceError,
+  buildDefaultUserDisplayName,
+  buildDefaultUserNickname,
+  ensureUserProfileIdentity,
+} from "@/features/auth/lib/auth-service";
 import {
   createUser,
   findActiveOtpCode,
@@ -10,32 +14,16 @@ import {
   markOtpCodeAsUsed,
 } from "@/features/auth/lib/auth-repository";
 import {
-  buildSessionExpiresAt,
-  generateSessionToken,
-  hashSessionToken,
   setSessionCookie,
 } from "@/features/auth/lib/session";
-import { createSession, deleteExpiredSessions } from "@/features/auth/lib/auth-repository";
 import { syncBootstrapModeratorGrant } from "@/features/auth/lib/bootstrap-moderator";
 import { isBootstrapModeratorEmail } from "@/features/auth/lib/bootstrap-moderator";
-import { buildDisplayName } from "@/features/auth/lib/profile";
+import { createSessionForUser } from "@/features/auth/lib/session-creation";
 import { hashOtpCode, OTP_MAX_ATTEMPTS, type OtpPurpose } from "@/features/auth/lib/otp";
 import { EMAIL_PATTERN } from "@/features/auth/constants";
 import type { AuthSuccessResponse } from "@/features/auth/types";
 
 export const runtime = "nodejs";
-
-async function createSessionForUser(userId: string) {
-  await deleteExpiredSessions();
-
-  const token = generateSessionToken();
-  const tokenHash = hashSessionToken(token);
-  const expiresAt = buildSessionExpiresAt();
-
-  await createSession({ expiresAt, tokenHash, userId });
-
-  return { token, expiresAt };
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +44,7 @@ export async function POST(request: NextRequest) {
       throw new AuthServiceError({ message: "Некорректный запрос.", status: 400 });
     }
 
-    const otpRecord = await findActiveOtpCode(email, purpose);
+    const otpRecord = await findActiveOtpCode(email, "sign-in");
 
     if (!otpRecord) {
       throw new AuthServiceError({
@@ -89,52 +77,35 @@ export async function POST(request: NextRequest) {
 
     let user;
 
-    if (purpose === "sign-in") {
-      user = await findUserByEmail(email);
+    user = await findUserByEmail(email);
 
-      if (!user) {
-        throw new AuthServiceError({
-          message: "Аккаунт не найден.",
-          status: 404,
-        });
-      }
+    if (user?.isBanned) {
+      throw new AuthServiceError({
+        message: "Аккаунт заблокирован.",
+        status: 403,
+      });
+    }
 
-      if (user.isBanned) {
-        throw new AuthServiceError({
-          message: "Аккаунт заблокирован.",
-          status: 403,
-        });
-      }
-    } else {
-      const existingUser = await findUserByEmail(email);
-
-      if (existingUser) {
-        throw new AuthServiceError({
-          message: "Этот email уже используется.",
-          status: 409,
-        });
-      }
-
-      const newUser = await createUser({
-        displayName: buildDisplayName({ email, role: "user" }),
+    if (!user) {
+      user = await createUser({
+        displayName: await buildDefaultUserDisplayName(),
         email,
         isModerator: isBootstrapModeratorEmail(email),
-        onboardingStep: "role",
+        nickname: await buildDefaultUserNickname(email),
+        onboardingStep: "user-profile",
         passwordHash: "otp-only",
         role: "user",
       });
 
-      if (!newUser) {
+      if (!user) {
         throw new AuthServiceError({
-          message: "Не удалось создать аккаунт.",
+          message: "Не удалось войти. Попробуйте ещё раз.",
           status: 500,
         });
       }
-
-      user = newUser;
     }
 
-    const resolvedUser = await syncBootstrapModeratorGrant(user);
+    const resolvedUser = await syncBootstrapModeratorGrant(await ensureUserProfileIdentity(user));
     const session = await createSessionForUser(resolvedUser.id);
 
     const response = NextResponse.json<AuthSuccessResponse>({

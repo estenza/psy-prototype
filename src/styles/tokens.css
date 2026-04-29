@@ -1,7 +1,7 @@
 :root {
   /* Layout */
   --app-shell-max-width: calc(var(--spacing) * 360);
-  --app-shell-nav-compact-width: 88px;
+  --app-shell-nav-compact-width: 56px;
   --app-shell-nav-width-min: 248px;
   --app-shell-nav-width-max: 280px;
   --app-shell-nav-width: clamp(
@@ -11,7 +11,7 @@
   );
   --app-shell-primary-column-width: calc(var(--spacing) * 168);
   --app-shell-sidebar-column-width: 344px;
-  --app-shell-column-gap: 16px;
+  --app-shell-column-gap: 0px;
   --app-shell-content-max-width: var(--app-shell-primary-column-width);
   --app-shell-legal-width: var(--app-shell-sidebar-column-width);
   --app-shell-main-width: calc(
@@ -29,6 +29,7 @@
     calc(calc(var(--spacing) * 6) + (100vw - 1280px) * 0.1),
     calc(var(--spacing) * 10)
   );
+  --app-shell-desktop-side-offset: calc(var(--app-shell-side-offset) + 16px);
   --app-shell-rail-gap: calc(var(--spacing) * 6);
 
   /* Accents */
@@ -45,7 +46,7 @@
   --fill-secondary: var(--default);
   --fill-tertiary: var(--default-hover);
   --fill-quaternary: color-mix(in oklab, var(--default) 52%, transparent);
-  --fill-selected-subtle: color-mix(in srgb, var(--label-primary) 6%, var(--background-primary));
+  --fill-selected-subtle: color-mix(in srgb, var(--label-primary) 3%, var(--background-primary));
   --fill-control-subtle: color-mix(in oklab, var(--foreground) 8%, transparent);
   --fill-control-subtle-hover: color-mix(in oklab, var(--foreground) 12%, transparent);
   --fill-control-subtle-pressed: color-mix(in oklab, var(--foreground) 16%, transparent);
@@ -93,14 +94,14 @@
   --type-section-title-leading: 20px;
   --type-subtitle-size: 16px;
   --type-subtitle-leading: 20px;
-  --type-body-base-size: 15px;
+  --type-body-base-size: 16px;
   --type-body-base-leading: 24px;
   --type-body-lg-size: 16px;
   --type-body-lg-leading: 24px;
   --type-body-md-size: 14px;
   --type-body-md-leading: 20px;
   --type-body-relaxed-size: 14px;
-  --type-body-relaxed-leading: 24px;
+  --type-body-relaxed-leading: 20px;
   --type-caption-size: 13px;
   --type-caption-leading: 20px;
   --type-caption-tight-size: 12px;
@@ -109,9 +110,9 @@
   --type-comment-author-leading: 18px;
   --type-comment-meta-size: 12px;
   --type-comment-meta-leading: 18px;
-  --type-label-lg-size: 15px;
+  --type-label-lg-size: 16px;
   --type-label-lg-leading: 20px;
-  --type-menu-label-size: 15px;
+  --type-menu-label-size: 16px;
   --type-menu-label-leading: 24px;
   --type-input-size: 16px;
   --type-input-leading: 20px;
@@ -135,8 +136,8 @@
   --type-empty-state-body-leading: 28px;
 
   /* Separators */
-  --separator-primary: var(--separator);
-  --separator-strong: color-mix(in oklab, var(--separator) 80%, var(--foreground) 20%);
+  --separator-primary: color-mix(in oklab, var(--separator) 92%, var(--foreground) 8%);
+  --separator-strong: color-mix(in oklab, var(--separator) 78%, var(--foreground) 22%);
   --field-focus-border: color-mix(
     in oklab,
     var(--accent-primary) 82%,
@@ -146,13 +147,13 @@
 
 .dark,
 [data-theme="dark"] {
-  --separator-primary: oklch(38% .006 286.033);
-  --separator-strong: color-mix(in oklab, oklch(38% .006 286.033) 80%, var(--foreground) 20%);
+  --separator-primary: color-mix(in oklab, oklch(38% .006 286.033) 92%, var(--foreground) 8%);
+  --separator-strong: color-mix(in oklab, oklch(38% .006 286.033) 78%, var(--foreground) 22%);
 
   /* Overlays */
-  --overlay-scrim: color-mix(in srgb, var(--black) 32%, transparent);
-  --overlay-scrim-strong: color-mix(in srgb, var(--black) 56%, transparent);
-  --overlay-media-scrim: color-mix(in srgb, var(--black) 40%, transparent);
+  --overlay-scrim: color-mix(in srgb, #000 32%, transparent);
+  --overlay-scrim-strong: color-mix(in srgb, #000 56%, transparent);
+  --overlay-media-scrim: color-mix(in srgb, #000 40%, transparent);
   --tooltip-foreground: var(--overlay-foreground);
   --tooltip-background: var(--overlay);
 }

@@ -1,21 +1,25 @@
 "use client";
 
 import { Tabs } from "@heroui/react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ContentPlaceholder } from "@/components/ui/content-placeholder";
+import { ArrowTurnRightIcon } from "@/components/ui/icons";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { CommentItem } from "@/features/comments/components/comment-item";
 import type { ProfileCommentItem } from "@/features/comments/types";
-import { ProfileDiscussionsSection } from "@/features/feed/components/profile-discussions-section";
-import { buildDiscussionHref } from "@/features/feed/lib/discussion-navigation";
+import { ProfilePostsSection } from "@/features/feed/components/profile-posts-section";
+import { buildPostHref } from "@/features/feed/lib/post-navigation";
 import type { CommentNode, CommentsViewer } from "@/features/comments/types";
 import type { Post } from "@/features/feed/types";
 
-type ProfileActivityTabKey = "discussions" | "replies" | "saved";
+type ProfileActivityTabKey = "posts" | "replies" | "favorites";
 
 type ProfileActivityTabsProps = {
   displayName: string;
-  discussions: Post[];
+  favoritePosts: Post[];
+  posts: Post[];
   replies: ProfileCommentItem[];
   viewerIsOwner: boolean;
 };
@@ -28,16 +32,7 @@ function EmptyState({
   title: string;
 }) {
   return (
-    <div className="surface-card flex justify-center px-5 py-12 text-center sm:px-6 sm:py-16">
-      <div className="max-w-[640px]">
-        <h2 className="type-empty-state-title text-label-primary">
-          {title}
-        </h2>
-        <p className="type-empty-state-body text-label-tertiary mt-3">
-          {description}
-        </p>
-      </div>
-    </div>
+    <ContentPlaceholder title={title} description={description} />
   );
 }
 
@@ -181,60 +176,61 @@ function RepliesPanel({
   }
 
   return (
-    <div className="space-y-2 min-[481px]:space-y-3 min-[721px]:space-y-4">
-      {items.map((reply) => (
-        <CommentItem
-          key={reply.id}
-          comment={mapProfileReplyToCommentNode(reply)}
-          viewer={readOnlyViewer}
-          canPostReply={false}
-          isViewerAuthenticated={isAuthenticated}
-          onRequireAuth={openAuthModal}
-          submittingTarget={null}
-          onDeleteComment={async () => {}}
-          onEditComment={async () => false}
-          onSubmitReply={async () => false}
-          onVote={handleVote}
-          onBlock={() => {}}
-          onReport={() => {}}
-          flat
-          showMenu={false}
-          showReplyAction={false}
-          bodySurface
-          onOpen={() => {
-            router.push(buildDiscussionHref(reply.discussionId, currentProfilePath, reply.id));
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+    <div className="space-y-5">
+      {items.map((reply) => {
+        const replyHref = buildPostHref(reply.postId, currentProfilePath, reply.id);
 
-function SavedPanel({
-  viewerIsOwner,
-}: {
-  viewerIsOwner: boolean;
-}) {
-  return (
-    <EmptyState
-      title={viewerIsOwner
-        ? "Сохранённое пока пусто"
-        : "Сохранённое недоступно в публичном профиле"}
-      description={viewerIsOwner
-        ? "Когда сохранение обсуждений будет подключено постоянно, материалы появятся здесь."
-        : "Этот раздел не показывается другим пользователям."}
-    />
+        return (
+          <div key={reply.id} className="flex min-w-0 flex-col gap-2">
+            <Link
+              href={replyHref}
+              className="mx-4 inline-flex max-w-full items-center gap-1 rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-tertiary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4 min-[481px]:mx-5 min-[481px]:mx-6"
+            >
+              <span className="flex-none">
+                <ArrowTurnRightIcon />
+              </span>
+              <span className="min-w-0 truncate">{reply.postTitle}</span>
+            </Link>
+            <CommentItem
+              comment={mapProfileReplyToCommentNode(reply)}
+              viewer={readOnlyViewer}
+              canPostReply={false}
+              isViewerAuthenticated={isAuthenticated}
+              onRequireAuth={openAuthModal}
+              submittingTarget={null}
+              onDeleteComment={async () => {}}
+              onEditComment={async () => false}
+              onSubmitReply={async () => false}
+              onVote={handleVote}
+              onBlock={() => {}}
+              onReport={() => {}}
+              flat
+              showAvatar={false}
+              showMenu={false}
+              readOnlyLike
+              showReplyAction={false}
+              bodySurface
+              onOpen={() => {
+                router.push(replyHref);
+              }}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 export function ProfileActivityTabs({
   displayName,
-  discussions,
+  favoritePosts,
+  posts,
   replies,
   viewerIsOwner,
 }: ProfileActivityTabsProps) {
-  const [selectedKey, setSelectedKey] = useState<ProfileActivityTabKey>("discussions");
-  const discussionsCount = discussions.length;
+  const [selectedKey, setSelectedKey] = useState<ProfileActivityTabKey>("posts");
+  const favoritePostsCount = favoritePosts.length;
+  const postsCount = posts.length;
   const repliesCount = replies.length;
   const getCounterClassName = (tabKey: ProfileActivityTabKey) =>
     tabKey === selectedKey
@@ -248,42 +244,45 @@ export function ProfileActivityTabs({
       onSelectionChange={(key) => setSelectedKey(String(key) as ProfileActivityTabKey)}
       className="w-full gap-0"
     >
-      <Tabs.ListContainer className="px-6">
+      <Tabs.ListContainer className="px-6 pt-6">
         <Tabs.List aria-label="Разделы активности профиля">
-          <Tabs.Tab key="discussions" id="discussions" className="h-10">
+          <Tabs.Tab key="posts" id="posts" className="h-10 text-[16px] leading-6">
             <span className="inline-flex items-center gap-1.5">
-              <span>Обсуждения</span>
-              <span className={getCounterClassName("discussions")}>{discussionsCount}</span>
+              <span>Посты</span>
+              <span className={getCounterClassName("posts")}>{postsCount}</span>
             </span>
             <Tabs.Indicator />
           </Tabs.Tab>
-          <Tabs.Tab key="replies" id="replies" className="h-10">
+          <Tabs.Tab key="replies" id="replies" className="h-10 text-[16px] leading-6">
             <span className="inline-flex items-center gap-1.5">
               <span>Ответы</span>
               <span className={getCounterClassName("replies")}>{repliesCount}</span>
             </span>
             <Tabs.Indicator />
           </Tabs.Tab>
-          <Tabs.Tab key="saved" id="saved" className="h-10">
-            Сохранённое
+          <Tabs.Tab key="favorites" id="favorites" className="h-10 text-[16px] leading-6">
+            <span className="inline-flex items-center gap-1.5">
+              <span>Избранное</span>
+              <span className={getCounterClassName("favorites")}>{favoritePostsCount}</span>
+            </span>
             <Tabs.Indicator />
           </Tabs.Tab>
         </Tabs.List>
       </Tabs.ListContainer>
 
-      <Tabs.Panel className="!px-0 !pb-0 pt-0" key="discussions" id="discussions">
-        <ProfileDiscussionsSection
-          initialPosts={discussions}
+      <Tabs.Panel className="!px-0 !pb-0 pt-0" key="posts" id="posts">
+        <ProfilePostsSection
+          initialPosts={posts}
           emptyTitle={viewerIsOwner
-            ? "У вас пока нет опубликованных обсуждений"
-            : `${displayName} пока не создал(а) обсуждения`}
+            ? "У вас пока нет опубликованных постов"
+            : `${displayName} пока не создал(а) постов`}
           emptyDescription={viewerIsOwner
-            ? "Когда вы опубликуете первое обсуждение, оно появится здесь в той же ленте, что и на главной."
+            ? "Когда вы опубликуете первый пост, он появится здесь в той же ленте, что и на главной."
             : "Когда здесь появятся публикации, они будут показаны в таком же формате, как на главной странице."}
         />
       </Tabs.Panel>
 
-      <Tabs.Panel className="px-2 pt-8 pb-24 min-[481px]:px-3 min-[721px]:px-0" key="replies" id="replies">
+      <Tabs.Panel className="px-2 pt-8 pb-24 min-[481px]:px-3 min-[481px]:px-0" key="replies" id="replies">
         <RepliesPanel
           displayName={displayName}
           replies={replies}
@@ -291,8 +290,17 @@ export function ProfileActivityTabs({
         />
       </Tabs.Panel>
 
-      <Tabs.Panel className="px-2 pt-8 min-[481px]:px-3 min-[721px]:px-0" key="saved" id="saved">
-        <SavedPanel viewerIsOwner={viewerIsOwner} />
+      <Tabs.Panel className="!px-0 !pb-0 pt-0" key="favorites" id="favorites">
+        <ProfilePostsSection
+          initialPosts={favoritePosts}
+          emptyTitle={viewerIsOwner
+            ? "У вас пока нет избранного"
+            : `${displayName} пока ничего не добавил(а) в избранное`}
+          emptyDescription={viewerIsOwner
+            ? "Когда вы добавите пост в профиль, он появится здесь."
+            : "Когда здесь появятся посты, их можно будет открыть из профиля."}
+          removeFromFeedWhenProfileFavoriteRemoved={viewerIsOwner}
+        />
       </Tabs.Panel>
     </Tabs>
   );

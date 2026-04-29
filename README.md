@@ -60,6 +60,8 @@ AUTH_SMTP_SECURE=false
 AUTH_SMTP_USERNAME=login
 AUTH_SMTP_PASSWORD=secret
 AUTH_SMTP_HELO_HOST=vnutri.live
+YANDEX_CLIENT_ID=your-yandex-client-id
+YANDEX_REDIRECT_URI=http://localhost:3000/auth/yandex/token
 ADMIN_APP_HOST=console-secret.vnutri.live
 ADMIN_ALLOWED_EMAILS=moderator@example.com,admin@example.com
 ADMIN_ACCESS_KEY=your-extra-secret-key
@@ -75,6 +77,10 @@ ADMIN_ACCESS_RATE_LIMIT_MAX=30
 - staging и production не должны работать на SQLite fallback внутри контейнера
 - если SMTP не настроен и приложение не в production, reset-password API
   возвращает debug-ссылку вместо реальной отправки письма
+- для входа через Yandex ID добавьте в OAuth-приложение Redirect URI:
+  `http://localhost:3000/auth/yandex/token`,
+  `https://staging.vnutri.live/auth/yandex/token`,
+  `https://vnutri.live/auth/yandex/token`
 - staging и production задают свои runtime env через GitHub Actions deploy
 
 ### Admin security hardening (app-level)

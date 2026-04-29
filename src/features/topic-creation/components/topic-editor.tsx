@@ -570,7 +570,7 @@ export function TopicEditor({
           size={48}
           className="px-2 py-2"
         >
-          <div className="flex w-max min-w-full flex-nowrap items-center gap-0 min-[721px]:w-auto min-[721px]:min-w-0 min-[721px]:flex-wrap">
+          <div className="flex w-max min-w-full flex-nowrap items-center gap-0 min-[481px]:w-auto min-[481px]:min-w-0 min-[481px]:flex-wrap">
             <ToolbarButton
               label="Жирный"
               icon={<TopicEditorBoldIcon />}

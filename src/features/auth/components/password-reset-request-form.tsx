@@ -59,13 +59,13 @@ export function PasswordResetRequestForm({
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
+    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 min-[481px]:px-7">
       <div className="flex flex-col gap-3">
         <h1 className="type-page-title text-label-primary">
           Восстановление пароля
         </h1>
         <p className="type-body-relaxed text-[var(--label-secondary)]">
-          Введите email, который использовали при регистрации. Если такой аккаунт
+          Введите email, который использовали для входа. Если такой аккаунт
           существует, мы отправим письмо со ссылкой для сброса пароля.
         </p>
       </div>

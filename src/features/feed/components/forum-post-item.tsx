@@ -41,11 +41,11 @@ export function ForumPostItem({
         </div>
       </div>
 
-      <div className="w-[96px] shrink-0 text-right sm:w-[112px]">
+      <div className="w-[96px] shrink-0 text-right min-[481px]:w-[112px]">
         <div className="type-subtitle text-label-secondary">
           {post.activity.lastCommentAtLabel}
         </div>
-        <div className="text-label-secondary mt-0.5 hidden text-sm leading-4 sm:block">
+        <div className="text-label-secondary mt-0.5 hidden text-sm leading-4 min-[481px]:block">
           {post.activity.lastCommentAuthor}
         </div>
       </div>
@@ -71,10 +71,10 @@ export function ForumPostItem({
             event.stopPropagation();
             onToggleBookmark(post.id);
           }}
-          className={`pointer-events-auto relative z-30 inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full ${
+          className={`post-action-button pointer-events-auto relative z-30 inline-flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full ${
             post.viewer.bookmarked
               ? "interactive-accent-bookmark"
-              : "interactive-toggle-bookmark-plain"
+              : "interactive-action-soft"
           }`}
         >
           <BookmarkIcon filled={post.viewer.bookmarked} />

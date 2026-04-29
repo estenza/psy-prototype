@@ -9,20 +9,22 @@ import type { Post } from "@/features/feed/types";
 
 type CompactPostItemProps = {
   post: Post;
+  onToggleBookmark: (postId: Post["id"]) => void;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
   onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => Promise<void> | void;
-  discussionHref?: string;
+  postHref?: string;
 };
 
 export function CompactPostItem({
   post,
+  onToggleBookmark,
   onToggleLike,
   onPostMenuAction,
-  discussionHref,
+  postHref,
 }: CompactPostItemProps) {
   return (
     <div className="pointer-events-none flex gap-4">
-      <div className="surface-secondary hidden h-[84px] w-[132px] flex-none overflow-hidden rounded-lg sm:block">
+      <div className="surface-secondary hidden h-[84px] w-[132px] flex-none overflow-hidden rounded-lg min-[481px]:block">
         {post.media?.type === "image" ? (
           <Image
             src={post.media.src}
@@ -72,7 +74,8 @@ export function CompactPostItem({
 
         <PostActions
           post={post}
-          discussionHref={discussionHref}
+          postHref={postHref}
+          onToggleBookmark={onToggleBookmark}
           onToggleLike={onToggleLike}
           className="relative z-10 mt-4 flex flex-wrap items-center gap-2 pt-1"
         />

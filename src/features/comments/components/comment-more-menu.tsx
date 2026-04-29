@@ -1,8 +1,16 @@
 "use client";
 
-import { Dropdown } from "@heroui/react";
+import { Dropdown, Label } from "@heroui/react";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DropdownPopover } from "@/components/ui/dropdown-popover";
+import {
+  DeleteOutlineIcon,
+  EditOutlineIcon,
+  FlagIcon,
+  IgnoreAuthorIcon,
+} from "@/components/ui/icons";
 import { MoreMenuButton } from "@/components/ui/more-menu-button";
 
 type CommentMoreMenuProps = {
@@ -18,13 +26,19 @@ type CommentMoreMenuProps = {
   onReport: () => void;
 };
 
+type CommentMenuItem = {
+  disabled: boolean;
+  icon: ReactNode;
+  label: string;
+  onSelect: () => void;
+};
+
 export function CommentMoreMenu({
   canReport,
   canEdit,
   canDelete,
   isViewerAuthenticated,
   viewerOwnsComment,
-  actionRow = false,
   onDelete,
   onEdit,
   onBlock,
@@ -33,17 +47,20 @@ export function CommentMoreMenu({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const items =
+  const items: CommentMenuItem[] =
     isViewerAuthenticated && viewerOwnsComment
       ? [
           {
             label: "Редактировать",
+            icon: <EditOutlineIcon />,
             disabled: !canEdit,
             onSelect: onEdit,
           },
           {
             label: "Удалить",
+            icon: <DeleteOutlineIcon />,
             disabled: !canDelete,
             onSelect: () => {
               setDeleteErrorMessage(null);
@@ -54,11 +71,13 @@ export function CommentMoreMenu({
       : [
           {
             label: "Пожаловаться",
+            icon: <FlagIcon />,
             disabled: !canReport,
             onSelect: onReport,
           },
           {
             label: "Заблокировать",
+            icon: <IgnoreAuthorIcon />,
             disabled: false,
             onSelect: onBlock,
           },
@@ -66,17 +85,13 @@ export function CommentMoreMenu({
 
   return (
     <>
-      <Dropdown.Root>
+      <Dropdown.Root isOpen={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <MoreMenuButton
           ariaLabel="Открыть меню действий"
-          className={
-            actionRow
-              ? "interactive-tertiary button--blur-no-focus button--icon-only !inline-flex h-9 w-9 min-w-9 !rounded-[10px] !bg-transparent px-0 text-[var(--label-secondary)] hover:!bg-transparent hover:!text-[var(--accent-primary)] data-[hovered=true]:!bg-transparent data-[hovered=true]:!text-[var(--accent-primary)] active:!bg-transparent active:!text-[var(--accent-primary)] data-[pressed=true]:!bg-transparent data-[pressed=true]:!text-[var(--accent-primary)]"
-              : "button--blur-no-focus button--icon-only !inline-flex h-9 w-9 min-w-9 !rounded-[10px] !bg-transparent px-0 text-[var(--label-secondary)] hover:!bg-transparent hover:!text-[var(--accent-primary)] data-[hovered=true]:!bg-transparent data-[hovered=true]:!text-[var(--accent-primary)] active:!bg-transparent active:!text-[var(--accent-primary)] data-[pressed=true]:!bg-transparent data-[pressed=true]:!text-[var(--accent-primary)]"
-          }
+          isTooltipDisabled={isMenuOpen}
         />
 
-        <Dropdown.Popover placement="bottom end" className="min-w-[188px]">
+        <DropdownPopover placement="bottom end" className="min-w-[188px]">
           <Dropdown.Menu
             aria-label="Меню комментария"
             selectionMode="none"
@@ -93,11 +108,18 @@ export function CommentMoreMenu({
                 textValue={item.label}
                 isDisabled={item.disabled}
               >
-                {item.label}
+                <div className="flex w-full items-center gap-3">
+                  <span className="inline-flex h-5 w-5 flex-none items-center justify-center text-[var(--label-secondary)]">
+                    {item.icon}
+                  </span>
+                  <Label className="min-w-0 flex-1 truncate">
+                    {item.label}
+                  </Label>
+                </div>
               </Dropdown.Item>
             ))}
           </Dropdown.Menu>
-        </Dropdown.Popover>
+        </DropdownPopover>
       </Dropdown.Root>
 
       {isDeleteDialogOpen ? (

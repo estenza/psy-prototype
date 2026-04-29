@@ -12,6 +12,7 @@ type AuthMode = "sign-in" | "sign-up";
 type AuthFormContext = "default" | "admin";
 
 type AuthFormProps = {
+  closeHref?: string;
   context?: AuthFormContext;
   defaultNextPath?: string;
   mode: AuthMode;
@@ -28,6 +29,7 @@ const INITIAL_FORM_STATE: FormState = {
 };
 
 export function AuthForm({
+  closeHref,
   context = "default",
   defaultNextPath = "/",
   mode,
@@ -43,18 +45,14 @@ export function AuthForm({
   const isSignUp = mode === "sign-up";
   const isAdminContext = context === "admin";
 
-  const heading = isSignUp ? "Регистрация" : "Вход";
+  const heading = "Вход";
   const subheading = isAdminContext
     ? "Войдите, чтобы открыть админку"
-    : isSignUp
-      ? "Зарегистрируйтесь, чтобы продолжить"
-      : "Войдите, чтобы продолжить";
-  const submitLabel = isSignUp ? "Зарегистрироваться" : "Войти";
-  const submitPath = isSignUp ? "/api/auth/sign-up" : "/api/auth/sign-in";
+    : "Войдите, чтобы продолжить";
+  const submitLabel = "Войти";
+  const submitPath = "/api/auth/sign-in";
   const nextPath = searchParams.get("next")?.trim() || defaultNextPath;
-  const alternateAuthHref = isSignUp
-    ? `/sign-in?next=${encodeURIComponent(nextPath)}`
-    : `/sign-up?next=${encodeURIComponent(nextPath)}`;
+  const resolvedCloseHref = closeHref ?? nextPath;
 
   function updateField(name: keyof FormState, value: string) {
     setFormState((currentState) => ({
@@ -117,7 +115,17 @@ export function AuthForm({
   }
 
   return (
-    <div className="surface-elevated surface--default border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
+    <div className="modal-surface surface-elevated relative w-full max-w-[460px] px-5 py-6 min-[481px]:px-7">
+      <Link
+        href={resolvedCloseHref}
+        aria-label="Закрыть"
+        className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)]"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+          <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+        </svg>
+      </Link>
+
       <div className="flex flex-col gap-2">
         <h1 className="type-page-title text-label-primary">
           {heading}
@@ -154,7 +162,7 @@ export function AuthForm({
           }}
           placeholder="Введите пароль"
           error={fieldErrors.password}
-          autoComplete={isSignUp ? "new-password" : "current-password"}
+          autoComplete="current-password"
         />
 
         {!isSignUp && !isAdminContext ? (
@@ -183,17 +191,6 @@ export function AuthForm({
         </Button>
       </form>
 
-      {!isAdminContext ? (
-        <div className="type-body-relaxed mt-5 text-[var(--label-secondary)]">
-          {isSignUp ? "Уже есть аккаунт?" : "Ещё нет аккаунта?"}{" "}
-          <Link
-            href={alternateAuthHref}
-            className="font-semibold text-[var(--label-primary)] underline decoration-[var(--underline-primary)] underline-offset-4"
-          >
-            {isSignUp ? "Войти" : "Зарегистрироваться"}
-          </Link>
-        </div>
-      ) : null}
     </div>
   );
 }

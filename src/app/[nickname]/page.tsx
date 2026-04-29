@@ -3,7 +3,10 @@ import { ProfilePageContent } from "@/features/auth/components/profile-page-cont
 import { listPublishedCommentsByAuthorUserId } from "@/features/comments/lib/comments-repository";
 import { findUserByNickname } from "@/features/auth/lib/auth-repository";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { listDiscussionsByAuthorUserId } from "@/features/feed/lib/discussions-repository";
+import {
+  listPostsByAuthorUserId,
+  listProfileFavoritePostsByUserId,
+} from "@/features/feed/lib/posts-repository";
 import {
   buildProfilePathFromNickname,
   normalizeNickname,
@@ -37,14 +40,16 @@ export default async function PublicProfilePage({
     notFound();
   }
 
-  const [discussions, replies] = await Promise.all([
-    listDiscussionsByAuthorUserId(profileUser.id, currentUser),
+  const [posts, favoritePosts, replies] = await Promise.all([
+    listPostsByAuthorUserId(profileUser.id, currentUser),
+    listProfileFavoritePostsByUserId(profileUser.id, currentUser),
     listPublishedCommentsByAuthorUserId(profileUser.id, currentUser?.id ?? null),
   ]);
 
   return (
     <ProfilePageContent
-      discussions={discussions}
+      posts={posts}
+      favoritePosts={favoritePosts}
       user={profileUser}
       replies={replies}
       viewerIsOwner={currentUser?.id === profileUser.id}

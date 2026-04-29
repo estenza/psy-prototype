@@ -25,7 +25,7 @@ export function DraftsOverviewCard() {
   const draftTitle = draft?.title.trim() || "Без названия";
 
   return (
-    <section className="surface-elevated border-separator rounded-[28px] border p-6">
+    <section className="surface-elevated rounded-[28px] p-6">
       <div className="flex flex-col gap-3">
         <h2 className="text-[18px] font-semibold text-[var(--label-primary)]">
           Локальные черновики
@@ -51,7 +51,7 @@ export function DraftsOverviewCard() {
               Сохранённых черновиков пока нет
             </div>
             <div className="mt-1 text-[13px] leading-5 text-[var(--label-secondary)]">
-              Как только вы начнёте писать обсуждение и закроете редактор, здесь появится быстрый доступ к восстановлению.
+              Как только вы начнёте писать пост и закроете редактор, здесь появится быстрый доступ к восстановлению.
             </div>
           </>
         )}

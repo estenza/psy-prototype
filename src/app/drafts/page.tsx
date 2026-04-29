@@ -7,13 +7,14 @@ export default async function DraftsPage() {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
-    redirect("/sign-in?next=%2Fdrafts");
+    redirect("/");
   }
 
   return (
     <AccountSectionShell
+      activeSection="drafts"
       title="Черновики"
-      description="Быстрый доступ к сохранённым локально наброскам обсуждений."
+      description="Быстрый доступ к сохранённым локально наброскам постов."
     >
       <DraftsOverviewCard />
     </AccountSectionShell>

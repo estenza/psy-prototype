@@ -3,8 +3,12 @@ import type { NavigationItem, NavigationItemKey } from "@/types/navigation";
 export const DEFAULT_ACTIVE_SECTION: NavigationItemKey = "forum";
 
 export const navItems: readonly NavigationItem[] = [
-  { name: "Обсуждения", key: "forum", href: "/" },
-  { name: "Психологи", key: "psychologists", href: "#" },
+  { name: "Главная", key: "forum", href: "/" },
+  { name: "Психологи", key: "psychologists", href: "/psychologists" },
+  { name: "Профиль", key: "profile", href: "/profile", requiresAuth: true },
+  { name: "Закладки", key: "bookmarks", href: "/bookmarks", requiresAuth: true },
+  { name: "Черновики", key: "drafts", href: "/drafts", requiresAuth: true },
+  { name: "Настройки", key: "settings", href: "/settings", requiresAuth: true },
 ] as const;
 
 export function isNavigationItemCurrent(

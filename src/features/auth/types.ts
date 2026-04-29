@@ -72,7 +72,8 @@ export type SelectRoleInput = {
 };
 
 export type CompleteUserProfileInput = {
-  nickname: string;
+  displayName?: string;
+  nickname?: string;
 };
 
 export type CompleteSpecialistProfileInput = {
@@ -111,6 +112,44 @@ export type AuthErrorResponse = {
 
 export type CurrentUserResponse = {
   user: SessionUser | null;
+};
+
+export type IgnoredAuthorSummary = {
+  avatarUrl: string | null;
+  handle: string;
+  id: string;
+  ignoredAt: string;
+  name: string;
+  role: UserRole | null;
+};
+
+export type NotificationPreferenceKey =
+  | "postReplies"
+  | "directReplies"
+  | "followedPostReplies"
+  | "followedAuthorPosts"
+  | "systemMessages";
+
+export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
+
+export type NotificationKind =
+  | "post_reply"
+  | "direct_reply"
+  | "followed_post_reply"
+  | "followed_author_post"
+  | "system";
+
+export type UserNotification = {
+  actorAvatarUrl: string | null;
+  actorHandle: string | null;
+  actorName: string | null;
+  body: string | null;
+  createdAt: string;
+  href: string;
+  id: string;
+  isRead: boolean;
+  title: string;
+  type: NotificationKind;
 };
 
 export type NicknameAvailabilityResponse = {

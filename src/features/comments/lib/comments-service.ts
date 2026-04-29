@@ -5,14 +5,14 @@ import type { SessionUser } from "@/features/auth/types";
 import { getInitials } from "@/features/comments/lib/comment-format";
 import {
   CommentsRepositoryError,
-  createDiscussionComment,
-  deleteDiscussionComment,
-  getDiscussionCommentsSection,
-  listDiscussionCommentReports,
-  moderateDiscussionComment,
-  reportDiscussionComment,
-  updateDiscussionComment,
-  setDiscussionCommentVote,
+  createPostComment,
+  deletePostComment,
+  getPostCommentsSection,
+  listPostCommentReports,
+  moderatePostComment,
+  reportPostComment,
+  updatePostComment,
+  setPostCommentVote,
 } from "@/features/comments/lib/comments-repository";
 import type {
   AdminModerateCommentPayload,
@@ -81,25 +81,25 @@ export function buildCommentsCapabilities(currentUser: SessionUser | null): Comm
         ? "Комментирование для этого аккаунта временно недоступно."
         : currentUser
           ? null
-          : "Нужно войти в аккаунт, чтобы комментировать обсуждения.",
+          : "Нужно войти в аккаунт, чтобы комментировать посты.",
     limitations,
   };
 }
 
-export function parseDiscussionPageId(pageId: string) {
+export function parsePostPageId(pageId: string) {
   const normalizedPageId = pageId.trim();
 
-  if (!normalizedPageId.startsWith("discussion:")) {
-    throw new CommentsServiceError("Комментарии сейчас поддерживаются только для обсуждений.", 400);
+  if (!normalizedPageId.startsWith("post:")) {
+    throw new CommentsServiceError("Комментарии сейчас поддерживаются только для постов.", 400);
   }
 
-  const discussionId = normalizedPageId.slice("discussion:".length).trim();
+  const postId = normalizedPageId.slice("post:".length).trim();
 
-  if (!discussionId) {
-    throw new CommentsServiceError("Не удалось определить обсуждение для комментариев.", 400);
+  if (!postId) {
+    throw new CommentsServiceError("Не удалось определить пост для комментариев.", 400);
   }
 
-  return discussionId;
+  return postId;
 }
 
 function toServiceError(error: unknown) {
@@ -117,14 +117,14 @@ export async function getCommentsSection(params: {
   sort: CommentsSortValue;
 }) {
   try {
-    const discussionId = parseDiscussionPageId(params.pageId);
+    const postId = parsePostPageId(params.pageId);
     const viewer = buildCommentsViewer(params.currentUser);
     const capabilities = buildCommentsCapabilities(params.currentUser);
 
-    return await getDiscussionCommentsSection({
+    return await getPostCommentsSection({
       capabilities,
       currentUser: params.currentUser,
-      discussionId,
+      postId,
       pageId: params.pageId,
       sort: params.sort,
       viewer,
@@ -143,15 +143,15 @@ export async function createComment(params: {
   try {
     if (!params.currentUser) {
       throw new CommentsServiceError(
-        "Нужно войти в аккаунт, чтобы комментировать обсуждения.",
+        "Нужно войти в аккаунт, чтобы комментировать посты.",
         401,
       );
     }
 
-    return await createDiscussionComment({
+    return await createPostComment({
       actor: params.currentUser,
       body: params.body,
-      discussionId: parseDiscussionPageId(params.pageId),
+      postId: parsePostPageId(params.pageId),
       parentId: params.parentId ?? null,
     });
   } catch (error) {
@@ -169,7 +169,7 @@ export async function voteComment(params: {
       throw new CommentsServiceError("Нужно войти в аккаунт, чтобы ставить лайки.", 401);
     }
 
-    await setDiscussionCommentVote({
+    await setPostCommentVote({
       actor: params.currentUser,
       commentId: params.commentId,
       type: params.type,
@@ -189,7 +189,7 @@ export async function reportComment(params: {
       throw new CommentsServiceError("Нужно войти в аккаунт, чтобы отправлять жалобы.", 401);
     }
 
-    await reportDiscussionComment({
+    await reportPostComment({
       actor: params.currentUser,
       commentId: params.commentId,
       reason: params.reason,
@@ -209,7 +209,7 @@ export async function editComment(params: {
       throw new CommentsServiceError("Нужно войти в аккаунт, чтобы редактировать комментарии.", 401);
     }
 
-    await updateDiscussionComment({
+    await updatePostComment({
       actor: params.currentUser,
       body: params.body,
       commentId: params.commentId,
@@ -228,7 +228,7 @@ export async function removeComment(params: {
       throw new CommentsServiceError("Нужно войти в аккаунт, чтобы удалять комментарии.", 401);
     }
 
-    await deleteDiscussionComment({
+    await deletePostComment({
       actor: params.currentUser,
       commentId: params.commentId,
     });
@@ -239,7 +239,7 @@ export async function removeComment(params: {
 
 export async function getAdminCommentReports() {
   try {
-    return await listDiscussionCommentReports();
+    return await listPostCommentReports();
   } catch (error) {
     throw toServiceError(error);
   }
@@ -255,7 +255,7 @@ export async function moderateComment(params: {
       throw new CommentsServiceError("Нужно войти в аккаунт, чтобы модерировать комментарии.", 401);
     }
 
-    await moderateDiscussionComment({
+    await moderatePostComment({
       action: params.payload.action,
       actor: params.currentUser,
       commentId: params.commentId,

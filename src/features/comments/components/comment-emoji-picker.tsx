@@ -320,7 +320,7 @@ export function CommentEmojiPicker({ onSelect }: CommentEmojiPickerProps) {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Поиск"
             autoComplete="off"
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-[var(--label-primary)] outline-none placeholder:text-[var(--field-placeholder)]"
+            className="min-w-0 flex-1 bg-transparent text-[16px] text-[var(--label-primary)] outline-none placeholder:text-[var(--field-placeholder)]"
           />
         </label>
       </div>

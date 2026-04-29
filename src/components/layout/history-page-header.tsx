@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 
 type HistoryPageHeaderProps = {
+  alwaysUseFallback?: boolean;
   fallbackHref?: string;
   title?: React.ReactNode;
 };
 
 export function HistoryPageHeader({
+  alwaysUseFallback = false,
   fallbackHref = "/",
   title,
 }: HistoryPageHeaderProps) {
@@ -17,7 +19,7 @@ export function HistoryPageHeader({
 
   function handleBack() {
     startTransition(() => {
-      if (window.history.length > 1) {
+      if (!alwaysUseFallback && window.history.length > 1) {
         router.back();
         return;
       }

@@ -4,7 +4,12 @@ import {
   EMPTY_TOPIC_DRAFT_FIELDS,
   TOPIC_FORMAT_META,
 } from "@/features/topic-creation/constants";
-import { isPostIntent, isPostTopic } from "@/constants/post-taxonomy";
+import {
+  DEFAULT_POST_SUBTOPIC,
+  isPostIntent,
+  normalizePostTopic,
+  POST_TOPIC_SUBTOPICS,
+} from "@/constants/post-taxonomy";
 import type { TopicDraft, TopicDraftFields, TopicFormat } from "@/features/topic-creation/types";
 import type { PostIntent, PostTopic } from "@/types/post-taxonomy";
 
@@ -52,6 +57,23 @@ function normalizeStoredIntent(value: unknown, format: TopicFormat): PostIntent 
   }
 
   return TOPIC_FORMAT_META[format].legacyIntent;
+}
+
+function normalizeStoredTopic(value: unknown): PostTopic {
+  return normalizePostTopic(value) ?? EMPTY_TOPIC_DRAFT.topic ?? "emotions";
+}
+
+function normalizeStoredSubtopics(value: unknown, topic: PostTopic | null): string[] {
+  if (!Array.isArray(value) || !topic) {
+    return [DEFAULT_POST_SUBTOPIC];
+  }
+
+  const availableSubtopics = new Set(POST_TOPIC_SUBTOPICS[topic] ?? []);
+  const storedSubtopic = value.find((item): item is string => (
+    typeof item === "string" && availableSubtopics.has(item)
+  ));
+
+  return [storedSubtopic ?? DEFAULT_POST_SUBTOPIC];
 }
 
 function normalizeStoredFields(
@@ -121,7 +143,7 @@ export function hasMeaningfulTopicDraft(
 
 export function serializeTopicSnapshot(
   draft:
-    | Pick<TopicDraft, "fields" | "format" | "guestEmail" | "topic">
+    | Pick<TopicDraft, "fields" | "format" | "guestEmail" | "subtopics" | "topic">
     | Pick<TopicDraft, "content" | "intent" | "title" | "topic">,
 ) {
   if ("fields" in draft) {
@@ -129,6 +151,7 @@ export function serializeTopicSnapshot(
       fields: draft.fields,
       format: draft.format,
       guestEmail: draft.guestEmail,
+      subtopics: draft.subtopics,
       topic: draft.topic,
     });
   }
@@ -158,6 +181,7 @@ export function normalizeTopicDraft(
   const intent = normalizeStoredIntent(draft.intent, format);
   const title = buildDraftTitle(fields);
   const content = buildDraftContent(fields);
+  const topic = normalizeStoredTopic(draft.topic);
 
   return {
     content,
@@ -166,7 +190,8 @@ export function normalizeTopicDraft(
     format,
     guestEmail: typeof draft.guestEmail === "string" ? draft.guestEmail : "",
     intent,
-    topic: draft.topic ?? "free-topic",
+    subtopics: normalizeStoredSubtopics(draft.subtopics, topic),
+    topic,
     title,
     updatedAt: draft.updatedAt ?? null,
   };
@@ -191,10 +216,7 @@ export function readStoredTopicDraft(): TopicDraft | null {
     }
 
     const draftRecord = parsedDraft as Record<string, unknown>;
-    const topic =
-      "topic" in draftRecord && isPostTopic(draftRecord.topic)
-        ? draftRecord.topic
-        : "free-topic";
+    const topic = normalizeStoredTopic(draftRecord.topic);
     const updatedAt =
       typeof draftRecord.updatedAt === "string" ? draftRecord.updatedAt : null;
 
@@ -213,6 +235,9 @@ export function readStoredTopicDraft(): TopicDraft | null {
         ? (draftRecord.intent as PostIntent)
         : undefined,
       title: typeof draftRecord.title === "string" ? draftRecord.title : "",
+      subtopics: "subtopics" in draftRecord
+        ? (draftRecord.subtopics as string[])
+        : undefined,
       topic,
       updatedAt,
     });
@@ -228,6 +253,7 @@ export function saveTopicDraft(
     format?: TopicFormat;
     guestEmail?: string;
     intent?: PostIntent;
+    subtopics?: string[];
     topic?: PostTopic | null;
     title?: string;
   },

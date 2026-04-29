@@ -50,7 +50,7 @@ export function AuthField({
   return (
     <TextField
       isInvalid={Boolean(error)}
-      className="field-surface-default flex w-full flex-col gap-2"
+      className="flex w-full flex-col gap-2"
     >
       <Label
         htmlFor={id}

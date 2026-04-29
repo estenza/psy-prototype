@@ -6,6 +6,7 @@ import { getDatabase } from "@/lib/db";
 import { canDeleteOwnComment, canModerateContent } from "@/features/auth/lib/permissions";
 import { getUserHandle } from "@/features/auth/lib/profile";
 import type { SessionUser } from "@/features/auth/types";
+import { createCommentNotifications } from "@/features/notifications/lib/notifications-repository";
 import {
   buildCommentHtml,
   escapeHtml,
@@ -30,15 +31,15 @@ import type {
 type CommentStatus = "published" | "hidden" | "deleted" | "pending";
 type CommentReportStatus = "open" | "reviewed" | "dismissed" | "resolved";
 
-type DiscussionSummaryRow = {
+type PostSummaryRow = {
   id: string;
   title: string;
 };
 
 type ProfileCommentRow = {
   id: string;
-  discussion_id: string;
-  discussion_title: string;
+  post_id: string;
+  post_title: string;
   author_user_id: string;
   author_display_name: string;
   author_nickname: string | null;
@@ -51,9 +52,9 @@ type ProfileCommentRow = {
   viewer_liked: boolean | number | null;
 };
 
-type DiscussionCommentRow = {
+type PostCommentRow = {
   id: string;
-  discussion_id: string;
+  post_id: string;
   author_user_id: string;
   parent_comment_id: string | null;
   root_comment_id: string | null;
@@ -77,9 +78,9 @@ type DiscussionCommentRow = {
   viewer_liked: boolean | number | null;
 };
 
-type DiscussionCommentBaseRow = {
+type PostCommentBaseRow = {
   id: string;
-  discussion_id: string;
+  post_id: string;
   author_user_id: string;
   parent_comment_id: string | null;
   root_comment_id: string | null;
@@ -93,7 +94,7 @@ type CommentAuthorMentionRow = {
   nickname: string | null;
 };
 
-type DiscussionCommentReportRow = {
+type PostCommentReportRow = {
   id: string;
   status: CommentReportStatus;
   reason: string | null;
@@ -102,8 +103,8 @@ type DiscussionCommentReportRow = {
   comment_id: string;
   comment_body_text: string;
   comment_status: CommentStatus;
-  discussion_id: string;
-  discussion_title: string;
+  post_id: string;
+  post_title: string;
   comment_author_id: string;
   comment_author_display_name: string;
   comment_author_nickname: string | null;
@@ -114,20 +115,20 @@ type DiscussionCommentReportRow = {
   reporter_avatar_url: string | null;
 };
 
-type CreateDiscussionCommentInput = {
+type CreatePostCommentInput = {
   actor: SessionUser;
   body: string;
-  discussionId: string;
+  postId: string;
   parentId?: string | null;
 };
 
-type UpdateDiscussionCommentInput = {
+type UpdatePostCommentInput = {
   actor: SessionUser;
   body: string;
   commentId: string;
 };
 
-type ModerateDiscussionCommentInput = {
+type ModeratePostCommentInput = {
   action: "hide" | "restore" | "delete";
   actor: SessionUser;
   commentId: string;
@@ -141,24 +142,24 @@ const COMMENT_EDIT_WINDOW_MS = 15 * 60 * 1000;
 const COMMENT_MAX_THREAD_DEPTH = 1;
 
 const PG_DISCUSSION_COMMENT_COLUMNS = `
-  discussion_comments.id,
-  discussion_comments.discussion_id,
-  discussion_comments.author_user_id,
-  discussion_comments.parent_comment_id,
-  discussion_comments.root_comment_id,
-  discussion_comments.depth,
-  discussion_comments.body_html,
-  discussion_comments.body_text,
-  discussion_comments.status,
-  discussion_comments.hidden_reason,
-  discussion_comments.likes_count,
-  discussion_comments.replies_count,
-  discussion_comments.reports_count,
-  discussion_comments.created_at::text AS created_at,
-  discussion_comments.updated_at::text AS updated_at,
-  discussion_comments.edited_at::text AS edited_at,
-  discussion_comments.hidden_at::text AS hidden_at,
-  discussion_comments.deleted_at::text AS deleted_at,
+  post_comments.id,
+  post_comments.post_id,
+  post_comments.author_user_id,
+  post_comments.parent_comment_id,
+  post_comments.root_comment_id,
+  post_comments.depth,
+  post_comments.body_html,
+  post_comments.body_text,
+  post_comments.status,
+  post_comments.hidden_reason,
+  post_comments.likes_count,
+  post_comments.replies_count,
+  post_comments.reports_count,
+  post_comments.created_at::text AS created_at,
+  post_comments.updated_at::text AS updated_at,
+  post_comments.edited_at::text AS edited_at,
+  post_comments.hidden_at::text AS hidden_at,
+  post_comments.deleted_at::text AS deleted_at,
   users.display_name AS author_display_name,
   users.nickname AS author_nickname,
   users.avatar_url AS author_avatar_url,
@@ -166,24 +167,24 @@ const PG_DISCUSSION_COMMENT_COLUMNS = `
 `;
 
 const SQLITE_DISCUSSION_COMMENT_COLUMNS = `
-  discussion_comments.id,
-  discussion_comments.discussion_id,
-  discussion_comments.author_user_id,
-  discussion_comments.parent_comment_id,
-  discussion_comments.root_comment_id,
-  discussion_comments.depth,
-  discussion_comments.body_html,
-  discussion_comments.body_text,
-  discussion_comments.status,
-  discussion_comments.hidden_reason,
-  discussion_comments.likes_count,
-  discussion_comments.replies_count,
-  discussion_comments.reports_count,
-  discussion_comments.created_at,
-  discussion_comments.updated_at,
-  discussion_comments.edited_at,
-  discussion_comments.hidden_at,
-  discussion_comments.deleted_at,
+  post_comments.id,
+  post_comments.post_id,
+  post_comments.author_user_id,
+  post_comments.parent_comment_id,
+  post_comments.root_comment_id,
+  post_comments.depth,
+  post_comments.body_html,
+  post_comments.body_text,
+  post_comments.status,
+  post_comments.hidden_reason,
+  post_comments.likes_count,
+  post_comments.replies_count,
+  post_comments.reports_count,
+  post_comments.created_at,
+  post_comments.updated_at,
+  post_comments.edited_at,
+  post_comments.hidden_at,
+  post_comments.deleted_at,
   users.display_name AS author_display_name,
   users.nickname AS author_nickname,
   users.avatar_url AS author_avatar_url,
@@ -329,8 +330,8 @@ function mapProfileComment(row: ProfileCommentRow): ProfileCommentItem {
 
   return {
     id: row.id,
-    discussionId: row.discussion_id,
-    discussionTitle: row.discussion_title,
+    postId: row.post_id,
+    postTitle: row.post_title,
     author: mapCommentAuthor({
       avatarUrl: row.author_avatar_url,
       displayName: row.author_display_name,
@@ -414,7 +415,7 @@ function buildCommentNode(params: {
   capabilities: CommentsCapabilities;
   currentUser: SessionUser | null;
   replies: CommentNode[];
-  row: DiscussionCommentRow;
+  row: PostCommentRow;
   depth: number;
   bodyHtml?: string;
   bodyText?: string;
@@ -489,7 +490,7 @@ function buildCommentNode(params: {
 }
 
 function sortTopLevelComments(
-  comments: DiscussionCommentRow[],
+  comments: PostCommentRow[],
   sort: CommentsSortValue,
 ) {
   const nextComments = [...comments];
@@ -505,17 +506,17 @@ function sortTopLevelComments(
   return nextComments;
 }
 
-function sortReplies(comments: DiscussionCommentRow[]) {
+function sortReplies(comments: PostCommentRow[]) {
   return [...comments].sort(
     (left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime(),
   );
 }
 
-function sortFlattenedRepliesByMentionTarget(comments: DiscussionCommentRow[]) {
+function sortFlattenedRepliesByMentionTarget(comments: PostCommentRow[]) {
   const sortedComments = sortReplies(comments);
   const commentsById = new Map(sortedComments.map((comment) => [comment.id, comment]));
-  const commentsByMentionTargetId = new Map<string, DiscussionCommentRow[]>();
-  const rootComments: DiscussionCommentRow[] = [];
+  const commentsByMentionTargetId = new Map<string, PostCommentRow[]>();
+  const rootComments: PostCommentRow[] = [];
 
   sortedComments.forEach((comment) => {
     const { targetCommentId } = extractCommentMentionMeta(comment.body_html);
@@ -530,7 +531,7 @@ function sortFlattenedRepliesByMentionTarget(comments: DiscussionCommentRow[]) {
     commentsByMentionTargetId.set(targetCommentId, currentTargetReplies);
   });
 
-  const expandComment = (comment: DiscussionCommentRow): DiscussionCommentRow[] => [
+  const expandComment = (comment: PostCommentRow): PostCommentRow[] => [
     comment,
     ...(commentsByMentionTargetId.get(comment.id) ?? []).flatMap(expandComment),
   ];
@@ -546,11 +547,11 @@ function buildCommentsSection(params: {
   capabilities: CommentsCapabilities;
   currentUser: SessionUser | null;
   pageId: string;
-  rows: DiscussionCommentRow[];
+  rows: PostCommentRow[];
   sort: CommentsSortValue;
   viewer: CommentsViewer;
 }): CommentsSectionData {
-  const repliesByParentCommentId = new Map<string, DiscussionCommentRow[]>();
+  const repliesByParentCommentId = new Map<string, PostCommentRow[]>();
 
   params.rows.forEach((row) => {
     const parentId = row.parent_comment_id;
@@ -566,7 +567,7 @@ function buildCommentsSection(params: {
 
   const buildFlattenedReplies = (
     parentId: string,
-    mentionTargetRow: DiscussionCommentRow,
+    mentionTargetRow: PostCommentRow,
     depth: number,
   ): CommentNode[] =>
     sortReplies(repliesByParentCommentId.get(parentId) ?? []).flatMap((replyRow) => {
@@ -649,27 +650,27 @@ function buildCommentsSection(params: {
   };
 }
 
-async function findDiscussionSummaryById(discussionId: string) {
+async function findPostSummaryById(postId: string) {
   if (isPostgresAuthEnabled()) {
-    return (await queryPgOne<DiscussionSummaryRow>(
+    return (await queryPgOne<PostSummaryRow>(
       `SELECT id, title
-       FROM discussions
+       FROM posts
        WHERE id = $1
        LIMIT 1`,
-      [discussionId],
-    )) as DiscussionSummaryRow | null;
+      [postId],
+    )) as PostSummaryRow | null;
   }
 
   const row = getDatabase()
     .prepare(
       `SELECT id, title
-       FROM discussions
+       FROM posts
        WHERE id = ?
        LIMIT 1`,
     )
-    .get(discussionId);
+    .get(postId);
 
-  return (row as DiscussionSummaryRow | undefined) ?? null;
+  return (row as PostSummaryRow | undefined) ?? null;
 }
 
 export async function listPublishedCommentsByAuthorUserId(
@@ -679,29 +680,29 @@ export async function listPublishedCommentsByAuthorUserId(
   if (isPostgresAuthEnabled()) {
     const rows = await queryPgRows<ProfileCommentRow>(
       `SELECT
-        discussion_comments.id,
-        discussion_comments.discussion_id,
-        discussions.title AS discussion_title,
-        discussion_comments.author_user_id,
+        post_comments.id,
+        post_comments.post_id,
+        posts.title AS post_title,
+        post_comments.author_user_id,
         users.display_name AS author_display_name,
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
-        discussion_comments.body_html,
-        discussion_comments.body_text,
-        discussion_comments.created_at::text AS created_at,
-        discussion_comments.likes_count,
+        post_comments.body_html,
+        post_comments.body_text,
+        post_comments.created_at::text AS created_at,
+        post_comments.likes_count,
         CASE WHEN viewer_reaction.id IS NULL THEN FALSE ELSE TRUE END AS viewer_liked
-      FROM discussion_comments
-      INNER JOIN discussions ON discussions.id = discussion_comments.discussion_id
-      INNER JOIN users ON users.id = discussion_comments.author_user_id
-      LEFT JOIN discussion_comment_reactions AS viewer_reaction
-        ON viewer_reaction.comment_id = discussion_comments.id
+      FROM post_comments
+      INNER JOIN posts ON posts.id = post_comments.post_id
+      INNER JOIN users ON users.id = post_comments.author_user_id
+      LEFT JOIN post_comment_reactions AS viewer_reaction
+        ON viewer_reaction.comment_id = post_comments.id
         AND viewer_reaction.user_id = $2
         AND viewer_reaction.reaction_type = 'like'
-      WHERE discussion_comments.author_user_id = $1
-        AND discussion_comments.status = 'published'
-      ORDER BY discussion_comments.created_at DESC`,
+      WHERE post_comments.author_user_id = $1
+        AND post_comments.status = 'published'
+      ORDER BY post_comments.created_at DESC`,
       [authorUserId, viewerUserId ?? null],
     );
 
@@ -711,72 +712,72 @@ export async function listPublishedCommentsByAuthorUserId(
   const rows = getDatabase()
     .prepare(
       `SELECT
-        discussion_comments.id,
-        discussion_comments.discussion_id,
-        discussions.title AS discussion_title,
-        discussion_comments.author_user_id,
+        post_comments.id,
+        post_comments.post_id,
+        posts.title AS post_title,
+        post_comments.author_user_id,
         users.display_name AS author_display_name,
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
-        discussion_comments.body_html,
-        discussion_comments.body_text,
-        discussion_comments.created_at,
-        discussion_comments.likes_count,
+        post_comments.body_html,
+        post_comments.body_text,
+        post_comments.created_at,
+        post_comments.likes_count,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
-      FROM discussion_comments
-      INNER JOIN discussions ON discussions.id = discussion_comments.discussion_id
-      INNER JOIN users ON users.id = discussion_comments.author_user_id
-      LEFT JOIN discussion_comment_reactions AS viewer_reaction
-        ON viewer_reaction.comment_id = discussion_comments.id
+      FROM post_comments
+      INNER JOIN posts ON posts.id = post_comments.post_id
+      INNER JOIN users ON users.id = post_comments.author_user_id
+      LEFT JOIN post_comment_reactions AS viewer_reaction
+        ON viewer_reaction.comment_id = post_comments.id
         AND viewer_reaction.user_id = ?
         AND viewer_reaction.reaction_type = 'like'
-      WHERE discussion_comments.author_user_id = ?
-        AND discussion_comments.status = 'published'
-      ORDER BY discussion_comments.created_at DESC`,
+      WHERE post_comments.author_user_id = ?
+        AND post_comments.status = 'published'
+      ORDER BY post_comments.created_at DESC`,
     )
     .all(viewerUserId ?? null, authorUserId) as ProfileCommentRow[];
 
   return rows.map((row) => mapProfileComment(row));
 }
 
-async function findDiscussionCommentBaseById(commentId: string) {
+async function findPostCommentBaseById(commentId: string) {
   if (isPostgresAuthEnabled()) {
-    return (await queryPgOne<DiscussionCommentBaseRow>(
+    return (await queryPgOne<PostCommentBaseRow>(
       `SELECT
         id,
-        discussion_id,
+        post_id,
         author_user_id,
         parent_comment_id,
         root_comment_id,
         depth,
         created_at::text AS created_at,
         status
-      FROM discussion_comments
+      FROM post_comments
       WHERE id = $1
       LIMIT 1`,
       [commentId],
-    )) as DiscussionCommentBaseRow | null;
+    )) as PostCommentBaseRow | null;
   }
 
   const row = getDatabase()
     .prepare(
       `SELECT
         id,
-        discussion_id,
+        post_id,
         author_user_id,
         parent_comment_id,
         root_comment_id,
         depth,
         created_at,
         status
-      FROM discussion_comments
+      FROM post_comments
       WHERE id = ?
       LIMIT 1`,
     )
     .get(commentId);
 
-  return (row as DiscussionCommentBaseRow | undefined) ?? null;
+  return (row as PostCommentBaseRow | undefined) ?? null;
 }
 
 async function findCommentAuthorMentionByUserId(userId: string) {
@@ -802,7 +803,7 @@ async function findCommentAuthorMentionByUserId(userId: string) {
   return (row as CommentAuthorMentionRow | undefined) ?? null;
 }
 
-async function listCommentAncestorChain(comment: DiscussionCommentBaseRow) {
+async function listCommentAncestorChain(comment: PostCommentBaseRow) {
   const chain = [comment];
   let currentComment = comment;
 
@@ -814,25 +815,25 @@ async function listCommentAncestorChain(comment: DiscussionCommentBaseRow) {
   return chain;
 }
 
-async function listPublishedCommentRows(discussionId: string, viewerUserId?: string | null) {
+async function listPublishedCommentRows(postId: string, viewerUserId?: string | null) {
   if (isPostgresAuthEnabled()) {
-    const rows = await queryPgRows<DiscussionCommentRow>(
+    const rows = await queryPgRows<PostCommentRow>(
       `SELECT
         ${PG_DISCUSSION_COMMENT_COLUMNS},
         CASE WHEN viewer_reaction.id IS NULL THEN FALSE ELSE TRUE END AS viewer_liked
-      FROM discussion_comments
-      INNER JOIN users ON users.id = discussion_comments.author_user_id
-      LEFT JOIN discussion_comment_reactions AS viewer_reaction
-        ON viewer_reaction.comment_id = discussion_comments.id
+      FROM post_comments
+      INNER JOIN users ON users.id = post_comments.author_user_id
+      LEFT JOIN post_comment_reactions AS viewer_reaction
+        ON viewer_reaction.comment_id = post_comments.id
         AND viewer_reaction.user_id = $2
         AND viewer_reaction.reaction_type = 'like'
-      WHERE discussion_comments.discussion_id = $1
-        AND discussion_comments.status IN ('published', 'deleted')
-      ORDER BY discussion_comments.created_at ASC`,
-      [discussionId, viewerUserId ?? null],
+      WHERE post_comments.post_id = $1
+        AND post_comments.status IN ('published', 'deleted')
+      ORDER BY post_comments.created_at ASC`,
+      [postId, viewerUserId ?? null],
     );
 
-    return rows as DiscussionCommentRow[];
+    return rows as PostCommentRow[];
   }
 
   const rows = getDatabase()
@@ -840,76 +841,76 @@ async function listPublishedCommentRows(discussionId: string, viewerUserId?: str
       `SELECT
         ${SQLITE_DISCUSSION_COMMENT_COLUMNS},
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked
-      FROM discussion_comments
-      INNER JOIN users ON users.id = discussion_comments.author_user_id
-      LEFT JOIN discussion_comment_reactions AS viewer_reaction
-        ON viewer_reaction.comment_id = discussion_comments.id
+      FROM post_comments
+      INNER JOIN users ON users.id = post_comments.author_user_id
+      LEFT JOIN post_comment_reactions AS viewer_reaction
+        ON viewer_reaction.comment_id = post_comments.id
         AND viewer_reaction.user_id = ?
         AND viewer_reaction.reaction_type = 'like'
-      WHERE discussion_comments.discussion_id = ?
-        AND discussion_comments.status IN ('published', 'deleted')
-      ORDER BY discussion_comments.created_at ASC`,
+      WHERE post_comments.post_id = ?
+        AND post_comments.status IN ('published', 'deleted')
+      ORDER BY post_comments.created_at ASC`,
     )
-    .all(viewerUserId ?? null, discussionId) as DiscussionCommentRow[];
+    .all(viewerUserId ?? null, postId) as PostCommentRow[];
 
   return rows;
 }
 
-async function syncDiscussionCommentsCount(discussionId: string) {
+async function syncPostCommentsCount(postId: string) {
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `UPDATE discussions
+      `UPDATE posts
        SET comments_count = (
          SELECT COUNT(*)
-         FROM discussion_comments
-         WHERE discussion_id = $1
+         FROM post_comments
+         WHERE post_id = $1
            AND status IN ('published', 'deleted')
            AND (
              parent_comment_id IS NULL
              OR EXISTS (
                SELECT 1
-               FROM discussion_comments AS root_comments
-               WHERE root_comments.id = discussion_comments.root_comment_id
+               FROM post_comments AS root_comments
+               WHERE root_comments.id = post_comments.root_comment_id
                  AND root_comments.status IN ('published', 'deleted')
              )
            )
        )
        WHERE id = $1`,
-      [discussionId],
+      [postId],
     );
     return;
   }
 
   getDatabase()
     .prepare(
-      `UPDATE discussions
+      `UPDATE posts
        SET comments_count = (
          SELECT COUNT(*)
-         FROM discussion_comments
-         WHERE discussion_id = ?
+         FROM post_comments
+         WHERE post_id = ?
            AND status IN ('published', 'deleted')
            AND (
              parent_comment_id IS NULL
              OR EXISTS (
                SELECT 1
-               FROM discussion_comments AS root_comments
-               WHERE root_comments.id = discussion_comments.root_comment_id
+               FROM post_comments AS root_comments
+               WHERE root_comments.id = post_comments.root_comment_id
                  AND root_comments.status IN ('published', 'deleted')
              )
            )
        )
        WHERE id = ?`,
     )
-    .run(discussionId, discussionId);
+    .run(postId, postId);
 }
 
 async function syncRootCommentRepliesCount(rootCommentId: string) {
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET replies_count = (
          SELECT COUNT(*)
-         FROM discussion_comments AS child_comments
+         FROM post_comments AS child_comments
          WHERE child_comments.root_comment_id = $1
            AND child_comments.status IN ('published', 'deleted')
        )
@@ -921,10 +922,10 @@ async function syncRootCommentRepliesCount(rootCommentId: string) {
 
   getDatabase()
     .prepare(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET replies_count = (
          SELECT COUNT(*)
-         FROM discussion_comments AS child_comments
+         FROM post_comments AS child_comments
          WHERE child_comments.root_comment_id = ?
            AND child_comments.status IN ('published', 'deleted')
        )
@@ -936,10 +937,10 @@ async function syncRootCommentRepliesCount(rootCommentId: string) {
 async function syncCommentLikesCount(commentId: string) {
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET likes_count = (
          SELECT COUNT(*)
-         FROM discussion_comment_reactions
+         FROM post_comment_reactions
          WHERE comment_id = $1
            AND reaction_type = 'like'
        )
@@ -951,10 +952,10 @@ async function syncCommentLikesCount(commentId: string) {
 
   getDatabase()
     .prepare(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET likes_count = (
          SELECT COUNT(*)
-         FROM discussion_comment_reactions
+         FROM post_comment_reactions
          WHERE comment_id = ?
            AND reaction_type = 'like'
        )
@@ -966,10 +967,10 @@ async function syncCommentLikesCount(commentId: string) {
 async function syncCommentReportsCount(commentId: string) {
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET reports_count = (
          SELECT COUNT(*)
-         FROM discussion_comment_reports
+         FROM post_comment_reports
          WHERE comment_id = $1
            AND status IN ('open', 'reviewed')
        )
@@ -981,10 +982,10 @@ async function syncCommentReportsCount(commentId: string) {
 
   getDatabase()
     .prepare(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET reports_count = (
          SELECT COUNT(*)
-         FROM discussion_comment_reports
+         FROM post_comment_reports
          WHERE comment_id = ?
            AND status IN ('open', 'reviewed')
        )
@@ -993,18 +994,18 @@ async function syncCommentReportsCount(commentId: string) {
     .run(commentId, commentId);
 }
 
-async function assertDiscussionExists(discussionId: string) {
-  const discussion = await findDiscussionSummaryById(discussionId);
+async function assertPostExists(postId: string) {
+  const post = await findPostSummaryById(postId);
 
-  if (!discussion) {
-    throw new CommentsRepositoryError("Обсуждение не найдено.", 404);
+  if (!post) {
+    throw new CommentsRepositoryError("Пост не найден.", 404);
   }
 
-  return discussion;
+  return post;
 }
 
 async function assertCommentExists(commentId: string) {
-  const comment = await findDiscussionCommentBaseById(commentId);
+  const comment = await findPostCommentBaseById(commentId);
 
   if (!comment) {
     throw new CommentsRepositoryError("Комментарий не найден.", 404);
@@ -1016,7 +1017,7 @@ async function assertCommentExists(commentId: string) {
 function assertCanCreateComment(actor: SessionUser | null) {
   if (!actor) {
     throw new CommentsRepositoryError(
-      "Нужно войти в аккаунт, чтобы комментировать обсуждения.",
+      "Нужно войти в аккаунт, чтобы комментировать посты.",
       401,
     );
   }
@@ -1026,18 +1027,18 @@ function assertCanCreateComment(actor: SessionUser | null) {
   }
 }
 
-export async function getDiscussionCommentsSection(params: {
+export async function getPostCommentsSection(params: {
   capabilities: CommentsCapabilities;
   currentUser: SessionUser | null;
-  discussionId: string;
+  postId: string;
   pageId: string;
   sort: CommentsSortValue;
   viewer: CommentsViewer;
 }) {
-  await assertDiscussionExists(params.discussionId);
+  await assertPostExists(params.postId);
 
   const rows = await listPublishedCommentRows(
-    params.discussionId,
+    params.postId,
     params.currentUser?.id ?? null,
   );
 
@@ -1051,17 +1052,17 @@ export async function getDiscussionCommentsSection(params: {
   });
 }
 
-export async function createDiscussionComment(input: CreateDiscussionCommentInput) {
+export async function createPostComment(input: CreatePostCommentInput) {
   assertCanCreateComment(input.actor);
-  await assertDiscussionExists(input.discussionId);
+  await assertPostExists(input.postId);
 
   const parentComment = input.parentId
     ? await assertCommentExists(input.parentId)
     : null;
 
   if (parentComment) {
-    if (parentComment.discussion_id !== input.discussionId) {
-      throw new CommentsRepositoryError("Нельзя ответить на комментарий из другого обсуждения.", 400);
+    if (parentComment.post_id !== input.postId) {
+      throw new CommentsRepositoryError("Нельзя ответить на комментарий из другого поста.", 400);
     }
 
     if (parentComment.status !== "published") {
@@ -1107,9 +1108,9 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
 
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `INSERT INTO discussion_comments (
+      `INSERT INTO post_comments (
         id,
-        discussion_id,
+        post_id,
         author_user_id,
         parent_comment_id,
         root_comment_id,
@@ -1123,7 +1124,7 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'published', $9, $10)`,
       [
         id,
-        input.discussionId,
+        input.postId,
         input.actor.id,
         parentCommentId,
         rootCommentId,
@@ -1137,9 +1138,9 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
   } else {
     getDatabase()
       .prepare(
-        `INSERT INTO discussion_comments (
+        `INSERT INTO post_comments (
           id,
-          discussion_id,
+          post_id,
           author_user_id,
           parent_comment_id,
           root_comment_id,
@@ -1154,7 +1155,7 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
       )
       .run(
         id,
-        input.discussionId,
+        input.postId,
         input.actor.id,
         parentCommentId,
         rootCommentId,
@@ -1166,10 +1167,21 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
       );
   }
 
-  await syncDiscussionCommentsCount(input.discussionId);
+  await syncPostCommentsCount(input.postId);
 
   if (rootCommentId) {
     await syncRootCommentRepliesCount(rootCommentId);
+  }
+
+  try {
+    await createCommentNotifications({
+      actor: input.actor,
+      commentId: id,
+      parentCommentId: input.parentId ?? null,
+      postId: input.postId,
+    });
+  } catch (error) {
+    console.error("[comments-repository/notifications]", error);
   }
 
   return {
@@ -1178,7 +1190,7 @@ export async function createDiscussionComment(input: CreateDiscussionCommentInpu
   };
 }
 
-export async function setDiscussionCommentVote(params: {
+export async function setPostCommentVote(params: {
   actor: SessionUser;
   commentId: string;
   type: "up" | "down" | null;
@@ -1198,7 +1210,7 @@ export async function setDiscussionCommentVote(params: {
   if (isPostgresAuthEnabled()) {
     if (params.type === "up") {
       await execAuthPostgres(
-        `INSERT INTO discussion_comment_reactions (
+        `INSERT INTO post_comment_reactions (
           id,
           comment_id,
           user_id,
@@ -1211,7 +1223,7 @@ export async function setDiscussionCommentVote(params: {
       );
     } else {
       await execAuthPostgres(
-        `DELETE FROM discussion_comment_reactions
+        `DELETE FROM post_comment_reactions
          WHERE comment_id = $1
            AND user_id = $2
            AND reaction_type = 'like'`,
@@ -1221,7 +1233,7 @@ export async function setDiscussionCommentVote(params: {
   } else if (params.type === "up") {
     getDatabase()
       .prepare(
-        `INSERT OR IGNORE INTO discussion_comment_reactions (
+        `INSERT OR IGNORE INTO post_comment_reactions (
           id,
           comment_id,
           user_id,
@@ -1234,7 +1246,7 @@ export async function setDiscussionCommentVote(params: {
   } else {
     getDatabase()
       .prepare(
-        `DELETE FROM discussion_comment_reactions
+        `DELETE FROM post_comment_reactions
          WHERE comment_id = ?
            AND user_id = ?
            AND reaction_type = 'like'`,
@@ -1245,7 +1257,7 @@ export async function setDiscussionCommentVote(params: {
   await syncCommentLikesCount(params.commentId);
 }
 
-export async function reportDiscussionComment(params: {
+export async function reportPostComment(params: {
   actor: SessionUser;
   commentId: string;
   reason?: string | null;
@@ -1267,7 +1279,7 @@ export async function reportDiscussionComment(params: {
 
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `INSERT INTO discussion_comment_reports (
+      `INSERT INTO post_comment_reports (
         id,
         comment_id,
         reporter_user_id,
@@ -1290,7 +1302,7 @@ export async function reportDiscussionComment(params: {
   } else {
     getDatabase()
       .prepare(
-        `INSERT INTO discussion_comment_reports (
+        `INSERT INTO post_comment_reports (
           id,
           comment_id,
           reporter_user_id,
@@ -1315,7 +1327,7 @@ export async function reportDiscussionComment(params: {
   await syncCommentReportsCount(params.commentId);
 }
 
-export async function updateDiscussionComment(input: UpdateDiscussionCommentInput) {
+export async function updatePostComment(input: UpdatePostCommentInput) {
   assertCanCreateComment(input.actor);
 
   const comment = await assertCommentExists(input.commentId);
@@ -1349,7 +1361,7 @@ export async function updateDiscussionComment(input: UpdateDiscussionCommentInpu
 
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET body_html = $1,
            body_text = $2,
            updated_at = $3,
@@ -1362,7 +1374,7 @@ export async function updateDiscussionComment(input: UpdateDiscussionCommentInpu
 
   getDatabase()
     .prepare(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET body_html = ?,
            body_text = ?,
            updated_at = ?,
@@ -1372,7 +1384,7 @@ export async function updateDiscussionComment(input: UpdateDiscussionCommentInpu
     .run(bodyHtml, bodyText, timestamp, timestamp, input.commentId);
 }
 
-export async function deleteDiscussionComment(params: {
+export async function deletePostComment(params: {
   actor: SessionUser;
   commentId: string;
 }) {
@@ -1392,7 +1404,7 @@ export async function deleteDiscussionComment(params: {
 
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `UPDATE discussion_comments
+      `UPDATE post_comments
        SET status = 'deleted',
            body_html = '',
            body_text = '',
@@ -1404,7 +1416,7 @@ export async function deleteDiscussionComment(params: {
   } else {
     getDatabase()
       .prepare(
-        `UPDATE discussion_comments
+        `UPDATE post_comments
          SET status = 'deleted',
              body_html = '',
              body_text = '',
@@ -1415,14 +1427,14 @@ export async function deleteDiscussionComment(params: {
       .run(timestamp, timestamp, params.commentId);
   }
 
-  await syncDiscussionCommentsCount(comment.discussion_id);
+  await syncPostCommentsCount(comment.post_id);
 
   if (comment.root_comment_id ?? comment.parent_comment_id) {
     await syncRootCommentRepliesCount(comment.root_comment_id ?? comment.parent_comment_id ?? "");
   }
 }
 
-export async function moderateDiscussionComment(input: ModerateDiscussionCommentInput) {
+export async function moderatePostComment(input: ModeratePostCommentInput) {
   if (!canModerateContent(input.actor)) {
     throw new CommentsRepositoryError("Недостаточно прав для модерации комментариев.", 403);
   }
@@ -1433,7 +1445,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
   if (input.action === "restore") {
     if (isPostgresAuthEnabled()) {
       await execAuthPostgres(
-        `UPDATE discussion_comments
+        `UPDATE post_comments
          SET status = 'published',
              hidden_reason = NULL,
              hidden_at = NULL,
@@ -1445,7 +1457,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
     } else {
       getDatabase()
         .prepare(
-          `UPDATE discussion_comments
+          `UPDATE post_comments
            SET status = 'published',
                hidden_reason = NULL,
                hidden_at = NULL,
@@ -1460,7 +1472,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
 
     if (isPostgresAuthEnabled()) {
       await execAuthPostgres(
-        `UPDATE discussion_comments
+        `UPDATE post_comments
          SET status = 'hidden',
              hidden_reason = $1,
              hidden_at = $2,
@@ -1471,7 +1483,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
     } else {
       getDatabase()
         .prepare(
-          `UPDATE discussion_comments
+          `UPDATE post_comments
            SET status = 'hidden',
                hidden_reason = ?,
                hidden_at = ?,
@@ -1483,7 +1495,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
   } else {
     if (isPostgresAuthEnabled()) {
       await execAuthPostgres(
-        `UPDATE discussion_comments
+        `UPDATE post_comments
          SET status = 'deleted',
              body_html = '',
              body_text = '',
@@ -1495,7 +1507,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
     } else {
       getDatabase()
         .prepare(
-          `UPDATE discussion_comments
+          `UPDATE post_comments
            SET status = 'deleted',
                body_html = '',
                body_text = '',
@@ -1509,7 +1521,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
 
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
-      `UPDATE discussion_comment_reports
+      `UPDATE post_comment_reports
        SET status = 'reviewed',
            updated_at = $1,
            resolved_at = CASE WHEN resolved_at IS NULL THEN $2 ELSE resolved_at END,
@@ -1524,7 +1536,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
   } else {
     getDatabase()
       .prepare(
-        `UPDATE discussion_comment_reports
+        `UPDATE post_comment_reports
          SET status = 'reviewed',
              updated_at = ?,
              resolved_at = CASE WHEN resolved_at IS NULL THEN ? ELSE resolved_at END,
@@ -1538,7 +1550,7 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
       .run(timestamp, timestamp, input.actor.id, input.commentId);
   }
 
-  await syncDiscussionCommentsCount(comment.discussion_id);
+  await syncPostCommentsCount(comment.post_id);
   await syncCommentReportsCount(input.commentId);
 
   if (comment.root_comment_id ?? comment.parent_comment_id) {
@@ -1546,20 +1558,20 @@ export async function moderateDiscussionComment(input: ModerateDiscussionComment
   }
 }
 
-export async function listDiscussionCommentReports() {
+export async function listPostCommentReports() {
   if (isPostgresAuthEnabled()) {
-    const rows = await queryPgRows<DiscussionCommentReportRow>(
+    const rows = await queryPgRows<PostCommentReportRow>(
       `SELECT
-        discussion_comment_reports.id,
-        discussion_comment_reports.status,
-        discussion_comment_reports.reason,
-        discussion_comment_reports.created_at::text AS created_at,
-        discussion_comment_reports.updated_at::text AS updated_at,
-        discussion_comments.id AS comment_id,
-        discussion_comments.body_text AS comment_body_text,
-        discussion_comments.status AS comment_status,
-        discussions.id AS discussion_id,
-        discussions.title AS discussion_title,
+        post_comment_reports.id,
+        post_comment_reports.status,
+        post_comment_reports.reason,
+        post_comment_reports.created_at::text AS created_at,
+        post_comment_reports.updated_at::text AS updated_at,
+        post_comments.id AS comment_id,
+        post_comments.body_text AS comment_body_text,
+        post_comments.status AS comment_status,
+        posts.id AS post_id,
+        posts.title AS post_title,
         comment_authors.id AS comment_author_id,
         comment_authors.display_name AS comment_author_display_name,
         comment_authors.nickname AS comment_author_nickname,
@@ -1568,36 +1580,36 @@ export async function listDiscussionCommentReports() {
         reporters.display_name AS reporter_display_name,
         reporters.nickname AS reporter_nickname,
         reporters.avatar_url AS reporter_avatar_url
-      FROM discussion_comment_reports
-      INNER JOIN discussion_comments ON discussion_comments.id = discussion_comment_reports.comment_id
-      INNER JOIN discussions ON discussions.id = discussion_comments.discussion_id
-      INNER JOIN users AS comment_authors ON comment_authors.id = discussion_comments.author_user_id
-      INNER JOIN users AS reporters ON reporters.id = discussion_comment_reports.reporter_user_id
+      FROM post_comment_reports
+      INNER JOIN post_comments ON post_comments.id = post_comment_reports.comment_id
+      INNER JOIN posts ON posts.id = post_comments.post_id
+      INNER JOIN users AS comment_authors ON comment_authors.id = post_comments.author_user_id
+      INNER JOIN users AS reporters ON reporters.id = post_comment_reports.reporter_user_id
       ORDER BY
-        CASE discussion_comment_reports.status
+        CASE post_comment_reports.status
           WHEN 'open' THEN 0
           WHEN 'reviewed' THEN 1
           ELSE 2
         END,
-        discussion_comment_reports.created_at DESC`,
+        post_comment_reports.created_at DESC`,
     );
 
-    return rows.map(mapDiscussionCommentReport);
+    return rows.map(mapPostCommentReport);
   }
 
   const rows = getDatabase()
     .prepare(
       `SELECT
-        discussion_comment_reports.id,
-        discussion_comment_reports.status,
-        discussion_comment_reports.reason,
-        discussion_comment_reports.created_at,
-        discussion_comment_reports.updated_at,
-        discussion_comments.id AS comment_id,
-        discussion_comments.body_text AS comment_body_text,
-        discussion_comments.status AS comment_status,
-        discussions.id AS discussion_id,
-        discussions.title AS discussion_title,
+        post_comment_reports.id,
+        post_comment_reports.status,
+        post_comment_reports.reason,
+        post_comment_reports.created_at,
+        post_comment_reports.updated_at,
+        post_comments.id AS comment_id,
+        post_comments.body_text AS comment_body_text,
+        post_comments.status AS comment_status,
+        posts.id AS post_id,
+        posts.title AS post_title,
         comment_authors.id AS comment_author_id,
         comment_authors.display_name AS comment_author_display_name,
         comment_authors.nickname AS comment_author_nickname,
@@ -1606,25 +1618,25 @@ export async function listDiscussionCommentReports() {
         reporters.display_name AS reporter_display_name,
         reporters.nickname AS reporter_nickname,
         reporters.avatar_url AS reporter_avatar_url
-      FROM discussion_comment_reports
-      INNER JOIN discussion_comments ON discussion_comments.id = discussion_comment_reports.comment_id
-      INNER JOIN discussions ON discussions.id = discussion_comments.discussion_id
-      INNER JOIN users AS comment_authors ON comment_authors.id = discussion_comments.author_user_id
-      INNER JOIN users AS reporters ON reporters.id = discussion_comment_reports.reporter_user_id
+      FROM post_comment_reports
+      INNER JOIN post_comments ON post_comments.id = post_comment_reports.comment_id
+      INNER JOIN posts ON posts.id = post_comments.post_id
+      INNER JOIN users AS comment_authors ON comment_authors.id = post_comments.author_user_id
+      INNER JOIN users AS reporters ON reporters.id = post_comment_reports.reporter_user_id
       ORDER BY
-        CASE discussion_comment_reports.status
+        CASE post_comment_reports.status
           WHEN 'open' THEN 0
           WHEN 'reviewed' THEN 1
           ELSE 2
         END,
-        discussion_comment_reports.created_at DESC`,
+        post_comment_reports.created_at DESC`,
     )
-    .all() as DiscussionCommentReportRow[];
+    .all() as PostCommentReportRow[];
 
-  return rows.map(mapDiscussionCommentReport);
+  return rows.map(mapPostCommentReport);
 }
 
-function mapDiscussionCommentReport(row: DiscussionCommentReportRow): AdminCommentReportItem {
+function mapPostCommentReport(row: PostCommentReportRow): AdminCommentReportItem {
   return {
     id: row.id,
     status: row.status,
@@ -1633,8 +1645,8 @@ function mapDiscussionCommentReport(row: DiscussionCommentReportRow): AdminComme
     updatedAt: row.updated_at,
     comment: {
       id: row.comment_id,
-      discussionId: row.discussion_id,
-      discussionTitle: row.discussion_title,
+      postId: row.post_id,
+      postTitle: row.post_title,
       bodyText: row.comment_body_text,
       status: row.comment_status,
       author: mapCommentAuthor({

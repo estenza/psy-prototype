@@ -17,7 +17,7 @@ type CommentListProps = {
   onVote: (commentId: string, type: "up" | "down" | null) => void;
   onBlock: (commentId: string) => void;
   onReport: (commentId: string) => void;
-  highlightedCommentId?: string | null;
+  highlightedCommentIds?: string[];
 };
 
 export function CommentList({
@@ -34,7 +34,7 @@ export function CommentList({
   onVote,
   onBlock,
   onReport,
-  highlightedCommentId = null,
+  highlightedCommentIds = [],
 }: CommentListProps) {
   return (
     <div className="flex w-full flex-col gap-5">
@@ -54,7 +54,7 @@ export function CommentList({
           onVote={onVote}
           onBlock={onBlock}
           onReport={onReport}
-          highlightedCommentId={highlightedCommentId}
+          highlightedCommentIds={highlightedCommentIds}
         />
       ))}
     </div>

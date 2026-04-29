@@ -8,7 +8,6 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   startTransition,
@@ -21,10 +20,14 @@ import { AppHeader } from "@/components/layout/app-header";
 import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { TOPIC_FORMAT_META } from "@/features/topic-creation/constants";
+import { DEFAULT_POST_SUBTOPIC } from "@/constants/post-taxonomy";
+import {
+  SUBTOPIC_FIELD_HINTS,
+  TOPIC_FORMAT_META,
+} from "@/features/topic-creation/constants";
 import { useAuthRequiredModal } from "@/features/auth/components/auth-required-provider";
-import { TopicFormatSwitch } from "@/features/topic-creation/components/topic-format-switch";
 import { TopicPicker } from "@/features/topic-creation/components/topic-picker";
+import { TopicSubtopicPicker } from "@/features/topic-creation/components/topic-subtopic-picker";
 import {
   clearTopicDraft,
   consumeTopicDraftRestoreRequest,
@@ -38,9 +41,10 @@ import {
   getCurrentPathWithSearchAndHash,
   normalizeCreateTopicReturnTo,
 } from "@/features/topic-creation/lib/create-topic-navigation";
+import { buildPostHref } from "@/features/feed/lib/post-navigation";
 import type { TopicDraftFields, TopicFieldKey, TopicFormat } from "@/features/topic-creation/types";
 import type { TopicFormatFieldConfig } from "@/features/topic-creation/constants";
-import type { DiscussionMutationResponse, DiscussionRouteErrorResponse } from "@/features/feed/types";
+import type { PostMutationResponse, PostRouteErrorResponse } from "@/features/feed/types";
 import type { PostTopic } from "@/types/post-taxonomy";
 
 const MIN_SUBMIT_LOADING_MS = 1000;
@@ -60,37 +64,49 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;");
 }
 
-function getActiveFieldConfig(topic: PostTopic | null, format: TopicFormat): TopicFormatFieldConfig[] {
-  if (topic === "free-topic") {
+function getActiveFieldConfig(
+  _topic: PostTopic | null,
+  format: TopicFormat,
+  subtopic: string,
+): TopicFormatFieldConfig[] {
+  if (subtopic === DEFAULT_POST_SUBTOPIC) {
     return [
       {
         key: "primary",
         label: "Заголовок",
-        placeholder: "Коротко обозначьте, о чём хотите написать",
+        placeholder: "Коротко обозначьте, что хотите обсудить",
         rows: 2,
       },
       {
         key: "secondary",
-        label: "Ваш текст",
-        placeholder: "Расскажите, что у вас происходит",
+        label: "Текст",
+        optional: true,
+        placeholder: "Расскажите, что происходит и какой отклик вам сейчас нужен",
         rows: 6,
       },
-    ] as const;
+    ];
   }
 
-  return TOPIC_FORMAT_META[format].fields;
+  const hints = subtopic ? SUBTOPIC_FIELD_HINTS[subtopic] : undefined;
+
+  return TOPIC_FORMAT_META[format].fields.map((field) => ({
+    ...field,
+    optional: field.key !== "primary",
+    ...(hints?.[field.key] ?? {}),
+    ...(field.key === "primary" ? { label: "Заголовок" } : {}),
+  }));
 }
 
-function buildDiscussionBodyHtml(
+function buildPostBodyHtml(
   topic: PostTopic | null,
   format: TopicFormat,
   fields: TopicDraftFields,
+  subtopic: string,
 ) {
-  const activeFields = getActiveFieldConfig(topic, format);
+  const activeFields = getActiveFieldConfig(topic, format, subtopic);
 
-  if (topic === "free-topic") {
-    const bodyField = activeFields.find((field) => field.key === "secondary");
-    const value = bodyField ? fields[bodyField.key].trim() : "";
+  if (subtopic === DEFAULT_POST_SUBTOPIC) {
+    const value = fields.secondary.trim();
 
     if (!value) {
       return "";
@@ -127,10 +143,16 @@ function buildDraftPayload(params: {
   fields: TopicDraftFields;
   format: TopicFormat;
   guestEmail: string;
+  subtopic: string;
   topic: PostTopic | null;
 }) {
   const title = params.fields.primary.trim();
-  const content = buildDiscussionBodyHtml(params.topic, params.format, params.fields);
+  const content = buildPostBodyHtml(
+    params.topic,
+    params.format,
+    params.fields,
+    params.subtopic,
+  );
 
   return {
     content,
@@ -139,6 +161,7 @@ function buildDraftPayload(params: {
     format: params.format,
     guestEmail: params.guestEmail,
     intent: TOPIC_FORMAT_META[params.format].legacyIntent,
+    subtopics: [params.subtopic],
     title,
     topic: params.topic,
     updatedAt: new Date().toISOString(),
@@ -159,7 +182,7 @@ function GuidedTextField({
   value: string;
 }) {
   return (
-    <TextField isInvalid={Boolean(error)} className="field-surface-default grid gap-2 text-sm">
+    <TextField isInvalid={Boolean(error)} className="grid gap-2 text-sm">
       <Label className="pl-1 text-[14px] leading-5 font-medium text-[var(--label-primary)]">
         {label}
       </Label>
@@ -209,7 +232,7 @@ function GuidedTextareaField({
   }, [value]);
 
   return (
-    <TextField isInvalid={Boolean(error)} className="field-surface-default grid gap-2 text-sm">
+    <TextField isInvalid={Boolean(error)} className="grid gap-2 text-sm">
       <Label className="pl-1 text-[14px] leading-5 font-medium text-[var(--label-primary)]">
         {label}
       </Label>
@@ -251,20 +274,22 @@ function hasRestorableTopicFormState({
   fields,
   format,
   guestEmail,
+  subtopic,
   topic,
 }: {
   fields: TopicDraftFields;
   format: TopicFormat;
   guestEmail: string;
+  subtopic: string;
   topic: PostTopic | null;
 }) {
   const emptyDraft = createEmptyTopicDraft();
-  const hasVisibleFormatSelection = topic !== "free-topic";
 
   return (
     hasMeaningfulTopicDraft({ fields })
     || topic !== emptyDraft.topic
-    || (hasVisibleFormatSelection && format !== emptyDraft.format)
+    || format !== emptyDraft.format
+    || subtopic !== (emptyDraft.subtopics[0] ?? DEFAULT_POST_SUBTOPIC)
     || guestEmail.trim().length > 0
   );
 }
@@ -277,13 +302,16 @@ export function CreateTopicScreen() {
   const [fields, setFields] = useState<TopicDraftFields>(initialDraft.fields);
   const [format, setFormat] = useState<TopicFormat>(initialDraft.format);
   const [topic, setTopic] = useState<PostTopic | null>(initialDraft.topic);
+  const [subtopic, setSubtopic] = useState<string>(
+    initialDraft.subtopics[0] ?? DEFAULT_POST_SUBTOPIC,
+  );
   const [editingPostId, setEditingPostId] = useState<string | null>(initialDraft.editingPostId);
   const [guestEmail, setGuestEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInitializedDraft, setHasInitializedDraft] = useState(false);
   const returnTo = normalizeCreateTopicReturnTo(searchParams.get("returnTo"));
-  const activeFields = getActiveFieldConfig(topic, format);
+  const activeFields = getActiveFieldConfig(topic, format, subtopic);
   const isEditing = Boolean(editingPostId);
   const submitLabel = user
     ? (isEditing ? "Сохранить" : "Опубликовать")
@@ -300,6 +328,7 @@ export function CreateTopicScreen() {
       setFields(storedDraft.fields);
       setFormat(storedDraft.format);
       setTopic(storedDraft.topic);
+      setSubtopic(storedDraft.subtopics[0] ?? DEFAULT_POST_SUBTOPIC);
       setEditingPostId(storedDraft.editingPostId);
       setGuestEmail(storedDraft.guestEmail);
     }
@@ -317,6 +346,7 @@ export function CreateTopicScreen() {
       fields,
       format,
       guestEmail,
+      subtopic,
       topic,
     });
 
@@ -324,6 +354,7 @@ export function CreateTopicScreen() {
       fields,
       format,
       guestEmail,
+      subtopic,
       topic,
     })) {
       saveTopicDraft(nextDraft);
@@ -331,7 +362,7 @@ export function CreateTopicScreen() {
     }
 
     clearTopicDraft();
-  }, [editingPostId, fields, format, guestEmail, hasInitializedDraft, topic]);
+  }, [editingPostId, fields, format, guestEmail, hasInitializedDraft, subtopic, topic]);
 
   function updateField(key: TopicFieldKey, value: string) {
     setFields((currentFields) => ({
@@ -352,14 +383,11 @@ export function CreateTopicScreen() {
 
   function updateTopic(nextTopic: PostTopic | null) {
     setTopic(nextTopic);
+    setSubtopic(DEFAULT_POST_SUBTOPIC);
     setFieldErrors((currentErrors) => ({
       ...currentErrors,
       topic: undefined,
     }));
-  }
-
-  function updateFormat(nextFormat: TopicFormat) {
-    setFormat(nextFormat);
   }
 
   function handleBack() {
@@ -383,7 +411,7 @@ export function CreateTopicScreen() {
 
     activeFields.forEach((field) => {
       if (!field.optional && !fields[field.key].trim()) {
-        nextErrors[field.key] = "Это поле лучше заполнить, чтобы людям было проще откликнуться.";
+        nextErrors[field.key] = "Напишите хотя бы немного";
       }
     });
 
@@ -391,9 +419,9 @@ export function CreateTopicScreen() {
       const normalizedEmail = guestEmail.trim();
 
       if (!normalizedEmail) {
-        nextErrors.guestEmail = "Введите email, чтобы войти и опубликовать.";
+        nextErrors.guestEmail = "Введите email, чтобы войти и опубликовать";
       } else if (!isValidEmail(normalizedEmail)) {
-        nextErrors.guestEmail = "Похоже, email введён с ошибкой.";
+        nextErrors.guestEmail = "Похоже, email введён с ошибкой";
       }
     }
 
@@ -415,6 +443,7 @@ export function CreateTopicScreen() {
       fields,
       format,
       guestEmail,
+      subtopic,
       topic,
     });
 
@@ -435,7 +464,7 @@ export function CreateTopicScreen() {
         window.setTimeout(resolve, MIN_SUBMIT_LOADING_MS);
       });
       const responsePromise = fetch(
-        editingPostId ? `/api/discussions/${editingPostId}` : "/api/discussions",
+        editingPostId ? `/api/posts/${editingPostId}` : "/api/posts",
         {
           method: editingPostId ? "PATCH" : "POST",
           headers: {
@@ -451,31 +480,38 @@ export function CreateTopicScreen() {
       );
       const [response] = await Promise.all([responsePromise, loadingDelay]);
       const payload =
-        (await response.json()) as DiscussionMutationResponse | DiscussionRouteErrorResponse;
+        (await response.json()) as PostMutationResponse | PostRouteErrorResponse;
 
       if (!response.ok) {
-        const errorPayload = payload as DiscussionRouteErrorResponse;
+        const errorPayload = payload as PostRouteErrorResponse;
         setFieldErrors((currentErrors) => ({
           ...currentErrors,
           ...(errorPayload.fieldErrors ?? {}),
         }));
-        throw new Error(errorPayload.error ?? "Не удалось сохранить обсуждение.");
+        throw new Error(errorPayload.error ?? "Не удалось сохранить пост.");
       }
 
-      const successPayload = payload as DiscussionMutationResponse;
+      const successPayload = payload as PostMutationResponse;
+      const wasEditing = Boolean(editingPostId);
+      const postHref = buildPostHref(successPayload.post.id, returnTo);
 
       clearTopicDraft();
       setEditingPostId(null);
 
-      toast.success(editingPostId ? "Обсуждение обновлено" : "Обсуждение опубликовано");
+      toast.success(wasEditing ? "Пост обновлён" : "Пост опубликован");
       startTransition(() => {
-        router.push(`/discussions/${successPayload.post.id}`);
+        if (wasEditing) {
+          router.replace(postHref);
+          return;
+        }
+
+        router.push(postHref);
       });
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "Не удалось сохранить обсуждение.";
+          : "Не удалось сохранить пост.";
       toast.danger(message);
     } finally {
       setIsSubmitting(false);
@@ -483,10 +519,10 @@ export function CreateTopicScreen() {
   }
 
   return (
-    <div className="surface-primary text-label-primary min-h-[100svh] min-[721px]:min-h-dvh">
+    <div className="surface-primary text-label-primary min-h-[100svh] min-[481px]:min-h-dvh">
       <AppHeader />
 
-      <div className="min-[721px]:pt-[var(--app-header-height)]">
+      <div className="min-[481px]:pt-[var(--app-header-height)]">
         <DesktopAppShell
           centerClassName="w-full max-w-[672px]"
           fitCenterToContent
@@ -494,27 +530,23 @@ export function CreateTopicScreen() {
           <section className="min-w-0">
             <PageHeader
               onBack={handleBack}
-              title={isEditing ? "Редактировать обсуждение" : "Новое обсуждение"}
+              title={isEditing ? "Редактировать пост" : "Что хотите обсудить?"}
               titleAs="h2"
-              action={(
-                <Link
-                  href="/drafts"
-                  className="text-[14px] leading-5 font-medium text-[var(--label-primary)] underline decoration-[color:var(--underline-primary)] underline-offset-4 transition-colors hover:text-[var(--accent-primary)]"
-                >
-                  Черновики
-                </Link>
-              )}
             />
 
-            <div className="px-2 pb-8 min-[481px]:px-3 min-[481px]:pb-12 min-[721px]:px-0 min-[721px]:pb-24">
+            <div className="px-0 pb-8 min-[481px]:pb-24">
               <form
                 onSubmit={handleSubmit}
-                className="surface--default surface-card flex flex-col gap-6 rounded-[28px] p-6"
+                className="surface-card flex flex-col gap-6 rounded-[28px] p-3 min-[481px]:p-6"
               >
                 <div className="grid gap-3">
-                  <TopicPicker value={topic ?? "free-topic"} onChange={updateTopic} />
-                  {topic !== "free-topic" ? (
-                    <TopicFormatSwitch value={format} onChange={updateFormat} />
+                  <TopicPicker value={topic ?? "emotions"} onChange={updateTopic} />
+                  {topic ? (
+                    <TopicSubtopicPicker
+                      topic={topic}
+                      value={subtopic}
+                      onChange={setSubtopic}
+                    />
                   ) : null}
                 </div>
 
@@ -546,7 +578,7 @@ export function CreateTopicScreen() {
                   {!user ? (
                     <GuidedTextField
                       error={fieldErrors.guestEmail}
-                      label="Email"
+                      label="Оставьте ваш Email"
                       onChange={(value) => {
                         setGuestEmail(value);
                         setFieldErrors((currentErrors) => ({
@@ -554,19 +586,19 @@ export function CreateTopicScreen() {
                           guestEmail: undefined,
                         }));
                       }}
-                      placeholder="Куда отправить код для входа"
+                      placeholder="example@mail.com"
                       value={guestEmail}
                     />
                   ) : null}
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-start">
                   <Button
                     type="submit"
                     variant="primary"
                     size="lg"
                     disabled={isSubmitting}
-                    className="relative !h-11 min-w-[220px] !rounded-full"
+                    className="relative !h-11 w-full min-w-[220px] !rounded-full min-[481px]:w-auto"
                   >
                     <span className={isSubmitting ? "opacity-0" : ""}>{submitLabel}</span>
                     {isSubmitting ? (

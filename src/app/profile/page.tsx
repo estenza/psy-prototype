@@ -2,14 +2,17 @@ import { redirect } from "next/navigation";
 import { ProfilePageContent } from "@/features/auth/components/profile-page-content";
 import { listPublishedCommentsByAuthorUserId } from "@/features/comments/lib/comments-repository";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { listDiscussionsByAuthorUserId } from "@/features/feed/lib/discussions-repository";
+import {
+  listPostsByAuthorUserId,
+  listProfileFavoritePostsByUserId,
+} from "@/features/feed/lib/posts-repository";
 import { buildOwnProfilePath } from "@/features/auth/lib/profile";
 
 export default async function ProfilePage() {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
-    redirect("/sign-in?next=%2Fprofile");
+    redirect("/");
   }
 
   const ownProfilePath = buildOwnProfilePath(currentUser);
@@ -18,14 +21,16 @@ export default async function ProfilePage() {
     redirect(ownProfilePath);
   }
 
-  const [discussions, replies] = await Promise.all([
-    listDiscussionsByAuthorUserId(currentUser.id, currentUser),
+  const [posts, favoritePosts, replies] = await Promise.all([
+    listPostsByAuthorUserId(currentUser.id, currentUser),
+    listProfileFavoritePostsByUserId(currentUser.id, currentUser),
     listPublishedCommentsByAuthorUserId(currentUser.id, currentUser.id),
   ]);
 
   return (
     <ProfilePageContent
-      discussions={discussions}
+      posts={posts}
+      favoritePosts={favoritePosts}
       replies={replies}
       user={currentUser}
       viewerIsOwner

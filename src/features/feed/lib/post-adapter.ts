@@ -1,4 +1,5 @@
 import { formatRelativeDate, formatRelativeDateCompact } from "@/features/comments/lib/comment-format";
+import { normalizePostTopic } from "@/constants/post-taxonomy";
 import type { ApiPostRecord, Post } from "@/features/feed/types";
 
 function formatPostPublishedAtLabel(createdAtIso: string) {
@@ -14,11 +15,13 @@ function formatPostCompactPublishedAtLabel(createdAtIso: string) {
 }
 
 export function mapApiPostToPost(record: ApiPostRecord): Post {
+  const topic = normalizePostTopic(record.topic);
+
   return {
     id: record.id,
     createdAt: new Date(record.created_at_iso),
     intent: record.intent,
-    topic: record.topic,
+    topic: topic ?? undefined,
     author: {
       id: record.author.id,
       name: record.author.display_name,
@@ -44,6 +47,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
       isAuthor: false,
       liked: record.viewer_state.liked,
       bookmarked: record.viewer_state.bookmarked,
+      profileFavorite: record.viewer_state.profile_favorite ?? false,
     },
     media:
       record.body.media?.kind === "image"

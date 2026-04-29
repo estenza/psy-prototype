@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ToggleButton, cn, toast } from "@heroui/react";
 import {
+  BookmarkIcon,
   ChatIcon,
   PostHeartIcon,
   ShareIcon,
@@ -13,42 +14,46 @@ import type { Post } from "@/features/feed/types";
 type PostActionsProps = {
   post: Post;
   className: string;
+  onToggleBookmark: (postId: Post["id"]) => void;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
-  discussionHref?: string;
+  postHref?: string;
 };
 
 export function PostActions({
   post,
   className,
+  onToggleBookmark,
   onToggleLike,
-  discussionHref,
+  postHref,
 }: PostActionsProps) {
   const router = useRouter();
-  const resolvedDiscussionHref = discussionHref ?? `/discussions/${post.id}`;
+  const resolvedPostHref = postHref ?? `/posts/${post.id}`;
   const likedActionClassName =
     "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)] active:text-[var(--danger)] data-[pressed=true]:text-[var(--danger)]";
   const tertiaryActionClassName =
-    "interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors active:text-[var(--label-secondary)] data-[pressed=true]:text-[var(--label-secondary)]";
+    "post-action-button interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors active:text-[var(--label-secondary)] data-[pressed=true]:text-[var(--label-secondary)]";
   const tertiaryIconOnlyActionClassName = cn(
     tertiaryActionClassName,
     "button--icon-only w-9 px-0",
   );
+  const bookmarkIconOnlyActionClassName =
+    "post-action-button interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full font-normal transition-colors button--icon-only w-9 px-0 text-[var(--label-secondary)]";
 
   async function handleShare() {
-    const discussionUrl = new URL(`/discussions/${post.id}`, window.location.origin).toString();
+    const postUrl = new URL(`/posts/${post.id}`, window.location.origin).toString();
 
     try {
       if (navigator.share) {
         await navigator.share({
           title: post.content.title,
           text: post.content.excerpt,
-          url: discussionUrl,
+          url: postUrl,
         });
         return;
       }
 
-      await navigator.clipboard.writeText(discussionUrl);
-      toast.success("Ссылка на обсуждение скопирована.");
+      await navigator.clipboard.writeText(postUrl);
+      toast.success("Ссылка на пост скопирована.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
@@ -60,7 +65,7 @@ export function PostActions({
 
   return (
     <div
-      className={cn(className, "pointer-events-none relative z-20 gap-2")}
+      className={cn(className, "pointer-events-none relative z-20 w-full gap-2")}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
@@ -69,14 +74,17 @@ export function PostActions({
           aria-label={post.viewer.liked ? "Больше не нравится" : "Нравится"}
           isSelected={post.viewer.liked}
           onChange={() => onToggleLike(post.id, !post.viewer.liked)}
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
           className={cn(
             tertiaryActionClassName,
             "pointer-events-auto",
             post.stats.likes > 0 ? "gap-2 align-middle" : "button--icon-only w-9 px-0",
             post.viewer.liked
-              ? likedActionClassName
-              : "",
+              ? `post-action-liked ${likedActionClassName}`
+              : "post-action-like-idle",
           )}
         >
           <span className="flex h-5 w-5 flex-none items-center justify-center">
@@ -95,7 +103,7 @@ export function PostActions({
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            router.push(resolvedDiscussionHref);
+            router.push(resolvedPostHref);
           }}
           className={cn(
             tertiaryActionClassName,
@@ -127,6 +135,30 @@ export function PostActions({
             <ShareIcon />
           </span>
         </button>
+      </HoverTooltip>
+
+      <HoverTooltip
+        label={post.viewer.bookmarked ? "Убрать из закладок" : "Добавить в закладки"}
+        triggerClassName="ml-auto"
+      >
+        <ToggleButton
+          aria-label={post.viewer.bookmarked ? "Убрать из закладок" : "Добавить в закладки"}
+          isSelected={post.viewer.bookmarked}
+          onChange={() => onToggleBookmark(post.id)}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          className={cn(
+            bookmarkIconOnlyActionClassName,
+            "pointer-events-auto",
+            post.viewer.bookmarked ? "interactive-accent-bookmark" : "",
+          )}
+        >
+          <span className="flex h-5 w-5 flex-none items-center justify-center">
+            <BookmarkIcon filled={post.viewer.bookmarked} />
+          </span>
+        </ToggleButton>
       </HoverTooltip>
     </div>
   );

@@ -8,6 +8,12 @@ type EventLike = {
   stopPropagation?: () => void;
 };
 
+type AuthModalOptions = {
+  initialEmail?: string;
+  methodTitle?: string;
+  nextHref?: string;
+};
+
 export function useAuthRequiredAction() {
   const {
     openAuthModal,
@@ -17,7 +23,7 @@ export function useAuthRequiredAction() {
   } = useAuthClient();
 
   const requireAuth = useCallback(
-    async (event?: EventLike) => {
+    async (event?: EventLike, modalOptions?: AuthModalOptions) => {
       if (user) {
         return true;
       }
@@ -34,7 +40,7 @@ export function useAuthRequiredAction() {
 
       event?.preventDefault?.();
       event?.stopPropagation?.();
-      openAuthModal();
+      openAuthModal(modalOptions);
 
       return false;
     },
@@ -42,8 +48,12 @@ export function useAuthRequiredAction() {
   );
 
   const runIfAuthorized = useCallback(
-    async <T>(action: () => T | Promise<T>, event?: EventLike) => {
-      if (!(await requireAuth(event))) {
+    async <T>(
+      action: () => T | Promise<T>,
+      event?: EventLike,
+      modalOptions?: AuthModalOptions,
+    ) => {
+      if (!(await requireAuth(event, modalOptions))) {
         return false as const;
       }
 

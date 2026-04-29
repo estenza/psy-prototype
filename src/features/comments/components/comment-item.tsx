@@ -36,12 +36,18 @@ type CommentItemProps = {
   onVote: (commentId: string, type: "up" | "down" | null) => void;
   onBlock: (commentId: string) => void;
   onReport: (commentId: string) => void;
+  contextLink?: {
+    href: string;
+    label: string;
+  } | null;
   flat?: boolean;
   showMenu?: boolean;
   showActions?: boolean;
+  showAvatar?: boolean;
   bodySurface?: boolean;
+  readOnlyLike?: boolean;
   showReplyAction?: boolean;
-  highlightedCommentId?: string | null;
+  highlightedCommentIds?: string[];
   onOpen?: () => void;
 };
 
@@ -129,16 +135,21 @@ export function CommentItem({
   onVote,
   onBlock,
   onReport,
+  contextLink = null,
   flat = false,
   showMenu = true,
   showActions = true,
+  showAvatar = true,
   bodySurface = false,
+  readOnlyLike = false,
   showReplyAction = true,
-  highlightedCommentId = null,
+  highlightedCommentIds = [],
   onOpen,
 }: CommentItemProps) {
-  const highlightedReplyIndex = highlightedCommentId
-    ? comment.replies.findIndex((reply) => commentTreeContainsId(reply, highlightedCommentId))
+  const highlightedReplyIndex = highlightedCommentIds.length > 0
+    ? comment.replies.findIndex((reply) =>
+        highlightedCommentIds.some((commentId) => commentTreeContainsId(reply, commentId)),
+      )
     : -1;
   const [isEditing, setIsEditing] = useState(false);
   const [isReplyComposerOpen, setIsReplyComposerOpen] = useState(false);
@@ -164,7 +175,10 @@ export function CommentItem({
   const visibleReplies = areExtraRepliesVisible ? comment.replies : comment.replies.slice(0, 3);
   const hiddenRepliesCount = Math.max(comment.replies.length - visibleReplies.length, 0);
   const hasHiddenReplies = hiddenRepliesCount > 0;
-  const isHighlighted = highlightedCommentId === comment.id;
+  const isHighlighted = highlightedCommentIds.includes(comment.id);
+  const bodySurfaceClassName = showAvatar
+    ? "surface-card feed-card-surface relative w-fit max-w-[calc(100%-3rem)] flex-none rounded-[28px] pl-4 pr-6 py-4 group-hover:bg-[color-mix(in_oklab,var(--background-elevated)_96%,var(--default))]"
+    : "surface-card feed-card-surface relative w-full rounded-[28px] px-4 py-4 group-hover:bg-[color-mix(in_oklab,var(--background-elevated)_96%,var(--default))] min-[481px]:px-5 min-[481px]:px-6";
 
   function shouldIgnoreOpenEvent(target: EventTarget | null) {
     return target instanceof Element
@@ -274,7 +288,9 @@ export function CommentItem({
       ref={articleRef}
       data-comment-id={comment.id}
       className={`relative flex min-w-0 ${
-        bodySurface ? "inline-flex max-w-full w-auto items-end gap-3" : ""
+        bodySurface
+          ? (showAvatar ? "inline-flex max-w-full w-auto items-end gap-3" : "w-full")
+          : ""
       } ${
         onOpen ? "group cursor-pointer" : ""
       }`.trim()}
@@ -290,28 +306,28 @@ export function CommentItem({
         />
       ) : null}
 
-      <div
-        className={`flex w-9 shrink-0 flex-col items-center ${
-          bodySurface ? "self-end" : "self-stretch"
-        }`.trim()}
-        style={bodySurface ? { justifyContent: "flex-end" } : undefined}
-      >
-        <UserAvatarAction
-          avatarUrl={comment.author.avatarUrl}
-          fallbackText={comment.author.initials}
-          name={comment.author.name}
-          showStatusDot={comment.author.role === "specialist"}
-          size="comment-md"
-          href={profileHref ?? null}
-          ariaLabel={`Открыть профиль ${comment.author.name}`}
-        />
-      </div>
+      {showAvatar ? (
+        <div
+          className={`flex w-9 shrink-0 flex-col items-center ${
+            bodySurface ? "self-end" : "self-stretch"
+          }`.trim()}
+          style={bodySurface ? { justifyContent: "flex-end" } : undefined}
+        >
+          <UserAvatarAction
+            avatarUrl={comment.author.avatarUrl}
+            fallbackText={comment.author.initials}
+            name={comment.author.name}
+            showStatusDot={comment.author.role === "specialist"}
+            size="comment-md"
+            href={profileHref ?? null}
+            ariaLabel={`Открыть профиль ${comment.author.name}`}
+          />
+        </div>
+      ) : null}
 
       <div
         className={`flex min-w-0 flex-1 flex-col ${
-          bodySurface
-            ? "surface-card feed-card-surface relative w-fit max-w-[calc(100%-3rem)] flex-none rounded-[28px] pl-4 pr-6 py-4 group-hover:bg-[color-mix(in_oklab,var(--background-elevated)_96%,var(--default))]"
-            : "pl-3"
+          bodySurface ? bodySurfaceClassName : (showAvatar ? "pl-3" : "")
         }`.trim()}
         onClick={onOpen ? handleOpen : undefined}
         onKeyDown={onOpen
@@ -326,13 +342,25 @@ export function CommentItem({
           : undefined}
         role={onOpen ? "link" : undefined}
         tabIndex={onOpen ? 0 : undefined}
-        aria-label={onOpen ? "Открыть обсуждение с этим ответом" : undefined}
+        aria-label={onOpen ? "Открыть пост с этим ответом" : undefined}
         style={isHighlighted
           ? {
-              boxShadow: "0 0 0 3px var(--color-accent-soft)",
+              backgroundColor: "rgba(59, 130, 246, 0.14)",
+              borderRadius: "16px",
             }
           : undefined}
       >
+        {contextLink ? (
+          <div className="min-w-0 pb-1 pl-1">
+            <Link
+              href={contextLink.href}
+              className="block max-w-full truncate rounded-none p-0 text-[14px] leading-5 font-normal text-[var(--accent-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--accent-primary)] decoration-[1.5px] underline-offset-4"
+            >
+              {contextLink.label}
+            </Link>
+          </div>
+        ) : null}
+
         <div className="flex min-w-0 items-center gap-2 pl-1">
           <div className="flex min-w-0 flex-1 items-center">
             {isDeleted ? (
@@ -438,6 +466,7 @@ export function CommentItem({
             likeCount={comment.upvotes}
             canLike={canLike}
             canReply={flat ? false : canStartReply}
+            readOnlyLike={readOnlyLike}
             showReplyAction={showReplyAction}
             onLike={() => {
               if (!isViewerAuthenticated) {
@@ -528,7 +557,7 @@ export function CommentItem({
                     onVote={onVote}
                     onBlock={onBlock}
                     onReport={onReport}
-                    highlightedCommentId={highlightedCommentId}
+                    highlightedCommentIds={highlightedCommentIds}
                   />
                 </div>
               ))}

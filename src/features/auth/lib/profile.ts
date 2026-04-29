@@ -5,16 +5,18 @@ const RESERVED_PROFILE_PATH_SEGMENTS = new Set([
   "access",
   "admin",
   "api",
+  "auth",
   "bookmarks",
   "complete-profile",
   "create-topic",
-  "discussions",
+  "posts",
   "drafts",
   "favicon.ico",
   "forgot-password",
   "profile",
   "reset-password",
   "robots.txt",
+  "search",
   "settings",
   "sign-in",
   "sign-up",
@@ -70,6 +72,18 @@ export function resolveOnboardingStep(params: {
     return "role" as const;
   }
 
+  if (params.onboardingStep === "user-profile") {
+    return "user-profile" as const;
+  }
+
+  if (params.onboardingStep === "specialist-profile") {
+    return "specialist-profile" as const;
+  }
+
+  if (params.onboardingStep === "complete") {
+    return "complete" as const;
+  }
+
   if (params.role === "specialist") {
     return sanitizeProfileText(params.firstName) && sanitizeProfileText(params.lastName)
       ? ("complete" as const)
@@ -88,7 +102,9 @@ export function buildPostAuthRedirectPath(user: AuthUser, nextPath: string) {
 }
 
 export function getUserHandle(user: Pick<AuthUser, "displayName" | "nickname">) {
-  return user.nickname ? `@${user.nickname}` : user.displayName;
+  const handle = user.nickname || user.displayName;
+
+  return handle.startsWith("@") ? handle : `@${handle}`;
 }
 
 export function isReservedProfilePathSegment(value: string | null | undefined) {

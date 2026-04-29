@@ -16,6 +16,7 @@ type AuthRequiredModalContextValue = {
   nextHref: string;
   openAuthModal: (options?: {
     initialEmail?: string;
+    methodTitle?: string;
     nextHref?: string;
   }) => void;
   refreshAuthState: () => Promise<SessionUser | null>;
@@ -45,13 +46,16 @@ export function AuthRequiredProvider({
   const { refresh, status, user } = useCurrentUser(initialUser);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialEmail, setInitialEmail] = useState("");
+  const [methodTitle, setMethodTitle] = useState<string | undefined>(undefined);
   const [nextHref, setNextHref] = useState("/");
 
   const openAuthModal = useCallback((options?: {
     initialEmail?: string;
+    methodTitle?: string;
     nextHref?: string;
   }) => {
     setInitialEmail(options?.initialEmail?.trim() ?? "");
+    setMethodTitle(options?.methodTitle?.trim() || undefined);
     setNextHref(options?.nextHref ?? getCurrentLocationHref());
     setIsModalOpen(true);
   }, []);
@@ -78,7 +82,9 @@ export function AuthRequiredProvider({
       <AuthRequiredModal
         initialEmail={initialEmail}
         isOpen={isModalOpen}
+        methodTitle={methodTitle}
         nextHref={nextHref}
+        onAuthStateChanged={refresh}
         onClose={closeAuthModal}
       />
     </AuthRequiredModalContext.Provider>

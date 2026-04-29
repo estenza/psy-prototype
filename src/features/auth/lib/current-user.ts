@@ -3,6 +3,10 @@ import "server-only";
 import { readSessionTokenFromCookies } from "@/features/auth/lib/session";
 import { getCurrentUserBySessionToken } from "@/features/auth/lib/auth-service";
 
+type CurrentUserOptions = {
+  completeSkippableUserOnboarding?: boolean;
+};
+
 function isRecoverableAuthStorageError(error: unknown) {
   if (!(error instanceof Error)) {
     return false;
@@ -17,7 +21,7 @@ function isRecoverableAuthStorageError(error: unknown) {
   );
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUser(options: CurrentUserOptions = {}) {
   const sessionToken = await readSessionTokenFromCookies();
 
   if (!sessionToken) {
@@ -25,7 +29,7 @@ export async function getCurrentUser() {
   }
 
   try {
-    return await getCurrentUserBySessionToken(sessionToken);
+    return await getCurrentUserBySessionToken(sessionToken, options);
   } catch (error) {
     if (!isRecoverableAuthStorageError(error)) {
       throw error;
@@ -39,8 +43,8 @@ export async function getCurrentUser() {
   }
 }
 
-export async function requireCurrentUser() {
-  const user = await getCurrentUser();
+export async function requireCurrentUser(options: CurrentUserOptions = {}) {
+  const user = await getCurrentUser(options);
 
   if (!user) {
     throw new Error("Unauthorized");

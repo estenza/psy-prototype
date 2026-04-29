@@ -88,7 +88,7 @@ export function PasswordResetConfirmForm({
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 sm:px-7">
+    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 min-[481px]:px-7">
       <div className="flex flex-col gap-3">
         <h1 className="type-page-title text-label-primary">
           Новый пароль

@@ -1,12 +1,17 @@
+import type { ReactNode } from "react";
 import { LegalInfo } from "@/components/layout/legal-info";
 
 type SidebarColumnProps = {
+  children?: ReactNode;
   hideContent?: boolean;
 };
 
 export function SidebarColumn({
+  children,
   hideContent = false,
 }: SidebarColumnProps) {
+  const hasCustomContent = Boolean(children);
+
   return (
     <aside
       data-testid="sidebarColumn"
@@ -18,16 +23,26 @@ export function SidebarColumn({
       >
         <div
           data-testid="sidebarColumnStickyShell"
-          className="min-[1140px]:sticky min-[1140px]:top-0 min-[1140px]:flex min-[1140px]:h-[calc(100dvh-var(--app-header-height))] min-[1140px]:flex-col min-[1140px]:justify-end"
+          className={`min-[1140px]:sticky min-[1140px]:top-0 min-[1140px]:flex min-[1140px]:h-[calc(100dvh-var(--app-header-height))] min-[1140px]:flex-col ${
+            hasCustomContent ? "" : "min-[1140px]:justify-end"
+          }`.trim()}
         >
           <div
             data-testid="sidebarColumnContent"
-            className={`min-[1140px]:mt-auto min-[1140px]:w-full min-[1140px]:pb-6 ${
+            className={`min-[1140px]:w-full ${
+              hasCustomContent
+                ? "min-[1140px]:flex-1"
+                : "min-[1140px]:mt-auto"
+            } ${
               hideContent ? "pointer-events-none invisible" : ""
             }`.trim()}
             aria-hidden={hideContent}
           >
-            <LegalInfo className="w-full px-6 pb-8 pt-8 xl:px-8" />
+            {hasCustomContent ? (
+              children
+            ) : (
+              <LegalInfo className="w-full px-6 pb-8 pt-8 xl:px-8" />
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { buttonClassName } from "@/components/ui/button-styles";
+import { ContentPlaceholder } from "@/components/ui/content-placeholder";
 import { FeedToolbar } from "@/features/feed/components/feed-toolbar";
 import { PostFeedItem } from "@/features/feed/components/post-feed-item";
 import { useFeed } from "@/features/feed/hooks/use-feed";
@@ -23,6 +26,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
     setSortMode,
     viewMode,
     setViewMode,
+    toggleBookmark,
     toggleLike,
   } = useFeed({ initialPosts });
 
@@ -37,8 +41,8 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
         onViewModeChange={setViewMode}
       />
 
-      <div className="px-2 pb-8 min-[481px]:px-3 min-[481px]:pb-12 min-[721px]:px-0 min-[721px]:pb-24">
-        <div className="space-y-2 min-[481px]:space-y-3 min-[721px]:space-y-4">
+      <div className="px-0 pb-8 min-[481px]:pb-12 min-[481px]:pb-24">
+        <div className="space-y-2 min-[481px]:space-y-3 min-[481px]:space-y-4">
           {feed.length > 0 ? (
             feed.map((post) => {
               const isHighlighted = post.id === highlightedPostId;
@@ -55,7 +59,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
                       return;
                     }
 
-                    router.push(`/discussions/${post.id}`);
+                    router.push(`/posts/${post.id}`);
                   }}
                   onKeyDown={(event) => {
                     if (event.key !== "Enter" && event.key !== " ") {
@@ -67,11 +71,11 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
                     }
 
                     event.preventDefault();
-                    router.push(`/discussions/${post.id}`);
+                    router.push(`/posts/${post.id}`);
                   }}
                 >
                   <div
-                    className={`surface-card feed-card-surface relative px-3 py-4 min-[481px]:px-5 sm:px-6 ${
+                    className={`surface-card feed-card-surface relative px-3 py-4 min-[481px]:px-5 min-[481px]:px-6 ${
                       isHighlighted ? "feed-post-flash" : ""
                     }`}
                   >
@@ -79,6 +83,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
                       onPostMenuAction={handlePostMenuAction}
                       post={post}
                       viewMode={viewMode}
+                      onToggleBookmark={toggleBookmark}
                       onToggleLike={toggleLike}
                     />
                   </div>
@@ -86,20 +91,25 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
               );
             })
           ) : (
-            <div className="surface-card flex justify-center px-5 py-12 text-center sm:px-6 sm:py-16">
-              <div className="max-w-[640px]">
-                <h2 className="type-empty-state-title text-label-primary">
-                  {activeTopic === "all"
-                    ? "Пока нет опубликованных обсуждений"
-                    : "Пока нет тем по этому фильтру"}
-                </h2>
-                <p className="type-empty-state-body text-label-tertiary mt-3">
-                  {activeTopic === "all"
-                    ? "Создайте первое обсуждение, и оно сразу появится здесь в ленте."
-                    : "Попробуйте выбрать другую тему или вернитесь к общей ленте. Все публикации остаются в одном потоке, а темы работают как фильтр и метаданные."}
-                </p>
-              </div>
-            </div>
+            <ContentPlaceholder
+              title={activeTopic === "all"
+                ? "Пока никто ничего не запостил :("
+                : "Пока нет тем по этому фильтру"}
+              description={activeTopic === "all"
+                ? "Напишите первый пост, и он сразу появится в ленте"
+                : "Попробуйте выбрать другую тему или вернитесь к общей ленте. Все публикации остаются в одном потоке, а темы работают как фильтр и метаданные."}
+              action={activeTopic === "all" ? (
+                <Link
+                  href="/create-topic?returnTo=%2F"
+                  className={buttonClassName({
+                    className: "type-body-md-medium h-11 px-6",
+                    variant: "primary",
+                  })}
+                >
+                  Написать
+                </Link>
+              ) : null}
+            />
           )}
         </div>
       </div>

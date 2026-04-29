@@ -85,7 +85,7 @@ function FormTextField({
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <TextField isInvalid={Boolean(error)} className="field-surface-default flex flex-col gap-2 text-sm">
+    <TextField isInvalid={Boolean(error)} className="flex flex-col gap-2 text-sm">
       <Label className="font-medium text-[var(--label-primary)]">{label}</Label>
       <div className="relative">
         {counter && isFocused ? (
@@ -165,7 +165,7 @@ function FormTextareaField({
   }, [value]);
 
   return (
-    <TextField className="field-surface-default grid gap-2 text-sm">
+    <TextField className="grid gap-2 text-sm">
       <span className="flex items-center justify-between gap-3">
         <Label className="font-medium text-[var(--label-primary)]">{label}</Label>
         {helper}

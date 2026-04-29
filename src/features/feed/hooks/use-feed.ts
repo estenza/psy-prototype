@@ -11,12 +11,20 @@ import {
 } from "@/features/feed/constants/feed";
 import {
   clearHighlightedPublishedPostId,
+  consumePublishedPostToast,
   readHighlightedPublishedPostId,
 } from "@/features/feed/lib/published-posts";
+import {
+  filterPostsByIgnoredAuthor,
+  getPostAuthorHandle,
+  requestIgnoreAuthor,
+  showIgnoredAuthorToast,
+} from "@/features/feed/lib/ignored-author-client";
+import { normalizePostDates, normalizePostsDates } from "@/features/feed/lib/post-normalization";
 import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
 import type {
-  DiscussionMutationResponse,
-  DiscussionRouteErrorResponse,
+  PostMutationResponse,
+  PostRouteErrorResponse,
 } from "@/features/feed/types";
 import {
   requestTopicDraftRestore,
@@ -37,6 +45,8 @@ type UseFeedOptions = {
   initialPosts: Post[];
   initialViewMode?: ViewMode;
   initialSortMode?: FeedSortMode;
+  removeFromFeedWhenBookmarkRemoved?: boolean;
+  removeFromFeedWhenProfileFavoriteRemoved?: boolean;
 };
 
 function sortFeed(posts: Post[], sortMode: FeedSortMode): Post[] {
@@ -78,10 +88,12 @@ export function useFeed({
   initialPosts,
   initialViewMode = DEFAULT_VIEW_MODE,
   initialSortMode = DEFAULT_FEED_SORT_MODE,
+  removeFromFeedWhenBookmarkRemoved = false,
+  removeFromFeedWhenProfileFavoriteRemoved = false,
 }: UseFeedOptions) {
   const { user } = useAuthClient();
   const { runIfAuthorized } = useAuthRequiredAction();
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [posts, setPosts] = useState<Post[]>(() => normalizePostsDates(initialPosts));
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(
     null,
   );
@@ -95,17 +107,22 @@ export function useFeed({
   const feed = sortFeed(filteredPosts, sortMode);
 
   useEffect(() => {
-    setPosts(initialPosts);
+    setPosts(normalizePostsDates(initialPosts));
   }, [initialPosts]);
 
   useLayoutEffect(() => {
     const nextHighlightedPostId = readHighlightedPublishedPostId();
+    const publishedPostToast = consumePublishedPostToast();
     let cancelled = false;
     let highlightTimer: number | undefined;
 
     queueMicrotask(() => {
       if (cancelled) {
         return;
+      }
+
+      if (publishedPostToast) {
+        toast.success(publishedPostToast);
       }
 
       if (!nextHighlightedPostId) {
@@ -130,7 +147,7 @@ export function useFeed({
 
   const toggleLike = (postId: Post["id"], liked: boolean) => {
     void runIfAuthorized(async () => {
-      const response = await fetch(`/api/discussions/${postId}/like`, {
+      const response = await fetch(`/api/posts/${postId}/like`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -139,16 +156,16 @@ export function useFeed({
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as DiscussionRouteErrorResponse | null;
+        const payload = (await response.json().catch(() => null)) as PostRouteErrorResponse | null;
         throw new Error(payload?.error ?? "Не удалось обновить лайк.");
       }
 
-      const payload = await response.json() as DiscussionMutationResponse;
+      const payload = await response.json() as PostMutationResponse;
 
       setPosts((current) =>
         current.map((post) => (
           post.id === payload.post.id
-            ? payload.post
+            ? normalizePostDates(payload.post)
             : post
         )),
       );
@@ -161,19 +178,95 @@ export function useFeed({
   };
 
   const toggleBookmark = (postId: Post["id"]) => {
-    setPosts((current) =>
-      current.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              viewer: {
-                ...post.viewer,
-                bookmarked: !post.viewer.bookmarked,
-              },
-            }
-          : post,
-      ),
-    );
+    void runIfAuthorized(async () => {
+      const postToToggle = posts.find((post) => post.id === postId);
+      const nextBookmarked = !postToToggle?.viewer.bookmarked;
+
+      setPosts((current) =>
+        current.map((post) => {
+          if (post.id !== postId) {
+            return post;
+          }
+
+          const bookmarked = !post.viewer.bookmarked;
+
+          return {
+            ...post,
+            viewer: {
+              ...post.viewer,
+              bookmarked,
+            },
+          };
+        }),
+      );
+      toast.success(nextBookmarked ? "Пост добавлен в закладки" : "Пост убран из закладок");
+
+      const response = await fetch(`/api/posts/${postId}/bookmark`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bookmarked: nextBookmarked }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as PostRouteErrorResponse | null;
+        throw new Error(payload?.error ?? "Не удалось обновить закладки.");
+      }
+
+      const payload = await response.json() as PostMutationResponse;
+
+      setPosts((current) =>
+        removeFromFeedWhenBookmarkRemoved && !nextBookmarked
+          ? current.filter((post) => post.id !== payload.post.id)
+          : current.map((post) => (
+              post.id === payload.post.id
+                ? normalizePostDates(payload.post)
+                : post
+            )),
+      );
+    }).catch((error: unknown) => {
+      const message = error instanceof Error
+        ? error.message
+        : "Не удалось обновить закладки.";
+      toast.danger(message);
+    });
+  };
+
+  const setProfileFavorite = (postId: Post["id"], favorited: boolean) => {
+    void runIfAuthorized(async () => {
+      const response = await fetch(`/api/posts/${postId}/profile-favorite`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ favorited }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as PostRouteErrorResponse | null;
+        throw new Error(payload?.error ?? "Не удалось обновить избранное.");
+      }
+
+      const payload = await response.json() as PostMutationResponse;
+
+      setPosts((current) =>
+        removeFromFeedWhenProfileFavoriteRemoved && !favorited
+          ? current.filter((post) => post.id !== payload.post.id)
+          : current.map((post) => (
+              post.id === payload.post.id
+                ? normalizePostDates(payload.post)
+                : post
+            )),
+      );
+
+      toast.success(favorited ? "Пост добавлен в профиль" : "Пост убран из профиля");
+    }).catch((error: unknown) => {
+      const message = error instanceof Error
+        ? error.message
+        : "Не удалось обновить избранное.";
+      toast.danger(message);
+    });
   };
 
   const handlePostMenuAction = async (
@@ -207,7 +300,7 @@ export function useFeed({
       }
 
       await runIfAuthorized(async () => {
-        const response = await fetch(`/api/discussions/${postId}`, {
+        const response = await fetch(`/api/posts/${postId}`, {
           method: "DELETE",
         });
         const payload = (await response.json()) as {
@@ -215,29 +308,107 @@ export function useFeed({
         };
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "Не удалось удалить обсуждение.");
+          throw new Error(payload.error ?? "Не удалось удалить пост.");
         }
 
         setPosts((current) => current.filter((post) => post.id !== postId));
-        toast.success("Обсуждение удалено");
+        toast.success("Пост удалён");
       });
       return;
     }
 
-    if (actionId === "save") {
-      void runIfAuthorized(() => {
-        toggleBookmark(postId);
-      });
+    if (actionId === "profile-favorite") {
+      const postToFavorite = posts.find((post) => post.id === postId);
+
+      if (!postToFavorite) {
+        return;
+      }
+
+      setProfileFavorite(postId, !postToFavorite.viewer.profileFavorite);
       return;
     }
 
-    if (actionId === "follow") {
-      void runIfAuthorized(async () => undefined);
+    if (actionId === "follow" || actionId === "follow-author") {
+      const postToFollow = posts.find((post) => post.id === postId);
+
+      if (!postToFollow) {
+        return;
+      }
+
+      if (actionId === "follow-author") {
+        void runIfAuthorized(async () => {
+          const response = await fetch("/api/follows/authors", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              followedUserId: postToFollow.author.id,
+              following: true,
+            }),
+          });
+
+          if (!response.ok) {
+            const payload = (await response.json().catch(() => null)) as PostRouteErrorResponse | null;
+            throw new Error(payload?.error ?? "Не удалось подписаться на автора.");
+          }
+
+          toast.success(`Теперь вы читаете ${postToFollow.author.handle}`);
+        }).catch((error: unknown) => {
+          const message = error instanceof Error
+            ? error.message
+            : "Не удалось подписаться на автора.";
+          toast.danger(message);
+        });
+        return;
+      }
+
+      void runIfAuthorized(async () => {
+        const response = await fetch(`/api/posts/${postId}/follow`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ following: true }),
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as PostRouteErrorResponse | null;
+          throw new Error(payload?.error ?? "Не удалось включить уведомления по посту.");
+        }
+
+        toast.success("Теперь вы следите за постом");
+      }).catch((error: unknown) => {
+        const message = error instanceof Error
+          ? error.message
+          : "Не удалось включить уведомления по посту.";
+        toast.danger(message);
+      });
       return;
     }
 
     if (actionId === "hide") {
-      setPosts((current) => current.filter((post) => post.id !== postId));
+      const postToIgnore = posts.find((post) => post.id === postId);
+
+      const ignoredUserId = postToIgnore?.author.id;
+
+      if (!ignoredUserId) {
+        return;
+      }
+
+      await runIfAuthorized(async () => {
+        await requestIgnoreAuthor(ignoredUserId);
+        setPosts((current) => filterPostsByIgnoredAuthor(current, ignoredUserId));
+        showIgnoredAuthorToast({
+          authorHandle: getPostAuthorHandle(postToIgnore),
+          ignoredUserId,
+        });
+      }).catch((error: unknown) => {
+        const message = error instanceof Error
+          ? error.message
+          : "Не удалось обновить игнор-лист.";
+        toast.danger(message);
+      });
     }
   };
 

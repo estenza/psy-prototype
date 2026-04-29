@@ -10,6 +10,7 @@ type CommentActionsProps = {
   likeCount: number;
   canLike: boolean;
   canReply: boolean;
+  readOnlyLike?: boolean;
   showReplyAction?: boolean;
   onLike: () => void;
   onReply: () => void;
@@ -25,6 +26,7 @@ export function CommentActions({
   likeCount,
   canLike,
   canReply,
+  readOnlyLike = false,
   showReplyAction = true,
   onLike,
   onReply,
@@ -44,27 +46,39 @@ export function CommentActions({
   return (
     <div data-comment-actions-row className={cn("flex min-h-7 w-full items-center gap-1", className)}>
       <div className="flex items-center gap-2">
-        <HoverTooltip label={liked ? "Больше не нравится" : "Нравится"}>
-          <ToggleButton
-            aria-label={liked ? "Больше не нравится" : "Нравится"}
-            isSelected={liked}
-            onChange={onLike}
-            className={cn(
-              actionClassName,
-              shouldShowLikeCount ? "gap-1 align-middle" : "button--icon-only w-9 px-0",
-              liked ? "pl-2 pr-3" : "",
-              liked ? likedActionClassName : "",
-            )}
-            isDisabled={!canLike}
+        {readOnlyLike ? (
+          <div
+            className="type-body-md inline-flex min-h-7 items-center gap-1 text-[var(--label-secondary)]"
+            aria-label={`Нравится: ${likeCount}`}
           >
             <span className="flex h-5 w-5 flex-none items-center justify-center">
-              <CommentHeartIcon filled={liked} />
+              <CommentHeartIcon filled={false} />
             </span>
-            {shouldShowLikeCount ? (
-              <span className="flex items-center leading-5">{likeCount}</span>
-            ) : null}
-          </ToggleButton>
-        </HoverTooltip>
+            <span className="flex items-center leading-5">{likeCount}</span>
+          </div>
+        ) : (
+          <HoverTooltip label={liked ? "Больше не нравится" : "Нравится"}>
+            <ToggleButton
+              aria-label={liked ? "Больше не нравится" : "Нравится"}
+              isSelected={liked}
+              onChange={onLike}
+              className={cn(
+                actionClassName,
+                shouldShowLikeCount ? "gap-1 align-middle" : "button--icon-only w-9 px-0",
+                liked ? "pl-2 pr-3" : "",
+                liked ? likedActionClassName : "",
+              )}
+              isDisabled={!canLike}
+            >
+              <span className="flex h-5 w-5 flex-none items-center justify-center">
+                <CommentHeartIcon filled={liked} />
+              </span>
+              {shouldShowLikeCount ? (
+                <span className="flex items-center leading-5">{likeCount}</span>
+              ) : null}
+            </ToggleButton>
+          </HoverTooltip>
+        )}
 
         {showReplyAction ? (
           <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import { CommentsComposer } from "@/features/comments/components/comments-composer";
 import { CommentsHeader } from "@/features/comments/components/comments-header";
@@ -10,7 +10,11 @@ import { useComments } from "@/features/comments/hooks/use-comments";
 type CommentsSectionProps = {
   pageId: string;
   highlightedCommentId?: string | null;
+  highlightedCommentIds?: string[];
 };
+
+const COMMENTS_AUTH_MODAL_TITLE = "Войдите, чтобы оставлять ответы";
+const EMPTY_HIGHLIGHTED_COMMENT_IDS: string[] = [];
 
 function CommentsComposerSkeleton() {
   return (
@@ -62,11 +66,27 @@ function CommentsListSkeleton() {
 export function CommentsSection({
   pageId,
   highlightedCommentId = null,
+  highlightedCommentIds = EMPTY_HIGHLIGHTED_COMMENT_IDS,
 }: CommentsSectionProps) {
   const { isAuthenticated, openAuthModal, runIfAuthorized } = useAuthRequiredAction();
-  const [activeHighlightedCommentId, setActiveHighlightedCommentId] = useState<string | null>(
-    highlightedCommentId,
+  const highlightedCommentIdsFromProps = useMemo(
+    () => (
+      highlightedCommentIds.length > 0
+        ? highlightedCommentIds
+        : highlightedCommentId
+          ? [highlightedCommentId]
+          : []
+    ),
+    [highlightedCommentId, highlightedCommentIds],
   );
+  const highlightedCommentIdsKey = highlightedCommentIdsFromProps.join("|");
+  const [dismissedHighlightedCommentIdsKey, setDismissedHighlightedCommentIdsKey] = useState<
+    string | null
+  >(null);
+  const activeHighlightedCommentIds =
+    highlightedCommentIdsKey && dismissedHighlightedCommentIdsKey !== highlightedCommentIdsKey
+      ? highlightedCommentIdsFromProps
+      : EMPTY_HIGHLIGHTED_COMMENT_IDS;
   const {
     blockCommentAuthor,
     data,
@@ -90,23 +110,27 @@ export function CommentsSection({
   const viewerIsAuthenticated = data?.viewer.isAuthenticated ?? isAuthenticated;
   const submitDisabled = viewerIsAuthenticated ? !canPost : false;
   const composerDisabledReason = viewerIsAuthenticated ? postDisabledReason : null;
+  const openCommentsAuthModal = () => {
+    openAuthModal({ methodTitle: COMMENTS_AUTH_MODAL_TITLE });
+  };
 
   useEffect(() => {
-    setActiveHighlightedCommentId(highlightedCommentId);
-  }, [highlightedCommentId]);
-
-  useEffect(() => {
-    if (!activeHighlightedCommentId || !data) {
+    if (activeHighlightedCommentIds.length === 0 || !data) {
       return;
     }
 
+    const firstHighlightedCommentId = activeHighlightedCommentIds[0];
     let attempts = 0;
     const maxAttempts = 8;
     let highlightTimeoutId: number | null = null;
 
     const scrollToHighlightedComment = () => {
+      if (!firstHighlightedCommentId) {
+        return;
+      }
+
       const commentElement = document.querySelector<HTMLElement>(
-        `[data-comment-id="${activeHighlightedCommentId}"]`,
+        `[data-comment-id="${firstHighlightedCommentId}"]`,
       );
 
       if (!commentElement) {
@@ -125,9 +149,7 @@ export function CommentsSection({
       });
 
       highlightTimeoutId = window.setTimeout(() => {
-        setActiveHighlightedCommentId((currentValue) =>
-          currentValue === activeHighlightedCommentId ? null : currentValue,
-        );
+        setDismissedHighlightedCommentIdsKey(highlightedCommentIdsKey);
       }, 2500);
     };
 
@@ -138,10 +160,10 @@ export function CommentsSection({
         window.clearTimeout(highlightTimeoutId);
       }
     };
-  }, [activeHighlightedCommentId, data]);
+  }, [activeHighlightedCommentIds, data, highlightedCommentIdsKey]);
 
   return (
-    <section className="surface--default flex w-full flex-col gap-6">
+    <section className="flex w-full flex-col gap-6">
       <div className="comments-top flex flex-col gap-4">
         <CommentsHeader
           totalCount={data?.totalCount ?? 0}
@@ -161,9 +183,11 @@ export function CommentsSection({
             disabledReason={composerDisabledReason}
             submitting={submittingTarget === "root"}
             onSubmit={(body) =>
-              runIfAuthorized(() => submitComment({ pageId, body })).then((result) =>
-                typeof result === "boolean" ? result : false,
-              )
+              runIfAuthorized(
+                () => submitComment({ pageId, body }),
+                undefined,
+                { methodTitle: COMMENTS_AUTH_MODAL_TITLE },
+              ).then((result) => (typeof result === "boolean" ? result : false))
             }
           />
         ) : null}
@@ -193,15 +217,18 @@ export function CommentsSection({
             canPostReply={data.capabilities.canReply}
             postDisabledReason={postDisabledReason}
             isViewerAuthenticated={viewerIsAuthenticated}
-            onRequireAuth={openAuthModal}
+            onRequireAuth={openCommentsAuthModal}
             submittingTarget={submittingTarget}
             onSubmitReply={(body, parentId) =>
-              runIfAuthorized(() =>
-                submitComment({
-                  pageId,
-                  body,
-                  parentId,
-                }),
+              runIfAuthorized(
+                () =>
+                  submitComment({
+                    pageId,
+                    body,
+                    parentId,
+                  }),
+                undefined,
+                { methodTitle: COMMENTS_AUTH_MODAL_TITLE },
               ).then((result) => (typeof result === "boolean" ? result : false))
             }
             onDeleteComment={(commentId) =>
@@ -217,7 +244,7 @@ export function CommentsSection({
             }}
             onBlock={blockCommentAuthor}
             onReport={reportComment}
-            highlightedCommentId={activeHighlightedCommentId}
+            highlightedCommentIds={activeHighlightedCommentIds}
           />
         ) : null}
 
@@ -227,7 +254,7 @@ export function CommentsSection({
               Пока нет комментариев
             </p>
             <p className="type-caption text-label-secondary mt-1">
-              Станьте первым, кто откликнется на это обсуждение.
+              Станьте первым, кто откликнется на этот пост.
             </p>
           </div>
         ) : null}

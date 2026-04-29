@@ -28,6 +28,53 @@ function readForeignKeys(database: DatabaseSync, tableName: string) {
   }>;
 }
 
+function tableExists(database: DatabaseSync, tableName: string) {
+  const row = database
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
+    .get(tableName);
+
+  return Boolean(row);
+}
+
+function renameTableIfNeeded(database: DatabaseSync, oldName: string, newName: string) {
+  if (!tableExists(database, oldName) || tableExists(database, newName)) {
+    return;
+  }
+
+  database.exec(`ALTER TABLE ${oldName} RENAME TO ${newName};`);
+}
+
+function renameColumnIfNeeded(
+  database: DatabaseSync,
+  tableName: string,
+  oldName: string,
+  newName: string,
+) {
+  if (!tableExists(database, tableName)) {
+    return;
+  }
+
+  const columns = new Set(readTableColumns(database, tableName).map((column) => column.name));
+
+  if (!columns.has(oldName) || columns.has(newName)) {
+    return;
+  }
+
+  database.exec(`ALTER TABLE ${tableName} RENAME COLUMN ${oldName} TO ${newName};`);
+}
+
+function migrateLegacyPostTables(database: DatabaseSync) {
+  database.exec("PRAGMA foreign_keys = OFF;");
+  renameTableIfNeeded(database, "discussions", "posts");
+  renameTableIfNeeded(database, "discussion_reactions", "post_reactions");
+  renameTableIfNeeded(database, "discussion_comments", "post_comments");
+  renameTableIfNeeded(database, "discussion_comment_reactions", "post_comment_reactions");
+  renameTableIfNeeded(database, "discussion_comment_reports", "post_comment_reports");
+  renameColumnIfNeeded(database, "post_reactions", "discussion_id", "post_id");
+  renameColumnIfNeeded(database, "post_comments", "discussion_id", "post_id");
+  database.exec("PRAGMA foreign_keys = ON;");
+}
+
 function createUsersTable(database: DatabaseSync) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -88,9 +135,9 @@ function ensureUsersTableColumns(database: DatabaseSync) {
   }
 }
 
-function createDiscussionsTable(database: DatabaseSync) {
+function createPostsTable(database: DatabaseSync) {
   database.exec(`
-    CREATE TABLE IF NOT EXISTS discussions (
+    CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,
       author_user_id TEXT NOT NULL,
       intent TEXT NOT NULL CHECK (intent IN ('support', 'discussion')),
@@ -121,34 +168,225 @@ function createDiscussionsTable(database: DatabaseSync) {
       FOREIGN KEY (author_user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
-    CREATE INDEX IF NOT EXISTS discussions_created_at_idx
-      ON discussions (created_at DESC);
-    CREATE INDEX IF NOT EXISTS discussions_author_user_id_idx
-      ON discussions (author_user_id);
+    CREATE INDEX IF NOT EXISTS posts_created_at_idx
+      ON posts (created_at DESC);
+    CREATE INDEX IF NOT EXISTS posts_author_user_id_idx
+      ON posts (author_user_id);
 
-    CREATE TABLE IF NOT EXISTS discussion_reactions (
+    CREATE TABLE IF NOT EXISTS post_reactions (
       id TEXT PRIMARY KEY,
-      discussion_id TEXT NOT NULL,
+      post_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       reaction_type TEXT NOT NULL DEFAULT 'like' CHECK (reaction_type IN ('like')),
       created_at TEXT NOT NULL,
-      FOREIGN KEY (discussion_id) REFERENCES discussions (id) ON DELETE CASCADE,
+      FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-      UNIQUE (discussion_id, user_id, reaction_type)
+      UNIQUE (post_id, user_id, reaction_type)
     );
 
-    CREATE INDEX IF NOT EXISTS discussion_reactions_discussion_id_idx
-      ON discussion_reactions (discussion_id);
-    CREATE INDEX IF NOT EXISTS discussion_reactions_user_id_idx
-      ON discussion_reactions (user_id);
+    CREATE INDEX IF NOT EXISTS post_reactions_post_id_idx
+      ON post_reactions (post_id);
+    CREATE INDEX IF NOT EXISTS post_reactions_user_id_idx
+      ON post_reactions (user_id);
+
+    CREATE TABLE IF NOT EXISTS user_profile_favorite_posts (
+      user_id TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, post_id),
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS user_profile_favorite_posts_user_id_idx
+      ON user_profile_favorite_posts (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS user_profile_favorite_posts_post_id_idx
+      ON user_profile_favorite_posts (post_id);
   `);
 }
 
-function createDiscussionCommentsTables(database: DatabaseSync) {
+function createUserIgnoredAuthorsTable(database: DatabaseSync) {
   database.exec(`
-    CREATE TABLE IF NOT EXISTS discussion_comments (
+    CREATE TABLE IF NOT EXISTS user_ignored_authors (
+      user_id TEXT NOT NULL,
+      ignored_user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, ignored_user_id),
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (ignored_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      CHECK (user_id <> ignored_user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS user_ignored_authors_user_id_idx
+      ON user_ignored_authors (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS user_ignored_authors_ignored_user_id_idx
+      ON user_ignored_authors (ignored_user_id);
+  `);
+}
+
+function createUserBookmarksTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS user_bookmarked_posts (
+      user_id TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, post_id),
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS user_bookmarked_posts_user_id_idx
+      ON user_bookmarked_posts (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS user_bookmarked_posts_post_id_idx
+      ON user_bookmarked_posts (post_id);
+  `);
+}
+
+function createUserFollowsTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS user_followed_posts (
+      user_id TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, post_id),
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS user_followed_posts_user_id_idx
+      ON user_followed_posts (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS user_followed_posts_post_id_idx
+      ON user_followed_posts (post_id);
+
+    CREATE TABLE IF NOT EXISTS user_followed_authors (
+      follower_user_id TEXT NOT NULL,
+      followed_user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (follower_user_id, followed_user_id),
+      FOREIGN KEY (follower_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (followed_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      CHECK (follower_user_id <> followed_user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS user_followed_authors_follower_user_id_idx
+      ON user_followed_authors (follower_user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS user_followed_authors_followed_user_id_idx
+      ON user_followed_authors (followed_user_id);
+  `);
+}
+
+function createNotificationsTables(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS user_notification_preferences (
+      user_id TEXT PRIMARY KEY,
+      post_replies_enabled INTEGER NOT NULL DEFAULT 1 CHECK (post_replies_enabled IN (0, 1)),
+      direct_replies_enabled INTEGER NOT NULL DEFAULT 1 CHECK (direct_replies_enabled IN (0, 1)),
+      bookmarked_post_replies_enabled INTEGER NOT NULL DEFAULT 1 CHECK (bookmarked_post_replies_enabled IN (0, 1)),
+      followed_author_posts_enabled INTEGER NOT NULL DEFAULT 1 CHECK (followed_author_posts_enabled IN (0, 1)),
+      system_messages_enabled INTEGER NOT NULL DEFAULT 1 CHECK (system_messages_enabled IN (0, 1)),
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS user_notifications (
       id TEXT PRIMARY KEY,
-      discussion_id TEXT NOT NULL,
+      recipient_user_id TEXT NOT NULL,
+      actor_user_id TEXT,
+      type TEXT NOT NULL CHECK (
+        type IN (
+          'post_reply',
+          'direct_reply',
+          'followed_post_reply',
+          'followed_author_post',
+          'system'
+        )
+      ),
+      post_id TEXT,
+      comment_id TEXT,
+      title TEXT NOT NULL,
+      body TEXT,
+      href TEXT NOT NULL,
+      dedupe_key TEXT NOT NULL,
+      read_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (recipient_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (actor_user_id) REFERENCES users (id) ON DELETE SET NULL,
+      FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+      FOREIGN KEY (comment_id) REFERENCES post_comments (id) ON DELETE CASCADE,
+      UNIQUE (recipient_user_id, dedupe_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS user_notifications_recipient_created_at_idx
+      ON user_notifications (recipient_user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS user_notifications_recipient_read_at_idx
+      ON user_notifications (recipient_user_id, read_at);
+  `);
+}
+
+function migrateLegacyNotificationTypes(database: DatabaseSync) {
+  if (!tableExists(database, "user_notifications")) {
+    return;
+  }
+
+  const row = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'user_notifications' LIMIT 1")
+    .get() as { sql?: string } | undefined;
+  const tableSql = row?.sql ?? "";
+
+  if (!tableSql.includes("'bookmarked_post_reply'") || tableSql.includes("'followed_post_reply'")) {
+    return;
+  }
+
+  database.exec(`
+    PRAGMA foreign_keys = OFF;
+    ALTER TABLE user_notifications RENAME TO user_notifications_legacy_type;
+  `);
+
+  createNotificationsTables(database);
+
+  database.exec(`
+    INSERT INTO user_notifications (
+      id,
+      recipient_user_id,
+      actor_user_id,
+      type,
+      post_id,
+      comment_id,
+      title,
+      body,
+      href,
+      dedupe_key,
+      read_at,
+      created_at
+    )
+    SELECT
+      id,
+      recipient_user_id,
+      actor_user_id,
+      CASE
+        WHEN type = 'bookmarked_post_reply' THEN 'followed_post_reply'
+        ELSE type
+      END,
+      post_id,
+      comment_id,
+      title,
+      body,
+      href,
+      dedupe_key,
+      read_at,
+      created_at
+    FROM user_notifications_legacy_type;
+
+    DROP TABLE user_notifications_legacy_type;
+    PRAGMA foreign_keys = ON;
+  `);
+}
+
+function createPostCommentsTables(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS post_comments (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL,
       author_user_id TEXT NOT NULL,
       parent_comment_id TEXT,
       root_comment_id TEXT,
@@ -167,38 +405,38 @@ function createDiscussionCommentsTables(database: DatabaseSync) {
       edited_at TEXT,
       hidden_at TEXT,
       deleted_at TEXT,
-      FOREIGN KEY (discussion_id) REFERENCES discussions (id) ON DELETE CASCADE,
+      FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
       FOREIGN KEY (author_user_id) REFERENCES users (id) ON DELETE CASCADE,
-      FOREIGN KEY (parent_comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE,
-      FOREIGN KEY (root_comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE
+      FOREIGN KEY (parent_comment_id) REFERENCES post_comments (id) ON DELETE CASCADE,
+      FOREIGN KEY (root_comment_id) REFERENCES post_comments (id) ON DELETE CASCADE
     );
 
-    CREATE INDEX IF NOT EXISTS discussion_comments_discussion_id_idx
-      ON discussion_comments (discussion_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS discussion_comments_parent_comment_id_idx
-      ON discussion_comments (parent_comment_id);
-    CREATE INDEX IF NOT EXISTS discussion_comments_root_comment_id_idx
-      ON discussion_comments (root_comment_id);
-    CREATE INDEX IF NOT EXISTS discussion_comments_status_idx
-      ON discussion_comments (status);
+    CREATE INDEX IF NOT EXISTS post_comments_post_id_idx
+      ON post_comments (post_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS post_comments_parent_comment_id_idx
+      ON post_comments (parent_comment_id);
+    CREATE INDEX IF NOT EXISTS post_comments_root_comment_id_idx
+      ON post_comments (root_comment_id);
+    CREATE INDEX IF NOT EXISTS post_comments_status_idx
+      ON post_comments (status);
 
-    CREATE TABLE IF NOT EXISTS discussion_comment_reactions (
+    CREATE TABLE IF NOT EXISTS post_comment_reactions (
       id TEXT PRIMARY KEY,
       comment_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       reaction_type TEXT NOT NULL DEFAULT 'like' CHECK (reaction_type IN ('like')),
       created_at TEXT NOT NULL,
-      FOREIGN KEY (comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      FOREIGN KEY (comment_id) REFERENCES post_comments (id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
       UNIQUE (comment_id, user_id, reaction_type)
     );
 
-    CREATE INDEX IF NOT EXISTS discussion_comment_reactions_comment_id_idx
-      ON discussion_comment_reactions (comment_id);
-    CREATE INDEX IF NOT EXISTS discussion_comment_reactions_user_id_idx
-      ON discussion_comment_reactions (user_id);
+    CREATE INDEX IF NOT EXISTS post_comment_reactions_comment_id_idx
+      ON post_comment_reactions (comment_id);
+    CREATE INDEX IF NOT EXISTS post_comment_reactions_user_id_idx
+      ON post_comment_reactions (user_id);
 
-    CREATE TABLE IF NOT EXISTS discussion_comment_reports (
+    CREATE TABLE IF NOT EXISTS post_comment_reports (
       id TEXT PRIMARY KEY,
       comment_id TEXT NOT NULL,
       reporter_user_id TEXT NOT NULL,
@@ -212,16 +450,16 @@ function createDiscussionCommentsTables(database: DatabaseSync) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       resolved_at TEXT,
-      FOREIGN KEY (comment_id) REFERENCES discussion_comments (id) ON DELETE CASCADE,
+      FOREIGN KEY (comment_id) REFERENCES post_comments (id) ON DELETE CASCADE,
       FOREIGN KEY (reporter_user_id) REFERENCES users (id) ON DELETE CASCADE,
       FOREIGN KEY (resolved_by_user_id) REFERENCES users (id) ON DELETE SET NULL,
       UNIQUE (comment_id, reporter_user_id)
     );
 
-    CREATE INDEX IF NOT EXISTS discussion_comment_reports_comment_id_idx
-      ON discussion_comment_reports (comment_id);
-    CREATE INDEX IF NOT EXISTS discussion_comment_reports_status_idx
-      ON discussion_comment_reports (status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS post_comment_reports_comment_id_idx
+      ON post_comment_reports (comment_id);
+    CREATE INDEX IF NOT EXISTS post_comment_reports_status_idx
+      ON post_comment_reports (status, created_at DESC);
   `);
 }
 
@@ -393,8 +631,14 @@ function initializeDatabase(database: DatabaseSync) {
   migrateLegacyUsersTable(database);
   createUsersTable(database);
   ensureUsersTableColumns(database);
-  createDiscussionsTable(database);
-  createDiscussionCommentsTables(database);
+  migrateLegacyPostTables(database);
+  createPostsTable(database);
+  createUserIgnoredAuthorsTable(database);
+  createUserBookmarksTable(database);
+  createUserFollowsTable(database);
+  createPostCommentsTables(database);
+  migrateLegacyNotificationTypes(database);
+  createNotificationsTables(database);
   createSessionsTable(database);
   createPasswordResetTokensTable(database);
   createOtpCodesTable(database);

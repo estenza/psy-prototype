@@ -4,14 +4,17 @@ import { Dropdown, Label } from "@heroui/react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import { MoreMenuButton } from "@/components/ui/more-menu-button";
 import {
+  ArrowTurnRightIcon,
   BellIcon,
-  BookmarkIcon,
   DeleteOutlineIcon,
   EditOutlineIcon,
   EyeOffIcon,
   FlagIcon,
+  IgnoreAuthorIcon,
+  PersonPlusIcon,
 } from "@/components/ui/icons";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import {
@@ -36,7 +39,7 @@ type PostMenuRenderItem = {
 
 const MIN_CONFIRM_LOADING_MS = 1000;
 
-function resolveMenuIcon(actionId: PostMenuActionId, bookmarked: boolean) {
+function resolveMenuIcon(actionId: PostMenuActionId) {
   if (actionId === "edit") {
     return <EditOutlineIcon />;
   }
@@ -45,8 +48,10 @@ function resolveMenuIcon(actionId: PostMenuActionId, bookmarked: boolean) {
     return <DeleteOutlineIcon />;
   }
 
+  if (actionId === "follow-author") return <PersonPlusIcon />;
   if (actionId === "follow") return <BellIcon />;
-  if (actionId === "save") return <BookmarkIcon filled={bookmarked} />;
+  if (actionId === "profile-favorite") return <ArrowTurnRightIcon />;
+  if (actionId === "hide") return <IgnoreAuthorIcon />;
   if (actionId === "report") return <FlagIcon />;
   return <EyeOffIcon />;
 }
@@ -57,16 +62,28 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const actions = useMemo<PostMenuRenderItem[]>(() => {
     const menuActions = isOwnedByCurrentUser
       ? OWN_POST_MENU_ACTIONS
       : COMMUNITY_POST_MENU_ACTIONS;
 
+    const authorHandle = post.author.handle.startsWith("@")
+      ? post.author.handle
+      : `@${post.author.handle}`;
+
     return menuActions.map((action) => ({
-      icon: resolveMenuIcon(action.id, post.viewer.bookmarked),
+      icon: resolveMenuIcon(action.id),
       id: action.id,
-      label: action.label,
+      label:
+        action.id === "follow-author"
+          ? `Начать читать ${authorHandle}`
+          : action.id === "profile-favorite" && post.viewer.profileFavorite
+            ? "Убрать из Избранного"
+          : action.id === "hide"
+            ? `Игнорировать ${authorHandle}`
+            : action.label,
       onSelect: () => {
         if (action.id === "delete") {
           setDeleteErrorMessage(null);
@@ -77,7 +94,7 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
         void onAction(action.id, post.id);
       },
     }));
-  }, [isOwnedByCurrentUser, onAction, post.id, post.viewer.bookmarked]);
+  }, [isOwnedByCurrentUser, onAction, post]);
 
   async function handleDeleteConfirm() {
     setIsDeleteSubmitting(true);
@@ -95,7 +112,7 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
       setDeleteErrorMessage(
         error instanceof Error
           ? error.message
-          : "Не удалось удалить обсуждение.",
+          : "Не удалось удалить пост.",
       );
     } finally {
       setIsDeleteSubmitting(false);
@@ -105,13 +122,10 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
   return (
     <>
       <div className="pointer-events-auto relative z-30 shrink-0">
-        <Dropdown.Root>
-          <MoreMenuButton
-            ariaLabel="Еще"
-            className="interactive-tertiary button--blur-no-focus button--icon-only !inline-flex h-9 w-9 min-w-9 rounded-full px-0 text-[var(--label-primary)]"
-          />
+        <Dropdown.Root isOpen={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <MoreMenuButton ariaLabel="Еще" isTooltipDisabled={isMenuOpen} />
 
-          <Dropdown.Popover placement="bottom end" className="w-[260px]">
+          <DropdownPopover placement="bottom end" className="w-[260px]">
             <Dropdown.Menu
               aria-label="Меню публикации"
               selectionMode="none"
@@ -130,7 +144,7 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
                     </span>
                     <Label
                       className={
-                        action.id === "save" && post.viewer.bookmarked
+                        action.id === "profile-favorite" && post.viewer.profileFavorite
                           ? "min-w-0 flex-1 truncate text-[var(--label-primary)]"
                           : "min-w-0 flex-1 truncate"
                       }
@@ -141,13 +155,13 @@ export function PostMoreMenu({ onAction, post }: PostMoreMenuProps) {
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
-          </Dropdown.Popover>
+          </DropdownPopover>
         </Dropdown.Root>
       </div>
 
       {isDeleteDialogOpen ? (
         <ConfirmDialog
-          title="Удалить обсуждение?"
+          title="Удалить пост?"
           description="Восстановить уже не получится"
           actionLabel="Удалить"
           errorMessage={deleteErrorMessage}

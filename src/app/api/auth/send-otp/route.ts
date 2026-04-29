@@ -7,7 +7,6 @@ import type { AuthMessageResponse } from "@/features/auth/types";
 import {
   createOtpCode,
   deleteExpiredOtpCodes,
-  findUserByEmail,
 } from "@/features/auth/lib/auth-repository";
 import {
   buildOtpExpiresAt,
@@ -41,42 +40,25 @@ export async function POST(request: NextRequest) {
       throw new AuthServiceError({ message: "Некорректный запрос.", status: 400 });
     }
 
-    const existingUser = await findUserByEmail(email);
-
-    if (purpose === "sign-in" && !existingUser) {
-      throw new AuthServiceError({
-        message: "Аккаунт с таким email не найден.",
-        status: 404,
-        fieldErrors: { email: "Аккаунт с таким email не найден." },
-      });
-    }
-
-    if (purpose === "sign-up" && existingUser) {
-      throw new AuthServiceError({
-        message: "Этот email уже используется.",
-        status: 409,
-        fieldErrors: { email: "Этот email уже занят. Войдите в аккаунт." },
-      });
-    }
-
     await deleteExpiredOtpCodes();
 
     const code = generateOtpCode();
     const codeHash = hashOtpCode(code);
     const expiresAt = buildOtpExpiresAt();
+    const resolvedPurpose: OtpPurpose = "sign-in";
 
     await createOtpCode({
       id: randomUUID(),
       email,
       codeHash,
-      purpose,
+      purpose: resolvedPurpose,
       expiresAt,
     });
 
     const emailResult = await sendOTPEmail({
       adminContext: Boolean(adminContext),
       code,
-      purpose,
+      purpose: resolvedPurpose,
       toEmail: email,
     });
 

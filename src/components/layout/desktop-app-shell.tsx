@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { MenuColumn } from "@/components/layout/menu-column";
 import { PrimaryColumn } from "@/components/layout/primary-column";
@@ -10,12 +9,14 @@ import type { NavigationItemKey } from "@/types/navigation";
 
 type DesktopAppShellProps = {
   children: ReactNode;
-  activeSection?: NavigationItemKey;
+  activeSection?: NavigationItemKey | null;
   showRightSidebar?: boolean;
   showMenuColumn?: boolean;
   hideMenuContent?: boolean;
   hideRightSidebarContent?: boolean;
   menuContent?: ReactNode;
+  sidebarContent?: ReactNode;
+  sidebarPlacement?: "start" | "end";
   centerClassName?: string;
   fitCenterToContent?: boolean;
 };
@@ -28,62 +29,25 @@ export function DesktopAppShell({
   hideMenuContent = false,
   hideRightSidebarContent = false,
   menuContent,
+  sidebarContent,
+  sidebarPlacement = "end",
   centerClassName = "",
   fitCenterToContent = false,
 }: DesktopAppShellProps) {
-  const mainRef = useRef<HTMLElement | null>(null);
   const primaryColumnClassName = `w-full ${centerClassName}`.trim();
   const mainRailClassName = `min-w-0 ${
     showRightSidebar
-      ? "min-[1140px]:min-w-[var(--app-shell-main-width)] min-[1140px]:w-fit"
+      ? "w-full min-[1140px]:min-w-[var(--app-shell-main-width)] min-[1140px]:w-fit"
       : "w-full"
   }`.trim();
-  const tabletCenteredRailClassName = fitCenterToContent
-    ? "min-[481px]:max-[720px]:w-full min-[481px]:max-[720px]:max-w-[672px] min-[721px]:max-w-none"
-    : "";
-
-  useEffect(() => {
-    function handleWheel(event: WheelEvent) {
-      if (window.innerWidth < 721 || event.ctrlKey || event.defaultPrevented) {
-        return;
-      }
-
-      const target = event.target instanceof HTMLElement ? event.target : null;
-
-      if (target?.closest('[data-allow-native-wheel="true"]')) {
-        return;
-      }
-
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX) || event.deltaY === 0) {
-        return;
-      }
-
-      const scrollContainer = mainRef.current;
-
-      if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight) {
-        return;
-      }
-
-      event.preventDefault();
-      scrollContainer.scrollBy({
-        top: event.deltaY,
-        left: 0,
-        behavior: "auto",
-      });
-    }
-
-    document.addEventListener("wheel", handleWheel, {
-      passive: false,
-      capture: true,
-    });
-
-    return () => {
-      document.removeEventListener("wheel", handleWheel, true);
-    };
-  }, []);
+  const sidebarColumn = showRightSidebar ? (
+    <SidebarColumn hideContent={hideRightSidebarContent}>
+      {sidebarContent}
+    </SidebarColumn>
+  ) : null;
 
   return (
-    <div className="w-full min-w-0 min-[721px]:flex min-[721px]:h-[calc(100dvh-var(--app-header-height))] min-[721px]:overflow-x-hidden min-[721px]:overflow-y-visible">
+    <div className="w-full min-w-0 min-[481px]:flex min-[481px]:min-h-[calc(100dvh-var(--app-header-height))] min-[481px]:overflow-x-clip min-[481px]:overflow-y-visible">
       {showMenuColumn ? (
         <MenuColumn
           items={navItems}
@@ -94,21 +58,20 @@ export function DesktopAppShell({
       ) : null}
 
       <main
-        ref={mainRef}
         className={`min-w-0 ${
           fitCenterToContent
             ? "min-[481px]:flex min-[481px]:flex-col min-[481px]:items-center"
             : ""
-        } min-[721px]:flex min-[721px]:h-full min-[721px]:min-h-0 min-[721px]:grow min-[721px]:basis-auto min-[721px]:flex-shrink min-[721px]:flex-col min-[721px]:items-start min-[721px]:overflow-y-auto min-[721px]:overflow-x-hidden`.trim()}
+        } min-[481px]:flex min-[481px]:min-h-full min-[481px]:grow min-[481px]:basis-auto min-[481px]:flex-shrink min-[481px]:flex-col min-[481px]:items-start min-[481px]:overflow-x-clip min-[481px]:overflow-y-visible`.trim()}
       >
         {/* X-like layout: main itself grows to the right edge, and a narrower rail lives inside it. */}
         <div
           data-testid="mainRailWrapper"
-          className={`${mainRailClassName} ${tabletCenteredRailClassName} min-[721px]:flex min-[721px]:flex-1 min-[721px]:flex-col`.trim()}
+          className={`${mainRailClassName} min-[481px]:flex min-[481px]:flex-1 min-[481px]:flex-col`.trim()}
         >
           <div
             data-testid="mainRailInner"
-            className="min-w-0 min-[721px]:flex min-[721px]:flex-1"
+            className="w-full min-w-0 min-[481px]:flex min-[481px]:flex-1"
           >
             <div
               data-testid="mainColumnsRow"
@@ -118,10 +81,9 @@ export function DesktopAppShell({
                   : ""
               }`.trim()}
             >
+              {sidebarPlacement === "start" ? sidebarColumn : null}
               <PrimaryColumn className={primaryColumnClassName}>{children}</PrimaryColumn>
-              {showRightSidebar ? (
-                <SidebarColumn hideContent={hideRightSidebarContent} />
-              ) : null}
+              {sidebarPlacement === "end" ? sidebarColumn : null}
             </div>
           </div>
         </div>

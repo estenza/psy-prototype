@@ -78,8 +78,8 @@ export type CommentsSectionData = {
 
 export type ProfileCommentItem = {
   id: string;
-  discussionId: string;
-  discussionTitle: string;
+  postId: string;
+  postTitle: string;
   author: CommentAuthor;
   bodyHtml: string;
   bodyText: string;
@@ -126,8 +126,8 @@ export type AdminCommentReportItem = {
   updatedAt: string;
   comment: {
     id: string;
-    discussionId: string;
-    discussionTitle: string;
+    postId: string;
+    postTitle: string;
     bodyText: string;
     status: "published" | "hidden" | "deleted" | "pending";
     author: CommentAuthor;

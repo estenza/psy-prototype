@@ -4,9 +4,9 @@ import { Dropdown, Label } from "@heroui/react";
 import {
   CheckIndicatorIcon,
   ChevronDownSmallIcon,
-  SortCommentsIcon,
 } from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button-styles";
+import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import { COMMENTS_SORT_OPTIONS } from "@/features/comments/constants";
 import type { CommentsSortValue } from "@/features/comments/types";
 
@@ -19,6 +19,11 @@ export function CommentsSortControl({
   value,
   onChange,
 }: CommentsSortControlProps) {
+  const selectedOptionLabel =
+    COMMENTS_SORT_OPTIONS.find((option) => option.value === value)?.label
+    ?? COMMENTS_SORT_OPTIONS[0]?.label
+    ?? "Популярные";
+
   return (
     <Dropdown.Root>
       <Dropdown.Trigger
@@ -30,17 +35,14 @@ export function CommentsSortControl({
         })}
       >
         <span className="inline-flex items-center gap-2 leading-none">
-          <span className="flex h-4 w-4 flex-none items-center justify-center">
-            <SortCommentsIcon />
-          </span>
-          <span>Упорядочить</span>
+          <span>{selectedOptionLabel}</span>
           <span className="flex h-3 w-3 flex-none items-center justify-center">
             <ChevronDownSmallIcon />
           </span>
         </span>
       </Dropdown.Trigger>
 
-      <Dropdown.Popover placement="bottom end" className="min-w-[182px]">
+      <DropdownPopover placement="bottom end" className="min-w-[182px]">
         <Dropdown.Menu
           className="dropdown-menu-default"
           selectionMode="single"
@@ -56,7 +58,7 @@ export function CommentsSortControl({
             </Dropdown.Item>
           ))}
         </Dropdown.Menu>
-      </Dropdown.Popover>
+      </DropdownPopover>
     </Dropdown.Root>
   );
 }

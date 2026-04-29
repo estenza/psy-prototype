@@ -29,7 +29,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
-      className={`surface-primary border-separator relative z-30 px-6 py-3 ${className}`.trim()}
+      className={`surface-primary border-separator relative z-30 px-0 pb-3 pt-8 min-[481px]:px-6 ${className}`.trim()}
     >
       <div className="relative z-40 flex items-center justify-between gap-4 text-sm">
         <div className="flex min-w-0 items-center gap-3">

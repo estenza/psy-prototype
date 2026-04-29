@@ -10,17 +10,19 @@ import type { Post } from "@/features/feed/types";
 type CardPostItemProps = {
   post: Post;
   blockPointerEvents?: boolean;
+  onToggleBookmark: (postId: Post["id"]) => void;
   onToggleLike: (postId: Post["id"], liked: boolean) => void;
   onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => Promise<void> | void;
-  discussionHref?: string;
+  postHref?: string;
 };
 
 export function CardPostItem({
   post,
   blockPointerEvents = true,
+  onToggleBookmark,
   onToggleLike,
   onPostMenuAction,
-  discussionHref,
+  postHref,
 }: CardPostItemProps) {
   return (
     <div className={`${blockPointerEvents ? "pointer-events-none" : ""} flex flex-col gap-3`.trim()}>
@@ -66,7 +68,8 @@ export function CardPostItem({
 
       <PostActions
         post={post}
-        discussionHref={discussionHref}
+        postHref={postHref}
+        onToggleBookmark={onToggleBookmark}
         onToggleLike={onToggleLike}
         className="relative z-10 flex flex-wrap items-center gap-2 pt-1"
       />

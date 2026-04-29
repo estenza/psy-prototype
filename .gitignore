@@ -22,6 +22,11 @@
 
 # misc
 .DS_Store
+.claude/
+.codex/
+.local-backups/
+.mcp.json
+.vscode/
 *.pem
 yc-sa-*.json
 

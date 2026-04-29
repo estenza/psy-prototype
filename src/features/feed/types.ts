@@ -25,6 +25,7 @@ export type Post = {
     isAuthor: boolean;
     liked: boolean;
     bookmarked: boolean;
+    profileFavorite: boolean;
   };
   editorState?: {
     content: string;
@@ -80,26 +81,27 @@ export type ApiPostRecord = {
     is_author?: boolean;
     liked: boolean;
     bookmarked: boolean;
+    profile_favorite?: boolean;
   };
 };
 
-export type DiscussionMutationPayload = {
+export type PostMutationPayload = {
   content: string;
   intent: PostIntent;
   title: string;
   topic: PostTopic | null;
 };
 
-export type DiscussionMutationResponse = {
+export type PostMutationResponse = {
   ok: true;
   post: Post;
 };
 
-export type DiscussionRouteErrorResponse = {
+export type PostRouteErrorResponse = {
   error: string;
   fieldErrors?: Partial<Record<"content" | "intent" | "title" | "topic", string>>;
 };
 
-export type DiscussionsResponsePayload = {
+export type PostsResponsePayload = {
   posts: Post[];
 };

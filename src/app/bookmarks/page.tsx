@@ -1,37 +1,32 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AccountSectionShell } from "@/components/layout/account-section-shell";
+import { HistoryPageHeader } from "@/components/layout/history-page-header";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
+import { ProfilePostsSection } from "@/features/feed/components/profile-posts-section";
+import { listBookmarkedPostsByUserId } from "@/features/feed/lib/posts-repository";
 
 export default async function BookmarksPage() {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
-    redirect("/sign-in?next=%2Fbookmarks");
+    redirect("/");
   }
+
+  const posts = await listBookmarkedPostsByUserId(currentUser.id, currentUser);
 
   return (
     <AccountSectionShell
-      title="Сохранённое"
-      description="Здесь будет собираться ваша личная подборка сохранённых обсуждений."
+      activeSection="bookmarks"
+      header={<HistoryPageHeader title="Закладки" />}
+      contentClassName="flex w-full min-w-0 flex-col gap-4"
     >
-      <section className="surface-elevated border-separator rounded-[28px] border p-6">
-        <h2 className="text-[18px] font-semibold text-[var(--label-primary)]">
-          Раздел уже подготовлен под отдельную страницу
-        </h2>
-        <p className="mt-2 text-[14px] leading-6 text-[var(--label-secondary)]">
-          Следующим шагом сюда можно будет вывести список действительно сохранённых публикаций. Пока сохранённые материалы остаются частью текущего прототипа ленты.
-        </p>
-
-        <div className="mt-5">
-          <Link
-            href="/"
-            className="interactive-secondary inline-flex items-center rounded-full px-4 py-2.5 text-sm font-semibold"
-          >
-            Вернуться к обсуждениям
-          </Link>
-        </div>
-      </section>
+      <ProfilePostsSection
+        emptyTitle="Пока нет закладок"
+        emptyDescription="Добавляйте посты в закладки из ленты или со страницы поста, и они появятся здесь."
+        flushTop
+        initialPosts={posts}
+        removeFromFeedWhenBookmarkRemoved
+      />
     </AccountSectionShell>
   );
 }
