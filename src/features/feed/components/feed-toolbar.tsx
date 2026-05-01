@@ -43,7 +43,7 @@ export function FeedToolbar({
   const chevronClassName = "flex h-3 w-3 flex-none items-center justify-center";
 
   return (
-    <div className="surface-primary border-separator relative z-30 px-0 py-3">
+    <div className="app-feed-toolbar surface-primary border-separator relative z-30 px-0 pb-3 pt-6">
       <div className="relative z-40 flex items-center justify-start gap-0 text-sm">
         <Dropdown.Root>
           <Dropdown.Trigger

@@ -19,6 +19,7 @@ import type { NavigationItem, NavigationItemKey } from "@/types/navigation";
 type MenuColumnProps = {
   items: readonly NavigationItem[];
   activeSection: NavigationItemKey | null;
+  compactWidth?: "default" | "narrow";
   hideContent?: boolean;
   customContent?: ReactNode;
 };
@@ -26,6 +27,7 @@ type MenuColumnProps = {
 export function MenuColumn({
   items,
   activeSection,
+  compactWidth = "default",
   hideContent = false,
   customContent,
 }: MenuColumnProps) {
@@ -56,9 +58,12 @@ export function MenuColumn({
   const customRailWidthClassName = customContent
     ? "w-[224px] min-w-[224px]"
     : "w-[calc(var(--app-shell-nav-compact-width)+16px)] min-w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-[var(--app-shell-nav-width)] min-[1296px]:min-w-[var(--app-shell-nav-width)]";
+  const compactColumnWidthClassName = compactWidth === "narrow"
+    ? "min-[481px]:w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-auto min-[1296px]:grow min-[1296px]:basis-auto"
+    : "min-[481px]:w-[max(calc(var(--app-shell-nav-compact-width)+16px),calc((100vw-var(--app-shell-primary-column-width))/2))] min-[1140px]:w-auto min-[1140px]:grow min-[1140px]:basis-auto";
   const columnWidthClassName = customContent
     ? "min-[481px]:w-[248px]"
-    : "min-[481px]:w-[max(calc(var(--app-shell-nav-compact-width)+16px),calc((100vw-var(--app-shell-primary-column-width))/2))] min-[1140px]:w-auto min-[1140px]:grow min-[1140px]:basis-auto";
+    : compactColumnWidthClassName;
 
   function handleItemClick(
     event: MouseEvent<HTMLAnchorElement>,
@@ -149,6 +154,7 @@ export function MenuColumn({
               <>
                 <UserAvatar
                   avatarUrl={user.avatarUrl}
+                  avatarSeed={user.nickname || user.id}
                   name={user.displayName || user.email}
                   size="menu"
                 />
@@ -256,7 +262,7 @@ export function MenuColumn({
         className={`flex min-w-0 min-[481px]:h-full ${customInnerWidthClassName} items-stretch justify-start pl-0 pr-0 transition-[width] duration-200 ease-out min-[1296px]:justify-end min-[1296px]:pl-2 min-[1296px]:pr-4`.trim()}
       >
         <aside
-          className={`relative z-10 min-[481px]:h-full ${customRailWidthClassName} ${
+          className={`relative z-10 min-[481px]:sticky min-[481px]:top-0 min-[481px]:h-dvh min-[481px]:self-start ${customRailWidthClassName} ${
             hideContent ? "pointer-events-none invisible" : ""
           }`.trim()}
           aria-hidden={hideContent}

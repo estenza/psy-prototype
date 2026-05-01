@@ -8,7 +8,7 @@ export const navItems: readonly NavigationItem[] = [
   { name: "Профиль", key: "profile", href: "/profile", requiresAuth: true },
   { name: "Закладки", key: "bookmarks", href: "/bookmarks", requiresAuth: true },
   { name: "Черновики", key: "drafts", href: "/drafts", requiresAuth: true },
-  { name: "Настройки", key: "settings", href: "/settings", requiresAuth: true },
+  { name: "Настройки", key: "settings", href: "/settings/account", requiresAuth: true },
 ] as const;
 
 export function isNavigationItemCurrent(

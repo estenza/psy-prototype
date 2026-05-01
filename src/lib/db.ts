@@ -281,7 +281,7 @@ function createNotificationsTables(database: DatabaseSync) {
       user_id TEXT PRIMARY KEY,
       post_replies_enabled INTEGER NOT NULL DEFAULT 1 CHECK (post_replies_enabled IN (0, 1)),
       direct_replies_enabled INTEGER NOT NULL DEFAULT 1 CHECK (direct_replies_enabled IN (0, 1)),
-      bookmarked_post_replies_enabled INTEGER NOT NULL DEFAULT 1 CHECK (bookmarked_post_replies_enabled IN (0, 1)),
+      followed_post_replies_enabled INTEGER NOT NULL DEFAULT 1 CHECK (followed_post_replies_enabled IN (0, 1)),
       followed_author_posts_enabled INTEGER NOT NULL DEFAULT 1 CHECK (followed_author_posts_enabled IN (0, 1)),
       system_messages_enabled INTEGER NOT NULL DEFAULT 1 CHECK (system_messages_enabled IN (0, 1)),
       updated_at TEXT NOT NULL,
@@ -320,6 +320,97 @@ function createNotificationsTables(database: DatabaseSync) {
       ON user_notifications (recipient_user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS user_notifications_recipient_read_at_idx
       ON user_notifications (recipient_user_id, read_at);
+  `);
+}
+
+function createNotificationOutboxTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS notification_outbox (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL CHECK (
+        event_type IN ('post.published', 'comment.created', 'author.followed')
+      ),
+      aggregate_id TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (
+        status IN ('pending', 'processing', 'processed', 'failed')
+      ),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      available_at TEXT NOT NULL,
+      processing_started_at TEXT,
+      processed_at TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS notification_outbox_pending_idx
+      ON notification_outbox (status, available_at, created_at);
+
+    CREATE INDEX IF NOT EXISTS notification_outbox_aggregate_idx
+      ON notification_outbox (event_type, aggregate_id);
+  `);
+}
+
+function migrateNotificationPreferenceColumns(database: DatabaseSync) {
+  renameColumnIfNeeded(
+    database,
+    "user_notification_preferences",
+    "bookmarked_post_replies_enabled",
+    "followed_post_replies_enabled",
+  );
+}
+
+function migrateNotificationOutboxEventTypes(database: DatabaseSync) {
+  if (!tableExists(database, "notification_outbox")) {
+    return;
+  }
+
+  const row = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notification_outbox' LIMIT 1")
+    .get() as { sql?: string } | undefined;
+  const tableSql = row?.sql ?? "";
+
+  if (tableSql.includes("'author.followed'")) {
+    return;
+  }
+
+  database.exec(`
+    PRAGMA foreign_keys = OFF;
+    ALTER TABLE notification_outbox RENAME TO notification_outbox_legacy_event_type;
+  `);
+
+  createNotificationOutboxTable(database);
+
+  database.exec(`
+    INSERT INTO notification_outbox (
+      id,
+      event_type,
+      aggregate_id,
+      payload_json,
+      status,
+      attempts,
+      last_error,
+      available_at,
+      processing_started_at,
+      processed_at,
+      created_at
+    )
+    SELECT
+      id,
+      event_type,
+      aggregate_id,
+      payload_json,
+      status,
+      attempts,
+      last_error,
+      available_at,
+      processing_started_at,
+      processed_at,
+      created_at
+    FROM notification_outbox_legacy_event_type;
+
+    DROP TABLE notification_outbox_legacy_event_type;
+    PRAGMA foreign_keys = ON;
   `);
 }
 
@@ -639,6 +730,9 @@ function initializeDatabase(database: DatabaseSync) {
   createPostCommentsTables(database);
   migrateLegacyNotificationTypes(database);
   createNotificationsTables(database);
+  migrateNotificationPreferenceColumns(database);
+  createNotificationOutboxTable(database);
+  migrateNotificationOutboxEventTypes(database);
   createSessionsTable(database);
   createPasswordResetTokensTable(database);
   createOtpCodesTable(database);
@@ -675,4 +769,21 @@ export function getDatabase() {
   globalCache.__psyPrototypeDatabase = database;
 
   return database;
+}
+
+export function runDatabaseTransaction<T>(
+  callback: (database: DatabaseSync) => T,
+) {
+  const database = getDatabase();
+
+  database.exec("BEGIN IMMEDIATE;");
+
+  try {
+    const result = callback(database);
+    database.exec("COMMIT;");
+    return result;
+  } catch (error) {
+    database.exec("ROLLBACK;");
+    throw error;
+  }
 }

@@ -282,7 +282,7 @@ export function ProfileActivityTabs({
         />
       </Tabs.Panel>
 
-      <Tabs.Panel className="px-2 pt-8 pb-24 min-[481px]:px-3 min-[481px]:px-0" key="replies" id="replies">
+      <Tabs.Panel className="pt-8 pb-24" key="replies" id="replies">
         <RepliesPanel
           displayName={displayName}
           replies={replies}

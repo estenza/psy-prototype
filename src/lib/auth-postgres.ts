@@ -1,11 +1,18 @@
 import "server-only";
 
 import { readFileSync } from "node:fs";
-import { Pool, type PoolConfig, type QueryResultRow } from "pg";
+import { Pool, type PoolConfig, type QueryResult, type QueryResultRow } from "pg";
 
 type GlobalPostgresCache = typeof globalThis & {
   __psyPrototypeAuthPostgresPool?: Pool;
   __psyPrototypeAuthPostgresSchemaPromise?: Promise<void>;
+};
+
+export type AuthPostgresTransaction = {
+  query<T extends QueryResultRow>(
+    query: string,
+    values?: unknown[],
+  ): Promise<QueryResult<T>>;
 };
 
 function getSslConfig(): PoolConfig["ssl"] {
@@ -70,6 +77,16 @@ function buildPoolConfig(): PoolConfig {
     max: Number.parseInt(process.env.AUTH_DATABASE_POOL_MAX?.trim() || "", 10) || 4,
     ssl: getSslConfig(),
   };
+}
+
+const LATEST_AUTH_POSTGRES_MIGRATION = "0005_notifications_followed_post_naming_and_author_followed";
+
+function buildMissingMigrationMessage() {
+  return [
+    "PostgreSQL schema is not migrated.",
+    'Run "npm run migrate:auth:postgres:schema" before starting the app.',
+    `Required migration: ${LATEST_AUTH_POSTGRES_MIGRATION}.`,
+  ].join(" ");
 }
 
 async function closePool(pool: Pool) {
@@ -145,7 +162,34 @@ async function runAuthPostgresQuery<T extends QueryResultRow>(
   throw new Error("Auth PostgreSQL query retry loop exhausted.");
 }
 
+async function verifyPostgresMigrations() {
+  const result = await runAuthPostgresQuery(
+    "SELECT 1 FROM schema_migrations WHERE version = $1 LIMIT 1",
+    [LATEST_AUTH_POSTGRES_MIGRATION],
+    {
+      skipSchema: true,
+    },
+  ).catch((error) => {
+    if (error?.code === "42P01") {
+      throw new Error(buildMissingMigrationMessage(), {
+        cause: error,
+      });
+    }
+
+    throw error;
+  });
+
+  if (!result.rowCount) {
+    throw new Error(buildMissingMigrationMessage());
+  }
+}
+
 async function initializePostgresSchema() {
+  if (process.env.AUTH_DATABASE_ALLOW_RUNTIME_SCHEMA_SYNC?.trim() !== "true") {
+    await verifyPostgresMigrations();
+    return;
+  }
+
   await runAuthPostgresQuery(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -420,7 +464,7 @@ async function initializePostgresSchema() {
       user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
       post_replies_enabled BOOLEAN NOT NULL DEFAULT TRUE,
       direct_replies_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-      bookmarked_post_replies_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      followed_post_replies_enabled BOOLEAN NOT NULL DEFAULT TRUE,
       followed_author_posts_enabled BOOLEAN NOT NULL DEFAULT TRUE,
       system_messages_enabled BOOLEAN NOT NULL DEFAULT TRUE,
       updated_at TIMESTAMPTZ NOT NULL
@@ -454,6 +498,30 @@ async function initializePostgresSchema() {
       ON user_notifications (recipient_user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS user_notifications_recipient_read_at_idx
       ON user_notifications (recipient_user_id, read_at);
+
+    CREATE TABLE IF NOT EXISTS notification_outbox (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL CHECK (
+        event_type IN ('post.published', 'comment.created', 'author.followed')
+      ),
+      aggregate_id TEXT NOT NULL,
+      payload_json JSONB NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (
+        status IN ('pending', 'processing', 'processed', 'failed')
+      ),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      available_at TIMESTAMPTZ NOT NULL,
+      processing_started_at TIMESTAMPTZ,
+      processed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS notification_outbox_pending_idx
+      ON notification_outbox (status, available_at, created_at);
+
+    CREATE INDEX IF NOT EXISTS notification_outbox_aggregate_idx
+      ON notification_outbox (event_type, aggregate_id);
 
     DO $$
     DECLARE
@@ -542,4 +610,31 @@ export async function queryAuthPostgres<T extends QueryResultRow>(
 
 export async function execAuthPostgres(query: string, values: unknown[] = []) {
   await runAuthPostgresQuery(query, values);
+}
+
+export async function runAuthPostgresTransaction<T>(
+  callback: (transaction: AuthPostgresTransaction) => Promise<T>,
+) {
+  await ensureAuthPostgresSchema();
+
+  const pool = getAuthPostgresPool();
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const result = await callback({
+      query(query, values = []) {
+        return client.query(query, values);
+      },
+    });
+
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }

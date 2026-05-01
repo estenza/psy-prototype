@@ -1,3 +1,8 @@
+import {
+  escapeHtml,
+  sanitizeRichHtml,
+} from "@/lib/safe-html";
+
 const shortMonthFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
   month: "short",
@@ -28,14 +33,7 @@ const repliesCountLabels: Record<Intl.LDMLPluralRule, string> = {
   other: "ответов",
 };
 
-export function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+export { escapeHtml };
 
 export function plainTextToHtml(value: string) {
   const trimmedValue = value.trim();
@@ -53,88 +51,8 @@ export function plainTextToHtml(value: string) {
     .join("");
 }
 
-const COMMENT_IMAGE_SRC_PATTERN = /^(https?:\/\/|data:image\/(?:png|jpeg);base64,)/i;
-
-function sanitizeCommentImageTag(tag: string) {
-  const sourceMatch = tag.match(/\ssrc\s*=\s*(['"])(.*?)\1/i);
-  const altMatch = tag.match(/\salt\s*=\s*(['"])(.*?)\1/i);
-  const source = sourceMatch?.[2]?.trim() ?? "";
-
-  if (!source || !COMMENT_IMAGE_SRC_PATTERN.test(source)) {
-    return "";
-  }
-
-  const alt = altMatch?.[2] ?? "";
-
-  return `<img src="${escapeHtml(source)}" alt="${escapeHtml(alt)}" />`;
-}
-
-function sanitizeCommentHtmlTag(tag: string) {
-  if (/^<\s*br\s*\/?\s*>$/i.test(tag)) {
-    return "<br />";
-  }
-
-  if (/^<\s*p\s*>$/i.test(tag)) {
-    return "<p>";
-  }
-
-  if (/^<\s*\/\s*p\s*>$/i.test(tag)) {
-    return "</p>";
-  }
-
-  if (/^<\s*(?:strong|b)\s*>$/i.test(tag)) {
-    return "<strong>";
-  }
-
-  if (/^<\s*\/\s*(?:strong|b)\s*>$/i.test(tag)) {
-    return "</strong>";
-  }
-
-  if (/^<\s*(?:s|strike|del)\s*>$/i.test(tag)) {
-    return "<s>";
-  }
-
-  if (/^<\s*\/\s*(?:s|strike|del)\s*>$/i.test(tag)) {
-    return "</s>";
-  }
-
-  if (/^<\s*blockquote\s*>$/i.test(tag)) {
-    return "<blockquote>";
-  }
-
-  if (/^<\s*\/\s*blockquote\s*>$/i.test(tag)) {
-    return "</blockquote>";
-  }
-
-  if (/^<\s*img\b/i.test(tag)) {
-    return sanitizeCommentImageTag(tag);
-  }
-
-  return "";
-}
-
 export function sanitizeCommentHtml(value: string) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return "";
-  }
-
-  const tagPattern = /<[^>]*>/g;
-  let sanitized = "";
-  let lastIndex = 0;
-
-  for (const match of trimmedValue.matchAll(tagPattern)) {
-    const currentIndex = match.index ?? 0;
-
-    sanitized += escapeHtml(trimmedValue.slice(lastIndex, currentIndex));
-    sanitized += sanitizeCommentHtmlTag(match[0]);
-    lastIndex = currentIndex + match[0].length;
-  }
-
-  sanitized += escapeHtml(trimmedValue.slice(lastIndex));
-
-  return sanitized.trim();
+  return sanitizeRichHtml(value);
 }
 
 export function buildCommentHtml(value: string) {

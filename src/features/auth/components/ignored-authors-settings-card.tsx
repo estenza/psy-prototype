@@ -70,6 +70,7 @@ export function IgnoredAuthorsSettingsCard({
               <div className="flex min-w-0 items-center gap-3">
                 <UserAvatar
                   avatarUrl={author.avatarUrl}
+                  avatarSeed={author.handle || author.id}
                   name={author.name}
                   size="sm"
                 />

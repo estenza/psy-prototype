@@ -3,8 +3,8 @@
 import { SearchField as HeroSearchField } from "@heroui/react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   NavIcon,
   NotificationIcon,
@@ -33,6 +33,185 @@ type AppHeaderProps = {
 };
 
 const desktopHeaderSearchInputId = "app-header-search-input-desktop";
+const mobilePullThreshold = 58;
+const mobilePullMaxDistance = 88;
+
+function getActiveScrollTop(target: EventTarget | null) {
+  let maxScrollTop = Math.max(
+    window.scrollY,
+    document.documentElement.scrollTop,
+    document.body.scrollTop,
+    document.scrollingElement?.scrollTop ?? 0,
+  );
+
+  if (!(target instanceof Element)) {
+    return maxScrollTop;
+  }
+
+  let element: Element | null = target;
+
+  while (element && element !== document.body && element !== document.documentElement) {
+    if (element instanceof HTMLElement && element.scrollHeight > element.clientHeight + 1) {
+      maxScrollTop = Math.max(maxScrollTop, element.scrollTop);
+    }
+
+    element = element.parentElement;
+  }
+
+  return maxScrollTop;
+}
+
+function MobilePullToRefresh({ disabled = false }: { disabled?: boolean }) {
+  const router = useRouter();
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [, startTransition] = useTransition();
+  const startYRef = useRef(0);
+  const isTrackingRef = useRef(false);
+  const isPullingRef = useRef(false);
+  const pullDistanceRef = useRef(0);
+  const hideTimerRef = useRef<number | null>(null);
+  const isReadyToRefresh = pullDistance >= mobilePullThreshold;
+
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 480px)");
+
+    function resetPull() {
+      isTrackingRef.current = false;
+      isPullingRef.current = false;
+      pullDistanceRef.current = 0;
+      setPullDistance(0);
+    }
+
+    function handleTouchStart(event: TouchEvent) {
+      if (
+        disabled ||
+        isRefreshing ||
+        !mediaQuery.matches ||
+        event.touches.length !== 1 ||
+        getActiveScrollTop(event.target) > 1
+      ) {
+        resetPull();
+        return;
+      }
+
+      startYRef.current = event.touches[0]?.clientY ?? 0;
+      isTrackingRef.current = true;
+      isPullingRef.current = false;
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+      if (!isTrackingRef.current || disabled || isRefreshing || !mediaQuery.matches) {
+        return;
+      }
+
+      const currentY = event.touches[0]?.clientY ?? 0;
+      const deltaY = currentY - startYRef.current;
+
+      if (deltaY <= 0) {
+        resetPull();
+        return;
+      }
+
+      if (getActiveScrollTop(event.target) > 1) {
+        resetPull();
+        return;
+      }
+
+      isPullingRef.current = true;
+
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+
+      const resistedDistance = Math.min(
+        mobilePullMaxDistance,
+        Math.round(deltaY * 0.46),
+      );
+
+      pullDistanceRef.current = resistedDistance;
+      setPullDistance(resistedDistance);
+    }
+
+    function handleTouchEnd() {
+      if (!isTrackingRef.current) {
+        return;
+      }
+
+      const shouldRefresh = isPullingRef.current
+        && pullDistanceRef.current >= mobilePullThreshold;
+
+      isTrackingRef.current = false;
+      isPullingRef.current = false;
+      pullDistanceRef.current = 0;
+
+      if (!shouldRefresh) {
+        setPullDistance(0);
+        return;
+      }
+
+      setPullDistance(mobilePullThreshold);
+      setIsRefreshing(true);
+
+      startTransition(() => {
+        router.refresh();
+      });
+
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+
+      hideTimerRef.current = window.setTimeout(() => {
+        setIsRefreshing(false);
+        setPullDistance(0);
+        hideTimerRef.current = null;
+      }, 750);
+    }
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", resetPull, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", resetPull);
+    };
+  }, [disabled, isRefreshing, router, startTransition]);
+
+  return (
+    <div
+      aria-hidden="true"
+      className={`app-mobile-pull-refresh min-[481px]:hidden ${
+        pullDistance > 0 || isRefreshing ? "app-mobile-pull-refresh--visible" : ""
+      } ${isReadyToRefresh ? "app-mobile-pull-refresh--ready" : ""} ${
+        isRefreshing ? "app-mobile-pull-refresh--refreshing" : ""
+      }`.trim()}
+      style={{
+        "--app-mobile-pull-distance": `${pullDistance}px`,
+        "--app-mobile-pull-offset": `${Math.round(
+          Math.min(18, Math.max(0, pullDistance - 16) * 0.45),
+        )}px`,
+      } as CSSProperties}
+    >
+      {isRefreshing ? (
+        <span className="app-mobile-pull-refresh__spinner" />
+      ) : (
+        <span className="app-mobile-pull-refresh__arrow" />
+      )}
+    </div>
+  );
+}
 
 type CreateTopicButtonProps = {
   ariaLabel?: string;
@@ -81,9 +260,9 @@ type MobileTabItem = {
 };
 
 function getMobileTabClassName(isActive: boolean) {
-  return `flex min-w-0 flex-1 items-center justify-center rounded-[18px] px-1 py-2 transition-colors ${
+  return `flex h-full min-w-0 items-center justify-center px-1 transition-colors ${
     isActive
-      ? "text-[var(--accent-primary)]"
+      ? "app-mobile-tabbar-item--active text-[var(--accent-primary)]"
       : "text-[var(--label-tertiary)]"
   }`.trim();
 }
@@ -92,13 +271,11 @@ function MobileTabBar({
   createTopicHref,
   onRequireAuth,
   pathname,
-  router,
   user,
 }: {
   createTopicHref: string;
   onRequireAuth: (nextHref?: string) => void;
   pathname: string | null;
-  router: ReturnType<typeof useRouter>;
   user: ReturnType<typeof useAuthClient>["user"];
 }) {
   const items: MobileTabItem[] = [
@@ -136,42 +313,74 @@ function MobileTabBar({
 
     if (isTabActive(item)) {
       event.preventDefault();
-      router.refresh();
     }
   }
 
   return (
-    <nav
-      aria-label="Основная навигация"
-      className="surface-elevated fixed inset-x-0 bottom-0 z-[80] flex min-[481px]:hidden border-t border-[var(--separator)] px-2 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-1.5"
-    >
-      {items.map((item) => {
-        const isActive = isTabActive(item);
+    <div className="app-mobile-tabbar-bar z-[80] min-[481px]:hidden">
+      <nav
+        aria-label="Основная навигация"
+        className="app-mobile-tabbar"
+      >
+        {items.map((item) => {
+          const isActive = isTabActive(item);
 
-        return (
-          <Link
-            key={item.key}
-            href={item.href}
-            onClick={(event) => handleTabClick(event, item)}
-            aria-label={item.label}
-            aria-current={isActive ? "page" : undefined}
-            className={getMobileTabClassName(isActive)}
-          >
-            <span className="flex h-8 w-8 items-center justify-center">
-              {item.key === "home" ? (
-                <NavIcon name="forum" filled={isActive} />
-              ) : item.key === "search" ? (
-                <SearchIcon />
-              ) : item.key === "create" ? (
-                <PlusCircleIcon />
-              ) : (
-                <NotificationIcon filled={isActive} />
-              )}
-            </span>
-          </Link>
-        );
-      })}
-    </nav>
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              onClick={(event) => handleTabClick(event, item)}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
+              className={getMobileTabClassName(isActive)}
+            >
+              <span className="flex h-8 w-8 items-center justify-center">
+                {item.key === "home" ? (
+                  <NavIcon name="forum" filled={isActive} />
+                ) : item.key === "search" ? (
+                  <SearchIcon />
+                ) : item.key === "create" ? (
+                  <PlusCircleIcon />
+                ) : (
+                  <NotificationIcon filled={isActive} />
+                )}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+function isMobileTabBarPath(pathname: string | null) {
+  return pathname === "/"
+    || pathname === "/search"
+    || pathname === "/create-topic"
+    || pathname === "/notifications";
+}
+
+export function AppMobileTabBar() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { openAuthModal, user } = useAuthClient();
+  const currentSearch = searchParams.toString();
+  const currentPathWithSearch = pathname
+    ? `${pathname}${currentSearch ? `?${currentSearch}` : ""}`
+    : "/";
+  const createTopicHref = buildCreateTopicHref(currentPathWithSearch);
+
+  if (!isMobileTabBarPath(pathname)) {
+    return null;
+  }
+
+  return (
+    <MobileTabBar
+      createTopicHref={createTopicHref}
+      onRequireAuth={(nextHref) => openAuthModal({ nextHref })}
+      pathname={pathname}
+      user={user}
+    />
   );
 }
 
@@ -273,7 +482,15 @@ export function AppHeader({
   }, []);
 
   function getMobileMenuItemHref(item: NavigationItem) {
-    return item.key === "profile" ? profileHref : item.href;
+    if (item.key === "profile") {
+      return profileHref;
+    }
+
+    if (item.key === "settings") {
+      return "/settings";
+    }
+
+    return item.href;
   }
 
   function isMobileMenuItemActive(item: NavigationItem) {
@@ -339,11 +556,12 @@ export function AppHeader({
   }
 
   return (
-    <header className={`surface-elevated relative z-50 shadow-[0_2px_12px_rgba(17,24,39,0.06)] ${
-      isAdminHeader
-        ? "fixed inset-x-0 top-0"
-        : "min-[481px]:hidden"
-    }`.trim()}>
+    <>
+      <header className={`app-mobile-header surface-elevated relative z-50 shadow-[0_2px_12px_rgba(17,24,39,0.06)] ${
+        isAdminHeader
+          ? "fixed inset-x-0 top-0"
+          : "min-[481px]:hidden"
+      }`.trim()}>
       {isAdminHeader ? (
         <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 px-[calc(var(--space-4)+16px)] py-3 min-[1280px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[1280px]:px-[var(--app-shell-desktop-side-offset)]">
           <div className="flex min-w-0 items-center gap-2">
@@ -397,6 +615,7 @@ export function AppHeader({
               {user ? (
                 <UserAvatar
                   avatarUrl={user.avatarUrl}
+                  avatarSeed={user.nickname || user.id}
                   name={user.displayName || user.email}
                   size="menu"
                 />
@@ -495,6 +714,11 @@ export function AppHeader({
           </div>
         </>
       )}
+      </header>
+
+      {!isAdminHeader ? (
+        <MobilePullToRefresh disabled={isMobileMenuOpen} />
+      ) : null}
 
       {!isAdminHeader ? (
         <div
@@ -548,6 +772,7 @@ export function AppHeader({
                           <>
                             <UserAvatar
                               avatarUrl={user.avatarUrl}
+                              avatarSeed={user.nickname || user.id}
                               name={user.displayName || user.email}
                               size="menu"
                             />
@@ -573,15 +798,6 @@ export function AppHeader({
         </div>
       ) : null}
 
-      {!isAdminHeader ? (
-        <MobileTabBar
-          createTopicHref={createTopicHref}
-          onRequireAuth={(nextHref) => openAuthModal({ nextHref })}
-          pathname={pathname}
-          router={router}
-          user={user}
-        />
-      ) : null}
-    </header>
+    </>
   );
 }

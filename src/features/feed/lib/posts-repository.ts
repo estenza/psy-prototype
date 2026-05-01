@@ -1,12 +1,19 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
+import type { DatabaseSync } from "node:sqlite";
+import {
+  isPostgresAuthEnabled,
+  queryAuthPostgres,
+  type AuthPostgresTransaction,
+} from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
+import { enqueueDomainEvent } from "@/lib/domain-events/outbox";
+import { sanitizeRichHtml } from "@/lib/safe-html";
+import { runStorageUnitOfWork } from "@/lib/unit-of-work";
 import { isPostIntent, isPostTopic, normalizePostTopic } from "@/constants/post-taxonomy";
 import type { SessionUser } from "@/features/auth/types";
 import { formatRelativeDate, formatRelativeDateCompact } from "@/features/comments/lib/comment-format";
-import { createPostPublishedNotifications } from "@/features/notifications/lib/notifications-repository";
 import { TOPIC_TITLE_MAX_LENGTH } from "@/features/topic-creation/constants";
 import type { Post } from "@/features/feed/types";
 import type { PostIntent, PostTopic } from "@/types/post-taxonomy";
@@ -33,6 +40,7 @@ type PostRow = {
   viewer_liked: boolean | number | null;
   viewer_bookmarked: boolean | number | null;
   viewer_profile_favorite: boolean | number | null;
+  feed_priority?: boolean | number | string | null;
 };
 
 type PostMutationInput = {
@@ -41,6 +49,28 @@ type PostMutationInput = {
   intent: PostIntent;
   title: string;
   topic: PostTopic | null;
+};
+
+export const FEED_PAGE_SIZE = 20;
+
+type FeedCursor = {
+  createdAt: string;
+  id: string;
+  priority: number;
+};
+
+export type ListPostsOptions = {
+  cursor?: string | null;
+  limit?: number;
+  topic?: PostTopic | "all" | null;
+};
+
+export type PostsPage = {
+  pageInfo: {
+    endCursor: string | null;
+    hasNextPage: boolean;
+  };
+  posts: Post[];
 };
 
 const PG_POST_COLUMNS = `
@@ -168,6 +198,72 @@ function readBoolean(value: boolean | number | null | undefined) {
   return Boolean(value);
 }
 
+function readFeedPriority(row: PostRow) {
+  const value = row.feed_priority;
+
+  if (typeof value === "boolean") {
+    return value ? 1 : 0;
+  }
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  return Number.parseInt(value ?? "0", 10) || 0;
+}
+
+function encodeFeedCursor(row: PostRow) {
+  const cursor: FeedCursor = {
+    createdAt: row.created_at,
+    id: row.id,
+    priority: readFeedPriority(row),
+  };
+
+  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+}
+
+function decodeFeedCursor(cursor: string | null | undefined): FeedCursor | null {
+  if (!cursor) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Partial<FeedCursor>;
+
+    if (
+      typeof parsed.createdAt === "string"
+      && typeof parsed.id === "string"
+      && typeof parsed.priority === "number"
+    ) {
+      return {
+        createdAt: parsed.createdAt,
+        id: parsed.id,
+        priority: parsed.priority,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function normalizeFeedLimit(limit: number | null | undefined) {
+  if (!Number.isFinite(limit)) {
+    return FEED_PAGE_SIZE;
+  }
+
+  return Math.min(50, Math.max(1, Math.floor(limit ?? FEED_PAGE_SIZE)));
+}
+
+function normalizeFeedTopic(topic: ListPostsOptions["topic"]) {
+  if (!topic || topic === "all") {
+    return null;
+  }
+
+  return normalizePostTopic(topic);
+}
+
 function mapPost(row: PostRow, currentUser: SessionUser | null): Post {
   const author = {
     id: row.author_user_id,
@@ -265,11 +361,14 @@ function preparePostRecord(input: {
 }): PreparedPostRecord {
   assertValidInput(input);
 
-  const mediaUrl = extractFirstImageSource(input.content);
+  const bodyHtml = sanitizeRichHtml(input.content, {
+    allowEmbeddedMedia: true,
+  });
+  const mediaUrl = extractFirstImageSource(bodyHtml);
 
   return {
-    bodyHtml: input.content,
-    excerpt: buildExcerpt(input.content),
+    bodyHtml,
+    excerpt: buildExcerpt(bodyHtml),
     intent: input.intent,
     mediaAlt: null,
     mediaType: mediaUrl ? "image" : null,
@@ -279,14 +378,23 @@ function preparePostRecord(input: {
   };
 }
 
-export async function listPosts(currentUser: SessionUser | null) {
+export async function listPostsPage(
+  currentUser: SessionUser | null,
+  options: ListPostsOptions = {},
+): Promise<PostsPage> {
+  const limit = normalizeFeedLimit(options.limit);
+  const cursor = decodeFeedCursor(options.cursor);
+  const topic = normalizeFeedTopic(options.topic);
+  const fetchLimit = limit + 1;
+
   if (isPostgresAuthEnabled()) {
     const rows = await queryPgRows<PostRow>(
       `SELECT
         ${PG_POST_COLUMNS},
         CASE WHEN viewer_reaction.id IS NULL THEN FALSE ELSE TRUE END AS viewer_liked,
         CASE WHEN viewer_bookmark.post_id IS NULL THEN FALSE ELSE TRUE END AS viewer_bookmarked,
-        CASE WHEN viewer_profile_favorite.post_id IS NULL THEN FALSE ELSE TRUE END AS viewer_profile_favorite
+        CASE WHEN viewer_profile_favorite.post_id IS NULL THEN FALSE ELSE TRUE END AS viewer_profile_favorite,
+        CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END AS feed_priority
       FROM posts
       INNER JOIN users ON users.id = posts.author_user_id
       LEFT JOIN post_reactions AS viewer_reaction
@@ -299,15 +407,48 @@ export async function listPosts(currentUser: SessionUser | null) {
       LEFT JOIN user_bookmarked_posts AS viewer_bookmark
         ON viewer_bookmark.post_id = posts.id
         AND viewer_bookmark.user_id = $1
+      LEFT JOIN user_followed_authors AS followed_author
+        ON followed_author.follower_user_id = $1
+        AND followed_author.followed_user_id = posts.author_user_id
       LEFT JOIN user_ignored_authors AS ignored_author
         ON ignored_author.user_id = $1
         AND ignored_author.ignored_user_id = posts.author_user_id
       WHERE ignored_author.user_id IS NULL
-      ORDER BY posts.created_at DESC`,
-      [currentUser?.id ?? null],
+        AND ($2::text IS NULL OR posts.topic = $2)
+        AND (
+          $3::integer IS NULL
+          OR (
+            CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END,
+            posts.created_at,
+            posts.id
+          ) < ($3::integer, $4::timestamptz, $5::text)
+        )
+      ORDER BY
+        CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END DESC,
+        posts.created_at DESC,
+        posts.id DESC
+      LIMIT $6`,
+      [
+        currentUser?.id ?? null,
+        topic,
+        cursor?.priority ?? null,
+        cursor?.createdAt ?? null,
+        cursor?.id ?? null,
+        fetchLimit,
+      ],
     );
 
-    return rows.map((row) => mapPost(row, currentUser));
+    const visibleRows = rows.slice(0, limit);
+
+    return {
+      pageInfo: {
+        endCursor: visibleRows.length > 0
+          ? encodeFeedCursor(visibleRows[visibleRows.length - 1])
+          : null,
+        hasNextPage: rows.length > limit,
+      },
+      posts: visibleRows.map((row) => mapPost(row, currentUser)),
+    };
   }
 
   const rows = getDatabase()
@@ -320,7 +461,8 @@ export async function listPosts(currentUser: SessionUser | null) {
         users.role AS author_role,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked,
         CASE WHEN viewer_bookmark.post_id IS NULL THEN 0 ELSE 1 END AS viewer_bookmarked,
-        CASE WHEN viewer_profile_favorite.post_id IS NULL THEN 0 ELSE 1 END AS viewer_profile_favorite
+        CASE WHEN viewer_profile_favorite.post_id IS NULL THEN 0 ELSE 1 END AS viewer_profile_favorite,
+        CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END AS feed_priority
       FROM posts
       INNER JOIN users ON users.id = posts.author_user_id
       LEFT JOIN post_reactions AS viewer_reaction
@@ -333,20 +475,67 @@ export async function listPosts(currentUser: SessionUser | null) {
       LEFT JOIN user_bookmarked_posts AS viewer_bookmark
         ON viewer_bookmark.post_id = posts.id
         AND viewer_bookmark.user_id = ?
+      LEFT JOIN user_followed_authors AS followed_author
+        ON followed_author.follower_user_id = ?
+        AND followed_author.followed_user_id = posts.author_user_id
       LEFT JOIN user_ignored_authors AS ignored_author
         ON ignored_author.user_id = ?
         AND ignored_author.ignored_user_id = posts.author_user_id
       WHERE ignored_author.user_id IS NULL
-      ORDER BY posts.created_at DESC`,
+        AND (? IS NULL OR posts.topic = ?)
+        AND (
+          ? IS NULL
+          OR CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END < ?
+          OR (
+            CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END = ?
+            AND posts.created_at < ?
+          )
+          OR (
+            CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END = ?
+            AND posts.created_at = ?
+            AND posts.id < ?
+          )
+        )
+      ORDER BY
+        CASE WHEN followed_author.followed_user_id IS NULL THEN 0 ELSE 1 END DESC,
+        posts.created_at DESC,
+        posts.id DESC
+      LIMIT ?`,
     )
     .all(
       currentUser?.id ?? null,
       currentUser?.id ?? null,
       currentUser?.id ?? null,
       currentUser?.id ?? null,
+      currentUser?.id ?? null,
+      topic,
+      topic,
+      cursor?.priority ?? null,
+      cursor?.priority ?? null,
+      cursor?.priority ?? null,
+      cursor?.createdAt ?? null,
+      cursor?.priority ?? null,
+      cursor?.createdAt ?? null,
+      cursor?.id ?? null,
+      fetchLimit,
     ) as PostRow[];
 
-  return rows.map((row) => mapPost(row, currentUser));
+  const visibleRows = rows.slice(0, limit);
+
+  return {
+    pageInfo: {
+      endCursor: visibleRows.length > 0
+        ? encodeFeedCursor(visibleRows[visibleRows.length - 1])
+        : null,
+      hasNextPage: rows.length > limit,
+    },
+    posts: visibleRows.map((row) => mapPost(row, currentUser)),
+  };
+}
+
+export async function listPosts(currentUser: SessionUser | null) {
+  const page = await listPostsPage(currentUser);
+  return page.posts;
 }
 
 export async function listPostsByAuthorUserId(
@@ -634,24 +823,71 @@ export async function createPost(input: PostMutationInput) {
   const id = randomUUID();
   const timestamp = new Date().toISOString();
 
-  if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `INSERT INTO posts (
-        id,
-        author_user_id,
-        intent,
-        topic,
-        title,
-        body_html,
-        excerpt,
-        media_type,
-        media_url,
-        media_alt,
-        created_at,
-        updated_at
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      await unitOfWork.transaction.query(
+        `INSERT INTO posts (
+          id,
+          author_user_id,
+          intent,
+          topic,
+          title,
+          body_html,
+          excerpt,
+          media_type,
+          media_url,
+          media_alt,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          id,
+          input.author.id,
+          prepared.intent,
+          prepared.topic,
+          prepared.title,
+          prepared.bodyHtml,
+          prepared.excerpt,
+          prepared.mediaType,
+          prepared.mediaUrl,
+          prepared.mediaAlt,
+          timestamp,
+          timestamp,
+        ],
+      );
+
+      await enqueueDomainEvent(unitOfWork, {
+        aggregateId: id,
+        eventType: "post.published",
+        payload: {
+          actor: input.author,
+          postId: id,
+          title: prepared.title,
+        },
+      });
+      return;
+    }
+
+    unitOfWork.database
+      .prepare(
+        `INSERT INTO posts (
+          id,
+          author_user_id,
+          intent,
+          topic,
+          title,
+          body_html,
+          excerpt,
+          media_type,
+          media_url,
+          media_alt,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [
+      .run(
         id,
         input.author.id,
         prepared.intent,
@@ -664,62 +900,18 @@ export async function createPost(input: PostMutationInput) {
         prepared.mediaAlt,
         timestamp,
         timestamp,
-      ],
-    );
+      );
 
-    const createdPost = await findPostById(id, input.author);
-
-    if (!createdPost) {
-      throw new PostRepositoryError("Не удалось загрузить пост из закладок.", {
-        status: 500,
-      });
-    }
-
-    try {
-      await createPostPublishedNotifications({
+    await enqueueDomainEvent(unitOfWork, {
+      aggregateId: id,
+      eventType: "post.published",
+      payload: {
         actor: input.author,
         postId: id,
         title: prepared.title,
-      });
-    } catch (error) {
-      console.error("[posts-repository/notifications]", error);
-    }
-
-    return createdPost;
-  }
-
-  getDatabase()
-    .prepare(
-      `INSERT INTO posts (
-        id,
-        author_user_id,
-        intent,
-        topic,
-        title,
-        body_html,
-        excerpt,
-        media_type,
-        media_url,
-        media_alt,
-        created_at,
-        updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      id,
-      input.author.id,
-      prepared.intent,
-      prepared.topic,
-      prepared.title,
-      prepared.bodyHtml,
-      prepared.excerpt,
-      prepared.mediaType,
-      prepared.mediaUrl,
-      prepared.mediaAlt,
-      timestamp,
-      timestamp,
-    );
+      },
+    });
+  });
 
   const createdPost = await findPostById(id, input.author);
 
@@ -727,16 +919,6 @@ export async function createPost(input: PostMutationInput) {
     throw new PostRepositoryError("Не удалось загрузить пост из закладок.", {
       status: 500,
     });
-  }
-
-  try {
-    await createPostPublishedNotifications({
-      actor: input.author,
-      postId: id,
-      title: prepared.title,
-    });
-  } catch (error) {
-    console.error("[posts-repository/notifications]", error);
   }
 
   return createdPost;
@@ -750,23 +932,25 @@ function assertCanSetPostLike(actor: SessionUser) {
   }
 }
 
-async function syncPostLikesCount(postId: string) {
-  if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `UPDATE posts
-       SET likes_count = (
-         SELECT COUNT(*)
-         FROM post_reactions
-         WHERE post_id = $1
-           AND reaction_type = 'like'
-       )
-       WHERE id = $1`,
-      [postId],
-    );
-    return;
-  }
+async function syncPostLikesCountInPostgres(
+  transaction: AuthPostgresTransaction,
+  postId: string,
+) {
+  await transaction.query(
+    `UPDATE posts
+     SET likes_count = (
+       SELECT COUNT(*)
+       FROM post_reactions
+       WHERE post_id = $1
+         AND reaction_type = 'like'
+     )
+     WHERE id = $1`,
+    [postId],
+  );
+}
 
-  getDatabase()
+function syncPostLikesCountInSqlite(database: DatabaseSync, postId: string) {
+  database
     .prepare(
       `UPDATE posts
        SET likes_count = (
@@ -797,54 +981,61 @@ export async function setPostLike(params: {
 
   const timestamp = new Date().toISOString();
 
-  if (isPostgresAuthEnabled()) {
-    if (params.liked) {
-      await execAuthPostgres(
-        `INSERT INTO post_reactions (
-          id,
-          post_id,
-          user_id,
-          reaction_type,
-          created_at
-        )
-        VALUES ($1, $2, $3, 'like', $4)
-        ON CONFLICT (post_id, user_id, reaction_type) DO NOTHING`,
-        [randomUUID(), params.postId, params.actor.id, timestamp],
-      );
-    } else {
-      await execAuthPostgres(
-        `DELETE FROM post_reactions
-         WHERE post_id = $1
-           AND user_id = $2
-           AND reaction_type = 'like'`,
-        [params.postId, params.actor.id],
-      );
-    }
-  } else if (params.liked) {
-    getDatabase()
-      .prepare(
-        `INSERT OR IGNORE INTO post_reactions (
-          id,
-          post_id,
-          user_id,
-          reaction_type,
-          created_at
-        )
-        VALUES (?, ?, ?, 'like', ?)`,
-      )
-      .run(randomUUID(), params.postId, params.actor.id, timestamp);
-  } else {
-    getDatabase()
-      .prepare(
-        `DELETE FROM post_reactions
-         WHERE post_id = ?
-           AND user_id = ?
-           AND reaction_type = 'like'`,
-      )
-      .run(params.postId, params.actor.id);
-  }
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      if (params.liked) {
+        await unitOfWork.transaction.query(
+          `INSERT INTO post_reactions (
+            id,
+            post_id,
+            user_id,
+            reaction_type,
+            created_at
+          )
+          VALUES ($1, $2, $3, 'like', $4)
+          ON CONFLICT (post_id, user_id, reaction_type) DO NOTHING`,
+          [randomUUID(), params.postId, params.actor.id, timestamp],
+        );
+      } else {
+        await unitOfWork.transaction.query(
+          `DELETE FROM post_reactions
+           WHERE post_id = $1
+             AND user_id = $2
+             AND reaction_type = 'like'`,
+          [params.postId, params.actor.id],
+        );
+      }
 
-  await syncPostLikesCount(params.postId);
+      await syncPostLikesCountInPostgres(unitOfWork.transaction, params.postId);
+      return;
+    }
+
+    if (params.liked) {
+      unitOfWork.database
+        .prepare(
+          `INSERT OR IGNORE INTO post_reactions (
+              id,
+              post_id,
+              user_id,
+              reaction_type,
+              created_at
+            )
+            VALUES (?, ?, ?, 'like', ?)`,
+        )
+        .run(randomUUID(), params.postId, params.actor.id, timestamp);
+    } else {
+      unitOfWork.database
+        .prepare(
+          `DELETE FROM post_reactions
+             WHERE post_id = ?
+               AND user_id = ?
+               AND reaction_type = 'like'`,
+        )
+        .run(params.postId, params.actor.id);
+    }
+
+    syncPostLikesCountInSqlite(unitOfWork.database, params.postId);
+  });
 
   const updatedPost = await findPostById(params.postId, params.actor);
 
@@ -878,46 +1069,53 @@ export async function setPostProfileFavorite(params: {
 
   const timestamp = new Date().toISOString();
 
-  if (isPostgresAuthEnabled()) {
-    if (params.favorited) {
-      await execAuthPostgres(
-        `INSERT INTO user_profile_favorite_posts (
-          user_id,
-          post_id,
-          created_at
-        )
-        VALUES ($1, $2, $3)
-        ON CONFLICT (user_id, post_id) DO NOTHING`,
-        [params.actor.id, params.postId, timestamp],
-      );
-    } else {
-      await execAuthPostgres(
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      if (params.favorited) {
+        await unitOfWork.transaction.query(
+          `INSERT INTO user_profile_favorite_posts (
+            user_id,
+            post_id,
+            created_at
+          )
+          VALUES ($1, $2, $3)
+          ON CONFLICT (user_id, post_id) DO NOTHING`,
+          [params.actor.id, params.postId, timestamp],
+        );
+        return;
+      }
+
+      await unitOfWork.transaction.query(
         `DELETE FROM user_profile_favorite_posts
          WHERE user_id = $1
            AND post_id = $2`,
         [params.actor.id, params.postId],
       );
+      return;
     }
-  } else if (params.favorited) {
-    getDatabase()
-      .prepare(
-        `INSERT OR IGNORE INTO user_profile_favorite_posts (
-          user_id,
-          post_id,
-          created_at
+
+    if (params.favorited) {
+      unitOfWork.database
+        .prepare(
+          `INSERT OR IGNORE INTO user_profile_favorite_posts (
+            user_id,
+            post_id,
+            created_at
+          )
+          VALUES (?, ?, ?)`,
         )
-        VALUES (?, ?, ?)`,
-      )
-      .run(params.actor.id, params.postId, timestamp);
-  } else {
-    getDatabase()
+        .run(params.actor.id, params.postId, timestamp);
+      return;
+    }
+
+    unitOfWork.database
       .prepare(
         `DELETE FROM user_profile_favorite_posts
-         WHERE user_id = ?
-           AND post_id = ?`,
+           WHERE user_id = ?
+             AND post_id = ?`,
       )
       .run(params.actor.id, params.postId);
-  }
+  });
 
   const updatedPost = await findPostById(params.postId, params.actor);
 
@@ -951,46 +1149,53 @@ export async function setPostBookmark(params: {
 
   const timestamp = new Date().toISOString();
 
-  if (isPostgresAuthEnabled()) {
-    if (params.bookmarked) {
-      await execAuthPostgres(
-        `INSERT INTO user_bookmarked_posts (
-          user_id,
-          post_id,
-          created_at
-        )
-        VALUES ($1, $2, $3)
-        ON CONFLICT (user_id, post_id) DO NOTHING`,
-        [params.actor.id, params.postId, timestamp],
-      );
-    } else {
-      await execAuthPostgres(
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      if (params.bookmarked) {
+        await unitOfWork.transaction.query(
+          `INSERT INTO user_bookmarked_posts (
+            user_id,
+            post_id,
+            created_at
+          )
+          VALUES ($1, $2, $3)
+          ON CONFLICT (user_id, post_id) DO NOTHING`,
+          [params.actor.id, params.postId, timestamp],
+        );
+        return;
+      }
+
+      await unitOfWork.transaction.query(
         `DELETE FROM user_bookmarked_posts
          WHERE user_id = $1
            AND post_id = $2`,
         [params.actor.id, params.postId],
       );
+      return;
     }
-  } else if (params.bookmarked) {
-    getDatabase()
-      .prepare(
-        `INSERT OR IGNORE INTO user_bookmarked_posts (
-          user_id,
-          post_id,
-          created_at
+
+    if (params.bookmarked) {
+      unitOfWork.database
+        .prepare(
+          `INSERT OR IGNORE INTO user_bookmarked_posts (
+            user_id,
+            post_id,
+            created_at
+          )
+          VALUES (?, ?, ?)`,
         )
-        VALUES (?, ?, ?)`,
-      )
-      .run(params.actor.id, params.postId, timestamp);
-  } else {
-    getDatabase()
+        .run(params.actor.id, params.postId, timestamp);
+      return;
+    }
+
+    unitOfWork.database
       .prepare(
         `DELETE FROM user_bookmarked_posts
-         WHERE user_id = ?
-           AND post_id = ?`,
+           WHERE user_id = ?
+             AND post_id = ?`,
       )
       .run(params.actor.id, params.postId);
-  }
+  });
 
   const updatedPost = await findPostById(params.postId, params.actor);
 
@@ -1021,48 +1226,51 @@ export async function updatePost(postId: string, input: PostMutationInput) {
   const prepared = preparePostRecord(input);
   const updatedAt = new Date().toISOString();
 
-  if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `UPDATE posts
-      SET
-        intent = $1,
-        topic = $2,
-        title = $3,
-        body_html = $4,
-        excerpt = $5,
-        media_type = $6,
-        media_url = $7,
-        media_alt = $8,
-        updated_at = $9
-      WHERE id = $10`,
-      [
-        prepared.intent,
-        prepared.topic,
-        prepared.title,
-        prepared.bodyHtml,
-        prepared.excerpt,
-        prepared.mediaType,
-        prepared.mediaUrl,
-        prepared.mediaAlt,
-        updatedAt,
-        postId,
-      ],
-    );
-  } else {
-    getDatabase()
-      .prepare(
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      await unitOfWork.transaction.query(
         `UPDATE posts
         SET
-          intent = ?,
-          topic = ?,
-          title = ?,
-          body_html = ?,
-          excerpt = ?,
-          media_type = ?,
-          media_url = ?,
-          media_alt = ?,
-          updated_at = ?
-        WHERE id = ?`,
+          intent = $1,
+          topic = $2,
+          title = $3,
+          body_html = $4,
+          excerpt = $5,
+          media_type = $6,
+          media_url = $7,
+          media_alt = $8,
+          updated_at = $9
+        WHERE id = $10`,
+        [
+          prepared.intent,
+          prepared.topic,
+          prepared.title,
+          prepared.bodyHtml,
+          prepared.excerpt,
+          prepared.mediaType,
+          prepared.mediaUrl,
+          prepared.mediaAlt,
+          updatedAt,
+          postId,
+        ],
+      );
+      return;
+    }
+
+    unitOfWork.database
+      .prepare(
+        `UPDATE posts
+          SET
+            intent = ?,
+            topic = ?,
+            title = ?,
+            body_html = ?,
+            excerpt = ?,
+            media_type = ?,
+            media_url = ?,
+            media_alt = ?,
+            updated_at = ?
+          WHERE id = ?`,
       )
       .run(
         prepared.intent,
@@ -1076,7 +1284,7 @@ export async function updatePost(postId: string, input: PostMutationInput) {
         updatedAt,
         postId,
       );
-  }
+  });
 
   const updatedPost = await findPostById(postId, input.author);
 
@@ -1104,19 +1312,21 @@ export async function deletePost(postId: string, actor: SessionUser) {
     });
   }
 
-  if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `DELETE FROM posts
-       WHERE id = $1`,
-      [postId],
-    );
-    return;
-  }
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      await unitOfWork.transaction.query(
+        `DELETE FROM posts
+         WHERE id = $1`,
+        [postId],
+      );
+      return;
+    }
 
-  getDatabase()
-    .prepare(
-      `DELETE FROM posts
-       WHERE id = ?`,
-    )
-    .run(postId);
+    unitOfWork.database
+      .prepare(
+        `DELETE FROM posts
+         WHERE id = ?`,
+      )
+      .run(postId);
+  });
 }

@@ -3,7 +3,7 @@ import { AccountSectionShell } from "@/components/layout/account-section-shell";
 import { HistoryPageHeader } from "@/components/layout/history-page-header";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import { ProfilePostsSection } from "@/features/feed/components/profile-posts-section";
-import { listBookmarkedPostsByUserId } from "@/features/feed/lib/posts-repository";
+import { listViewerBookmarkedPosts } from "@/features/feed/lib/post-query-service";
 
 export default async function BookmarksPage() {
   const currentUser = await getCurrentUser();
@@ -12,7 +12,7 @@ export default async function BookmarksPage() {
     redirect("/");
   }
 
-  const posts = await listBookmarkedPostsByUserId(currentUser.id, currentUser);
+  const posts = await listViewerBookmarkedPosts(currentUser);
 
   return (
     <AccountSectionShell

@@ -1,12 +1,19 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
+import type { DatabaseSync } from "node:sqlite";
+import {
+  execAuthPostgres,
+  isPostgresAuthEnabled,
+  queryAuthPostgres,
+  type AuthPostgresTransaction,
+} from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
+import { enqueueDomainEvent } from "@/lib/domain-events/outbox";
+import { runStorageUnitOfWork } from "@/lib/unit-of-work";
 import { canDeleteOwnComment, canModerateContent } from "@/features/auth/lib/permissions";
 import { getUserHandle } from "@/features/auth/lib/profile";
 import type { SessionUser } from "@/features/auth/types";
-import { createCommentNotifications } from "@/features/notifications/lib/notifications-repository";
 import {
   buildCommentHtml,
   escapeHtml,
@@ -858,30 +865,41 @@ async function listPublishedCommentRows(postId: string, viewerUserId?: string | 
 
 async function syncPostCommentsCount(postId: string) {
   if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `UPDATE posts
-       SET comments_count = (
-         SELECT COUNT(*)
-         FROM post_comments
-         WHERE post_id = $1
-           AND status IN ('published', 'deleted')
-           AND (
-             parent_comment_id IS NULL
-             OR EXISTS (
-               SELECT 1
-               FROM post_comments AS root_comments
-               WHERE root_comments.id = post_comments.root_comment_id
-                 AND root_comments.status IN ('published', 'deleted')
-             )
-           )
-       )
-       WHERE id = $1`,
-      [postId],
-    );
+    await syncPostCommentsCountInPostgres({ query: queryAuthPostgres }, postId);
     return;
   }
 
-  getDatabase()
+  syncPostCommentsCountInSqlite(getDatabase(), postId);
+}
+
+async function syncPostCommentsCountInPostgres(
+  transaction: AuthPostgresTransaction,
+  postId: string,
+) {
+  await transaction.query(
+    `UPDATE posts
+     SET comments_count = (
+       SELECT COUNT(*)
+       FROM post_comments
+       WHERE post_id = $1
+         AND status IN ('published', 'deleted')
+         AND (
+           parent_comment_id IS NULL
+           OR EXISTS (
+             SELECT 1
+             FROM post_comments AS root_comments
+             WHERE root_comments.id = post_comments.root_comment_id
+               AND root_comments.status IN ('published', 'deleted')
+           )
+         )
+     )
+     WHERE id = $1`,
+    [postId],
+  );
+}
+
+function syncPostCommentsCountInSqlite(database: DatabaseSync, postId: string) {
+  database
     .prepare(
       `UPDATE posts
        SET comments_count = (
@@ -906,21 +924,35 @@ async function syncPostCommentsCount(postId: string) {
 
 async function syncRootCommentRepliesCount(rootCommentId: string) {
   if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `UPDATE post_comments
-       SET replies_count = (
-         SELECT COUNT(*)
-         FROM post_comments AS child_comments
-         WHERE child_comments.root_comment_id = $1
-           AND child_comments.status IN ('published', 'deleted')
-       )
-       WHERE id = $1`,
-      [rootCommentId],
-    );
+    await syncRootCommentRepliesCountInPostgres({ query: queryAuthPostgres }, rootCommentId);
     return;
   }
 
-  getDatabase()
+  syncRootCommentRepliesCountInSqlite(getDatabase(), rootCommentId);
+}
+
+async function syncRootCommentRepliesCountInPostgres(
+  transaction: AuthPostgresTransaction,
+  rootCommentId: string,
+) {
+  await transaction.query(
+    `UPDATE post_comments
+     SET replies_count = (
+       SELECT COUNT(*)
+       FROM post_comments AS child_comments
+       WHERE child_comments.root_comment_id = $1
+         AND child_comments.status IN ('published', 'deleted')
+     )
+     WHERE id = $1`,
+    [rootCommentId],
+  );
+}
+
+function syncRootCommentRepliesCountInSqlite(
+  database: DatabaseSync,
+  rootCommentId: string,
+) {
+  database
     .prepare(
       `UPDATE post_comments
        SET replies_count = (
@@ -934,23 +966,25 @@ async function syncRootCommentRepliesCount(rootCommentId: string) {
     .run(rootCommentId, rootCommentId);
 }
 
-async function syncCommentLikesCount(commentId: string) {
-  if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `UPDATE post_comments
-       SET likes_count = (
-         SELECT COUNT(*)
-         FROM post_comment_reactions
-         WHERE comment_id = $1
-           AND reaction_type = 'like'
-       )
-       WHERE id = $1`,
-      [commentId],
-    );
-    return;
-  }
+async function syncCommentLikesCountInPostgres(
+  transaction: AuthPostgresTransaction,
+  commentId: string,
+) {
+  await transaction.query(
+    `UPDATE post_comments
+     SET likes_count = (
+       SELECT COUNT(*)
+       FROM post_comment_reactions
+       WHERE comment_id = $1
+         AND reaction_type = 'like'
+     )
+     WHERE id = $1`,
+    [commentId],
+  );
+}
 
-  getDatabase()
+function syncCommentLikesCountInSqlite(database: DatabaseSync, commentId: string) {
+  database
     .prepare(
       `UPDATE post_comments
        SET likes_count = (
@@ -1106,38 +1140,9 @@ export async function createPostComment(input: CreatePostCommentInput) {
   const parentCommentId = effectiveParentComment?.id ?? null;
   const commentDepth = effectiveParentComment ? 1 : 0;
 
-  if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `INSERT INTO post_comments (
-        id,
-        post_id,
-        author_user_id,
-        parent_comment_id,
-        root_comment_id,
-        depth,
-        body_html,
-        body_text,
-        status,
-        created_at,
-        updated_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'published', $9, $10)`,
-      [
-        id,
-        input.postId,
-        input.actor.id,
-        parentCommentId,
-        rootCommentId,
-        commentDepth,
-        bodyHtml,
-        bodyText,
-        timestamp,
-        timestamp,
-      ],
-    );
-  } else {
-    getDatabase()
-      .prepare(
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      await unitOfWork.transaction.query(
         `INSERT INTO post_comments (
           id,
           post_id,
@@ -1151,38 +1156,87 @@ export async function createPostComment(input: CreatePostCommentInput) {
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`,
-      )
-      .run(
-        id,
-        input.postId,
-        input.actor.id,
-        parentCommentId,
-        rootCommentId,
-        commentDepth,
-        bodyHtml,
-        bodyText,
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'published', $9, $10)`,
+        [
+          id,
+          input.postId,
+          input.actor.id,
+          parentCommentId,
+          rootCommentId,
+          commentDepth,
+          bodyHtml,
+          bodyText,
+          timestamp,
+          timestamp,
+        ],
+      );
+
+      await syncPostCommentsCountInPostgres(unitOfWork.transaction, input.postId);
+
+      if (rootCommentId) {
+        await syncRootCommentRepliesCountInPostgres(unitOfWork.transaction, rootCommentId);
+      }
+
+      await enqueueDomainEvent(unitOfWork, {
+        aggregateId: id,
+        eventType: "comment.created",
+        payload: {
+          actor: input.actor,
+          commentId: id,
+          parentCommentId: input.parentId ?? null,
+          postId: input.postId,
+        },
+      });
+      return;
+    }
+
+    unitOfWork.database
+      .prepare(
+        `INSERT INTO post_comments (
+            id,
+            post_id,
+            author_user_id,
+            parent_comment_id,
+            root_comment_id,
+            depth,
+            body_html,
+            body_text,
+            status,
+            created_at,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)`,
+        )
+        .run(
+          id,
+          input.postId,
+          input.actor.id,
+          parentCommentId,
+          rootCommentId,
+          commentDepth,
+          bodyHtml,
+          bodyText,
         timestamp,
         timestamp,
       );
-  }
 
-  await syncPostCommentsCount(input.postId);
+    syncPostCommentsCountInSqlite(unitOfWork.database, input.postId);
 
-  if (rootCommentId) {
-    await syncRootCommentRepliesCount(rootCommentId);
-  }
+    if (rootCommentId) {
+      syncRootCommentRepliesCountInSqlite(unitOfWork.database, rootCommentId);
+    }
 
-  try {
-    await createCommentNotifications({
-      actor: input.actor,
-      commentId: id,
-      parentCommentId: input.parentId ?? null,
-      postId: input.postId,
+    await enqueueDomainEvent(unitOfWork, {
+      aggregateId: id,
+      eventType: "comment.created",
+      payload: {
+        actor: input.actor,
+        commentId: id,
+        parentCommentId: input.parentId ?? null,
+        postId: input.postId,
+      },
     });
-  } catch (error) {
-    console.error("[comments-repository/notifications]", error);
-  }
+  });
 
   return {
     commentId: id,
@@ -1207,54 +1261,61 @@ export async function setPostCommentVote(params: {
     throw new CommentsRepositoryError("Нельзя оценить скрытый комментарий.", 409);
   }
 
-  if (isPostgresAuthEnabled()) {
-    if (params.type === "up") {
-      await execAuthPostgres(
-        `INSERT INTO post_comment_reactions (
-          id,
-          comment_id,
-          user_id,
-          reaction_type,
-          created_at
-        )
-        VALUES ($1, $2, $3, 'like', $4)
-        ON CONFLICT (comment_id, user_id, reaction_type) DO NOTHING`,
-        [randomUUID(), params.commentId, params.actor.id, new Date().toISOString()],
-      );
-    } else {
-      await execAuthPostgres(
-        `DELETE FROM post_comment_reactions
-         WHERE comment_id = $1
-           AND user_id = $2
-           AND reaction_type = 'like'`,
-        [params.commentId, params.actor.id],
-      );
-    }
-  } else if (params.type === "up") {
-    getDatabase()
-      .prepare(
-        `INSERT OR IGNORE INTO post_comment_reactions (
-          id,
-          comment_id,
-          user_id,
-          reaction_type,
-          created_at
-        )
-        VALUES (?, ?, ?, 'like', ?)`,
-      )
-      .run(randomUUID(), params.commentId, params.actor.id, new Date().toISOString());
-  } else {
-    getDatabase()
-      .prepare(
-        `DELETE FROM post_comment_reactions
-         WHERE comment_id = ?
-           AND user_id = ?
-           AND reaction_type = 'like'`,
-      )
-      .run(params.commentId, params.actor.id);
-  }
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      if (params.type === "up") {
+        await unitOfWork.transaction.query(
+          `INSERT INTO post_comment_reactions (
+            id,
+            comment_id,
+            user_id,
+            reaction_type,
+            created_at
+          )
+          VALUES ($1, $2, $3, 'like', $4)
+          ON CONFLICT (comment_id, user_id, reaction_type) DO NOTHING`,
+          [randomUUID(), params.commentId, params.actor.id, new Date().toISOString()],
+        );
+      } else {
+        await unitOfWork.transaction.query(
+          `DELETE FROM post_comment_reactions
+           WHERE comment_id = $1
+             AND user_id = $2
+             AND reaction_type = 'like'`,
+          [params.commentId, params.actor.id],
+        );
+      }
 
-  await syncCommentLikesCount(params.commentId);
+      await syncCommentLikesCountInPostgres(unitOfWork.transaction, params.commentId);
+      return;
+    }
+
+    if (params.type === "up") {
+      unitOfWork.database
+        .prepare(
+          `INSERT OR IGNORE INTO post_comment_reactions (
+              id,
+              comment_id,
+              user_id,
+              reaction_type,
+              created_at
+            )
+            VALUES (?, ?, ?, 'like', ?)`,
+        )
+        .run(randomUUID(), params.commentId, params.actor.id, new Date().toISOString());
+    } else {
+      unitOfWork.database
+        .prepare(
+          `DELETE FROM post_comment_reactions
+             WHERE comment_id = ?
+               AND user_id = ?
+               AND reaction_type = 'like'`,
+        )
+        .run(params.commentId, params.actor.id);
+    }
+
+    syncCommentLikesCountInSqlite(unitOfWork.database, params.commentId);
+  });
 }
 
 export async function reportPostComment(params: {
@@ -1401,37 +1462,47 @@ export async function deletePostComment(params: {
   }
 
   const timestamp = new Date().toISOString();
+  const rootCommentId = comment.root_comment_id ?? comment.parent_comment_id ?? null;
 
-  if (isPostgresAuthEnabled()) {
-    await execAuthPostgres(
-      `UPDATE post_comments
-       SET status = 'deleted',
-           body_html = '',
-           body_text = '',
-           updated_at = $1,
-           deleted_at = $2
-       WHERE id = $3`,
-      [timestamp, timestamp, params.commentId],
-    );
-  } else {
-    getDatabase()
-      .prepare(
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      await unitOfWork.transaction.query(
         `UPDATE post_comments
          SET status = 'deleted',
              body_html = '',
              body_text = '',
-             updated_at = ?,
-             deleted_at = ?
-         WHERE id = ?`,
-      )
-      .run(timestamp, timestamp, params.commentId);
-  }
+             updated_at = $1,
+             deleted_at = $2
+         WHERE id = $3`,
+        [timestamp, timestamp, params.commentId],
+      );
 
-  await syncPostCommentsCount(comment.post_id);
+      await syncPostCommentsCountInPostgres(unitOfWork.transaction, comment.post_id);
 
-  if (comment.root_comment_id ?? comment.parent_comment_id) {
-    await syncRootCommentRepliesCount(comment.root_comment_id ?? comment.parent_comment_id ?? "");
-  }
+      if (rootCommentId) {
+        await syncRootCommentRepliesCountInPostgres(unitOfWork.transaction, rootCommentId);
+      }
+      return;
+    }
+
+    unitOfWork.database
+      .prepare(
+        `UPDATE post_comments
+           SET status = 'deleted',
+               body_html = '',
+               body_text = '',
+               updated_at = ?,
+               deleted_at = ?
+           WHERE id = ?`,
+        )
+        .run(timestamp, timestamp, params.commentId);
+
+    syncPostCommentsCountInSqlite(unitOfWork.database, comment.post_id);
+
+    if (rootCommentId) {
+      syncRootCommentRepliesCountInSqlite(unitOfWork.database, rootCommentId);
+    }
+  });
 }
 
 export async function moderatePostComment(input: ModeratePostCommentInput) {

@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/lib/auth-postgres";
 import { getDatabase } from "@/lib/db";
-import { getUserHandle } from "@/features/auth/lib/profile";
+import { buildPublicProfilePathFromHandle, getUserHandle } from "@/features/auth/lib/profile";
 import type {
   NotificationKind,
   NotificationPreferences,
@@ -16,7 +16,7 @@ type BooleanLike = boolean | number | null;
 type NotificationPreferencesRow = {
   post_replies_enabled: BooleanLike;
   direct_replies_enabled: BooleanLike;
-  bookmarked_post_replies_enabled: BooleanLike;
+  followed_post_replies_enabled: BooleanLike;
   followed_author_posts_enabled: BooleanLike;
   system_messages_enabled: BooleanLike;
 };
@@ -73,7 +73,7 @@ function mapPreferences(row: NotificationPreferencesRow | null): NotificationPre
   return {
     postReplies: readBoolean(row.post_replies_enabled),
     directReplies: readBoolean(row.direct_replies_enabled),
-    followedPostReplies: readBoolean(row.bookmarked_post_replies_enabled),
+    followedPostReplies: readBoolean(row.followed_post_replies_enabled),
     followedAuthorPosts: readBoolean(row.followed_author_posts_enabled),
     systemMessages: readBoolean(row.system_messages_enabled),
   };
@@ -134,7 +134,7 @@ export async function getNotificationPreferences(userId: string) {
       `SELECT
         post_replies_enabled,
         direct_replies_enabled,
-        bookmarked_post_replies_enabled,
+        followed_post_replies_enabled,
         followed_author_posts_enabled,
         system_messages_enabled
       FROM user_notification_preferences
@@ -151,7 +151,7 @@ export async function getNotificationPreferences(userId: string) {
       `SELECT
         post_replies_enabled,
         direct_replies_enabled,
-        bookmarked_post_replies_enabled,
+        followed_post_replies_enabled,
         followed_author_posts_enabled,
         system_messages_enabled
       FROM user_notification_preferences
@@ -180,7 +180,7 @@ export async function updateNotificationPreferences(
         user_id,
         post_replies_enabled,
         direct_replies_enabled,
-        bookmarked_post_replies_enabled,
+        followed_post_replies_enabled,
         followed_author_posts_enabled,
         system_messages_enabled,
         updated_at
@@ -189,7 +189,7 @@ export async function updateNotificationPreferences(
       ON CONFLICT (user_id) DO UPDATE SET
         post_replies_enabled = EXCLUDED.post_replies_enabled,
         direct_replies_enabled = EXCLUDED.direct_replies_enabled,
-        bookmarked_post_replies_enabled = EXCLUDED.bookmarked_post_replies_enabled,
+        followed_post_replies_enabled = EXCLUDED.followed_post_replies_enabled,
         followed_author_posts_enabled = EXCLUDED.followed_author_posts_enabled,
         system_messages_enabled = EXCLUDED.system_messages_enabled,
         updated_at = EXCLUDED.updated_at`,
@@ -213,7 +213,7 @@ export async function updateNotificationPreferences(
         user_id,
         post_replies_enabled,
         direct_replies_enabled,
-        bookmarked_post_replies_enabled,
+        followed_post_replies_enabled,
         followed_author_posts_enabled,
         system_messages_enabled,
         updated_at
@@ -222,7 +222,7 @@ export async function updateNotificationPreferences(
       ON CONFLICT (user_id) DO UPDATE SET
         post_replies_enabled = excluded.post_replies_enabled,
         direct_replies_enabled = excluded.direct_replies_enabled,
-        bookmarked_post_replies_enabled = excluded.bookmarked_post_replies_enabled,
+        followed_post_replies_enabled = excluded.followed_post_replies_enabled,
         followed_author_posts_enabled = excluded.followed_author_posts_enabled,
         system_messages_enabled = excluded.system_messages_enabled,
         updated_at = excluded.updated_at`,
@@ -438,6 +438,29 @@ export async function createPostPublishedNotifications(params: {
   );
 }
 
+export async function createAuthorFollowedNotification(params: {
+  actor: SessionUser;
+  followedUserId: string;
+}) {
+  const preferences = await getNotificationPreferences(params.followedUserId);
+
+  if (!preferences.systemMessages) {
+    return;
+  }
+
+  const actorHandle = getUserHandle(params.actor);
+
+  await insertNotification({
+    actorUserId: params.actor.id,
+    body: null,
+    dedupeKey: `author-followed:${params.actor.id}`,
+    href: buildPublicProfilePathFromHandle(actorHandle) ?? "/profile",
+    recipientUserId: params.followedUserId,
+    title: `${actorHandle} подписался на вас`,
+    type: "system",
+  });
+}
+
 export async function createCommentNotifications(params: {
   actor: SessionUser;
   commentId: string;
@@ -512,7 +535,7 @@ export async function createCommentNotifications(params: {
   }
 
   const bookmarkedRecipients = await listRecipientsForPreference(
-    "bookmarked_post_replies_enabled",
+    "followed_post_replies_enabled",
     {
       pg: `SELECT bookmarks.user_id
         FROM user_followed_posts AS followed_posts
@@ -665,114 +688,4 @@ export async function markAllNotificationsRead(userId: string) {
          AND read_at IS NULL`,
     )
     .run(readAt, userId);
-}
-
-export async function setAuthorFollow(params: {
-  actor: SessionUser;
-  followedUserId: string;
-  following: boolean;
-}) {
-  if (params.actor.id === params.followedUserId) {
-    throw new Error("Нельзя подписаться на свой профиль.");
-  }
-
-  const timestamp = new Date().toISOString();
-
-  if (isPostgresAuthEnabled()) {
-    if (params.following) {
-      await execAuthPostgres(
-        `INSERT INTO user_followed_authors (
-          follower_user_id,
-          followed_user_id,
-          created_at
-        )
-        VALUES ($1, $2, $3)
-        ON CONFLICT (follower_user_id, followed_user_id) DO NOTHING`,
-        [params.actor.id, params.followedUserId, timestamp],
-      );
-    } else {
-      await execAuthPostgres(
-        `DELETE FROM user_followed_authors
-         WHERE follower_user_id = $1
-           AND followed_user_id = $2`,
-        [params.actor.id, params.followedUserId],
-      );
-    }
-    return;
-  }
-
-  if (params.following) {
-    getDatabase()
-      .prepare(
-        `INSERT OR IGNORE INTO user_followed_authors (
-          follower_user_id,
-          followed_user_id,
-          created_at
-        )
-        VALUES (?, ?, ?)`,
-      )
-      .run(params.actor.id, params.followedUserId, timestamp);
-    return;
-  }
-
-  getDatabase()
-    .prepare(
-      `DELETE FROM user_followed_authors
-       WHERE follower_user_id = ?
-         AND followed_user_id = ?`,
-    )
-    .run(params.actor.id, params.followedUserId);
-}
-
-export async function setPostFollow(params: {
-  actor: SessionUser;
-  following: boolean;
-  postId: string;
-}) {
-  const timestamp = new Date().toISOString();
-
-  if (isPostgresAuthEnabled()) {
-    if (params.following) {
-      await execAuthPostgres(
-        `INSERT INTO user_followed_posts (
-          user_id,
-          post_id,
-          created_at
-        )
-        VALUES ($1, $2, $3)
-        ON CONFLICT (user_id, post_id) DO NOTHING`,
-        [params.actor.id, params.postId, timestamp],
-      );
-    } else {
-      await execAuthPostgres(
-        `DELETE FROM user_followed_posts
-         WHERE user_id = $1
-           AND post_id = $2`,
-        [params.actor.id, params.postId],
-      );
-    }
-    return;
-  }
-
-  if (params.following) {
-    getDatabase()
-      .prepare(
-        `INSERT OR IGNORE INTO user_followed_posts (
-          user_id,
-          post_id,
-          created_at
-        )
-        VALUES (?, ?, ?)`,
-      )
-      .run(params.actor.id, params.postId, timestamp);
-    return;
-  }
-
-  getDatabase()
-    .prepare(
-      `DELETE FROM user_followed_posts
-       WHERE user_id = ?
-         AND post_id = ?`,
-    )
-    .run(params.actor.id, params.postId);
 }

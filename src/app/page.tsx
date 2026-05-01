@@ -5,7 +5,7 @@ import { isAdminConsoleRequest } from "@/features/admin/lib/admin-console-reques
 import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
 import { FeedSection } from "@/features/feed/components/feed-section";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { listPosts } from "@/features/feed/lib/posts-repository";
+import { listFeedPosts } from "@/features/feed/lib/post-query-service";
 
 // The home route carries environment-specific branding, so we disable
 // prerender caching to avoid stale staging visuals after a fresh deploy.
@@ -19,7 +19,7 @@ export default async function Home() {
     redirect(canAccessAdminConsole(currentUser) ? "/admin/users" : "/sign-in");
   }
 
-  const posts = await listPosts(currentUser);
+  const postsPage = await listFeedPosts(currentUser);
 
   return (
     <div className="surface-primary text-label-primary min-h-[100svh] min-[481px]:min-h-dvh">
@@ -30,7 +30,10 @@ export default async function Home() {
           centerClassName="w-full max-w-[672px]"
           fitCenterToContent
         >
-          <FeedSection initialPosts={posts} />
+          <FeedSection
+            initialPageInfo={postsPage.pageInfo}
+            initialPosts={postsPage.posts}
+          />
         </DesktopAppShell>
       </div>
     </div>

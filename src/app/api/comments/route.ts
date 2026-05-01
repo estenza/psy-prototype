@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import {
-  CommentsServiceError,
   createComment,
   getCommentsSection,
 } from "@/features/comments/lib/comments-service";
+import { buildCommentsErrorResponse } from "@/features/comments/lib/comments-http";
 import type {
   CommentsResponsePayload,
   CommentsSortValue,
@@ -13,48 +13,6 @@ import type {
 } from "@/features/comments/types";
 
 export const runtime = "nodejs";
-
-function buildCommentsErrorResponse(error: unknown, fallbackMessage: string) {
-  if (error instanceof CommentsServiceError) {
-    return NextResponse.json(
-      {
-        error: error.message,
-      },
-      {
-        status: error.status,
-      },
-    );
-  }
-
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof error.message === "string" &&
-    "status" in error &&
-    typeof error.status === "number"
-  ) {
-    return NextResponse.json(
-      {
-        error: error.message,
-      },
-      {
-        status: error.status,
-      },
-    );
-  }
-
-  console.error("[api/comments]", error);
-
-  return NextResponse.json(
-    {
-      error: fallbackMessage,
-    },
-    {
-      status: 500,
-    },
-  );
-}
 
 export async function GET(request: NextRequest) {
   const pageId = request.nextUrl.searchParams.get("pageId")?.trim();

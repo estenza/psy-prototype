@@ -155,6 +155,7 @@ export function NotificationsDropdown({
                     avatarUrl={notification.actorAvatarUrl}
                     name={notification.actorName ?? "внутри"}
                     size="sm"
+                    useGeneratedFallback={Boolean(notification.actorName)}
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14px] font-semibold leading-5 text-[var(--label-primary)]">

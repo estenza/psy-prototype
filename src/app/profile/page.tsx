@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { ProfilePageContent } from "@/features/auth/components/profile-page-content";
-import { listPublishedCommentsByAuthorUserId } from "@/features/comments/lib/comments-repository";
+import { listAuthorPublishedComments } from "@/features/comments/lib/comments-service";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import {
-  listPostsByAuthorUserId,
-  listProfileFavoritePostsByUserId,
-} from "@/features/feed/lib/posts-repository";
+  listAuthorProfileFavoritePosts,
+  listAuthorProfilePosts,
+} from "@/features/feed/lib/post-query-service";
 import { buildOwnProfilePath } from "@/features/auth/lib/profile";
+import { getAuthorFollowSummary } from "@/features/social/lib/follows-repository";
 
 export default async function ProfilePage() {
   const currentUser = await getCurrentUser();
@@ -21,16 +22,21 @@ export default async function ProfilePage() {
     redirect(ownProfilePath);
   }
 
-  const [posts, favoritePosts, replies] = await Promise.all([
-    listPostsByAuthorUserId(currentUser.id, currentUser),
-    listProfileFavoritePostsByUserId(currentUser.id, currentUser),
-    listPublishedCommentsByAuthorUserId(currentUser.id, currentUser.id),
+  const [posts, favoritePosts, replies, followSummary] = await Promise.all([
+    listAuthorProfilePosts(currentUser.id, currentUser),
+    listAuthorProfileFavoritePosts(currentUser.id, currentUser),
+    listAuthorPublishedComments({
+      authorUserId: currentUser.id,
+      viewerUserId: currentUser.id,
+    }),
+    getAuthorFollowSummary(currentUser.id, currentUser.id),
   ]);
 
   return (
     <ProfilePageContent
       posts={posts}
       favoritePosts={favoritePosts}
+      followSummary={followSummary}
       replies={replies}
       user={currentUser}
       viewerIsOwner

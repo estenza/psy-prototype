@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { setAuthorFollow } from "@/features/notifications/lib/notifications-repository";
+import { buildFollowErrorResponse } from "@/features/social/lib/follows-http";
+import { toggleAuthorFollow } from "@/features/social/lib/follow-service";
 
 export const runtime = "nodejs";
 
@@ -30,21 +31,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await setAuthorFollow({
+    const follow = await toggleAuthorFollow({
       actor: currentUser,
       followedUserId,
       following: payload?.following !== false,
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ follow, ok: true });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Не удалось обновить подписку.",
-      },
-      {
-        status: 500,
-      },
-    );
+    return buildFollowErrorResponse(error);
   }
 }

@@ -4,7 +4,10 @@
 
 :root {
   --app-header-height: calc(var(--spacing) * 16);
-  --app-mobile-tabbar-height: calc(64px + env(safe-area-inset-bottom));
+  --app-mobile-tabbar-control-height: 50px;
+  --app-mobile-tabbar-height: calc(
+    var(--app-mobile-tabbar-control-height) + 16px + env(safe-area-inset-bottom)
+  );
   --field-focus-ring-width: 3px;
   --space-1: calc(var(--spacing) * 1);
   --space-2: calc(var(--spacing) * 2);
@@ -105,8 +108,16 @@
 html,
 body {
   height: 100%;
-  padding-bottom: var(--app-mobile-tabbar-height);
   overscroll-behavior-y: auto;
+}
+
+@media (max-width: 480px) {
+  html,
+  body {
+    height: 100%;
+    overflow-y: scroll;
+    overscroll-behavior-y: none;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -136,6 +147,185 @@ body {
   color: var(--foreground);
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   letter-spacing: 0;
+}
+
+@media (max-width: 480px) {
+  body {
+    min-height: 100%;
+  }
+
+  .app-responsive-shell,
+  .app-shell-main {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .app-shell-main-rail,
+  .app-shell-main-rail-inner,
+  .app-shell-main-columns {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .app-shell-main:has(.app-mobile-tabbar-bar) {
+    padding-bottom: var(--app-mobile-tabbar-height);
+  }
+
+  .app-mobile-header {
+    position: relative;
+    z-index: 90;
+    isolation: isolate;
+  }
+
+  .app-feed-toolbar {
+    position: relative;
+    z-index: 60;
+    isolation: isolate;
+  }
+}
+
+.app-mobile-tabbar-bar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 8px max(16px, env(safe-area-inset-right))
+    calc(8px + env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to top,
+      var(--background-primary) 0%,
+      color-mix(in srgb, var(--background-primary) 92%, transparent) 62%,
+      transparent 100%
+    );
+}
+
+.app-mobile-tabbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  height: var(--app-mobile-tabbar-control-height);
+  overflow: hidden;
+  border-radius: 999px;
+  color: var(--label-tertiary);
+  background-color: color-mix(in srgb, var(--background-elevated) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--separator) 72%, transparent);
+  box-shadow:
+    0 -8px 24px rgba(17, 24, 39, 0.08),
+    inset 1px 1px rgba(255, 255, 255, 0.16),
+    inset -1px -1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(17px);
+  -webkit-backdrop-filter: blur(17px);
+  pointer-events: auto;
+  will-change: transform;
+}
+
+.app-mobile-tabbar,
+.app-mobile-tabbar * {
+  touch-action: pan-y;
+}
+
+.app-mobile-tabbar-item--active svg {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, currentColor 70%, transparent));
+}
+
+.settings-primary-column {
+  max-width: var(--app-shell-primary-column-width);
+}
+
+@media (min-width: 721px) {
+  .settings-primary-column {
+    max-width: var(--app-shell-main-width);
+  }
+}
+
+@media (min-width: 1140px) {
+  .settings-primary-column {
+    max-width: var(--app-shell-main-width);
+  }
+}
+
+.app-mobile-pull-refresh {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--app-header-height);
+  z-index: 70;
+  display: flex;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, -26px, 0);
+  transition:
+    opacity 160ms ease,
+    transform 180ms ease;
+}
+
+.app-mobile-pull-refresh--visible {
+  opacity: 1;
+  transform: translate3d(0, var(--app-mobile-pull-offset, 0), 0);
+}
+
+.app-mobile-pull-refresh__arrow {
+  position: relative;
+  display: flex;
+  height: 32px;
+  width: 32px;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--label-tertiary) 62%, transparent);
+  opacity: 0.86;
+  transform: rotate(0deg);
+  transition:
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 180ms ease;
+}
+
+.app-mobile-pull-refresh__arrow::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-right: 4px solid currentColor;
+  border-bottom: 4px solid currentColor;
+  transform: translateY(-3px) rotate(45deg);
+}
+
+.app-mobile-pull-refresh__arrow::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  width: 4px;
+  height: 24px;
+  border-radius: 999px;
+  background-color: currentColor;
+}
+
+.app-mobile-pull-refresh--ready .app-mobile-pull-refresh__arrow {
+  color: color-mix(in srgb, var(--label-tertiary) 76%, transparent);
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+.app-mobile-pull-refresh__spinner {
+  display: block;
+  height: 32px;
+  width: 32px;
+  border-radius: 999px;
+  border: 4px solid color-mix(in srgb, var(--accent-primary) 20%, transparent);
+  border-top-color: var(--accent-primary);
+  animation: app-mobile-pull-refresh-spin 760ms linear infinite;
+}
+
+@keyframes app-mobile-pull-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .app-brand {
@@ -819,20 +1009,28 @@ textarea:placeholder-shown::selection {
 
   .interactive-accent-bookmark {
     --toggle-button-fg-selected: var(--accent-primary);
-    background-color: var(--fill-bookmark);
+    background-color: color-mix(in oklab, var(--foreground) 5%, transparent);
     color: var(--accent-primary);
   }
 
   .toggle-button.interactive-accent-bookmark[data-selected="true"] {
+    background-color: color-mix(in oklab, var(--foreground) 5%, transparent) !important;
     color: var(--accent-primary) !important;
   }
 
-  .interactive-accent-bookmark:hover {
-    background-color: var(--fill-bookmark-hover);
+  .interactive-accent-bookmark:hover,
+  .interactive-accent-bookmark[data-hovered="true"],
+  .toggle-button.interactive-accent-bookmark[data-selected="true"]:hover,
+  .toggle-button.interactive-accent-bookmark[data-selected="true"][data-hovered="true"] {
+    background-color: var(--color-accent-soft) !important;
   }
 
-  .interactive-accent-bookmark:active {
-    background-color: var(--fill-bookmark-hover);
+  .interactive-accent-bookmark:active,
+  .interactive-accent-bookmark[data-pressed="true"],
+  .toggle-button.interactive-accent-bookmark[data-selected="true"]:active,
+  .toggle-button.interactive-accent-bookmark[data-selected="true"][data-pressed="true"] {
+    background-color: var(--color-accent-soft-hover) !important;
+    color: var(--accent-primary) !important;
   }
 
   .feedback-critical-surface {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { ThemePreferenceCard } from "@/components/theme/theme-preference-card";
 import { IgnoreAuthorIcon } from "@/components/ui/icons";
 import { AuthField } from "@/features/auth/components/auth-field";
@@ -36,8 +36,31 @@ type SettingsPageContentProps = {
 
 type SettingsMenuContentProps = {
   activePrivacyAndSafetySubsectionId?: PrivacyAndSafetySubsectionId;
-  activeSectionId: SettingsSectionId;
+  activeSectionId?: SettingsSectionId | null;
 };
+
+export function SettingsDesktopRedirect() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 721px)");
+
+    function syncSettingsIndexRoute() {
+      if (mediaQuery.matches) {
+        router.replace(DEFAULT_SETTINGS_SECTION.href);
+      }
+    }
+
+    syncSettingsIndexRoute();
+    mediaQuery.addEventListener("change", syncSettingsIndexRoute);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncSettingsIndexRoute);
+    };
+  }, [router]);
+
+  return null;
+}
 
 function ChevronRightIcon() {
   return (
@@ -179,16 +202,29 @@ export function SettingsMenuContent({
   activePrivacyAndSafetySubsectionId,
   activeSectionId,
 }: SettingsMenuContentProps) {
+  const router = useRouter();
   const activeNavigationSectionId = activePrivacyAndSafetySubsectionId
     ? "privacy_and_safety"
     : activeSectionId;
 
+  function handleSettingsMenuBack() {
+    startTransition(() => {
+      router.back();
+    });
+  }
+
   return (
-    <div className="w-full px-4 py-6 min-[481px]:py-8">
+    <div className="w-full">
       <header className="pb-5 pl-1">
-        <h1 className="text-[22px] font-semibold leading-7 text-[var(--label-primary)]">
-          Настройки
-        </h1>
+        <div className="flex items-center gap-3">
+          <BackNavigationButton
+            className="min-[721px]:hidden"
+            onClick={handleSettingsMenuBack}
+          />
+          <h1 className="min-w-0 text-[22px] font-semibold leading-7 text-[var(--label-primary)]">
+            Настройки
+          </h1>
+        </div>
       </header>
 
       <div className="surface-elevated overflow-hidden rounded-[28px]">
@@ -247,14 +283,21 @@ export function SettingsPageContent({
     });
   }
 
+  function handleSettingsBack() {
+    startTransition(() => {
+      router.push("/settings");
+    });
+  }
+
   return (
     <section className="w-full min-w-0 py-6 min-[481px]:py-8">
-      <div className="mb-6 min-[1140px]:hidden">
-        <SettingsMenuContent
-          activePrivacyAndSafetySubsectionId={activePrivacyAndSafetySubsectionId}
-          activeSectionId={activeSectionId}
-        />
-      </div>
+      <div className="min-w-0 min-[721px]:grid min-[721px]:grid-cols-[minmax(220px,328fr)_minmax(0,640fr)] min-[721px]:gap-4 min-[1140px]:grid-cols-[328px_640px]">
+        <div className="hidden min-[721px]:mb-0 min-[721px]:block">
+          <SettingsMenuContent
+            activePrivacyAndSafetySubsectionId={activePrivacyAndSafetySubsectionId}
+            activeSectionId={activeSectionId}
+          />
+        </div>
 
       <div className="min-w-0">
         <header className="pb-5 pl-1">
@@ -266,9 +309,15 @@ export function SettingsPageContent({
               </h2>
             </div>
           ) : (
-            <h2 className="text-[22px] font-semibold leading-7 text-[var(--label-primary)]">
-              {activeSection.title}
-            </h2>
+            <div className="flex items-center gap-3">
+              <BackNavigationButton
+                className="min-[721px]:hidden"
+                onClick={handleSettingsBack}
+              />
+              <h2 className="min-w-0 text-[22px] font-semibold leading-7 text-[var(--label-primary)]">
+                {activeSection.title}
+              </h2>
+            </div>
           )}
         </header>
 
@@ -341,6 +390,7 @@ export function SettingsPageContent({
             <ThemePreferenceCard />
           ) : null}
         </div>
+      </div>
       </div>
     </section>
   );

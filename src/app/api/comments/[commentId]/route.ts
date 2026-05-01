@@ -1,37 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import {
-  CommentsServiceError,
   editComment,
   removeComment,
 } from "@/features/comments/lib/comments-service";
+import { buildCommentsErrorResponse } from "@/features/comments/lib/comments-http";
 import type { UpdateCommentPayload } from "@/features/comments/types";
 
 export const runtime = "nodejs";
-
-function buildCommentMutationErrorResponse(error: unknown, fallbackMessage: string) {
-  if (error instanceof CommentsServiceError) {
-    return NextResponse.json(
-      {
-        error: error.message,
-      },
-      {
-        status: error.status,
-      },
-    );
-  }
-
-  console.error("[api/comments/[commentId]]", error);
-
-  return NextResponse.json(
-    {
-      error: fallbackMessage,
-    },
-    {
-      status: 500,
-    },
-  );
-}
 
 export async function PATCH(
   request: NextRequest,
@@ -51,7 +27,11 @@ export async function PATCH(
       ok: true,
     });
   } catch (error) {
-    return buildCommentMutationErrorResponse(error, "Не удалось обновить комментарий.");
+    return buildCommentsErrorResponse(
+      error,
+      "Не удалось обновить комментарий.",
+      "api/comments/[commentId]",
+    );
   }
 }
 
@@ -71,6 +51,10 @@ export async function DELETE(
       ok: true,
     });
   } catch (error) {
-    return buildCommentMutationErrorResponse(error, "Не удалось удалить комментарий.");
+    return buildCommentsErrorResponse(
+      error,
+      "Не удалось удалить комментарий.",
+      "api/comments/[commentId]",
+    );
   }
 }

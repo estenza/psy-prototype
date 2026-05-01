@@ -17,6 +17,7 @@ import {
   requestIgnoreAuthor,
   showIgnoredAuthorToast,
 } from "@/features/feed/lib/ignored-author-client";
+import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 
 type ProfileMoreMenuProps = {
   profilePath: string;
@@ -50,16 +51,20 @@ export function ProfileMoreMenu({
         await navigator.share({ url: profileUrl });
         return;
       }
-
-      await navigator.clipboard.writeText(profileUrl);
-      toast.success("Ссылка на профиль скопирована.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
-
-      toast.danger("Не удалось поделиться ссылкой.");
     }
+
+    const copied = await copyTextToClipboard(profileUrl);
+
+    if (copied) {
+      toast.success("Ссылка на профиль скопирована.");
+      return;
+    }
+
+    toast.danger("Не удалось поделиться ссылкой.");
   }, [profilePath]);
 
   const items = useMemo<ProfileMenuItem[]>(() => {

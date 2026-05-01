@@ -58,6 +58,7 @@ export function AuthStatus({
   return (
     <UserAvatarAction
       avatarUrl={user.avatarUrl}
+      avatarSeed={user.nickname || user.id}
       ariaLabel="Открыть профиль"
       href={buildOwnProfilePath(user) ?? "/profile"}
       interactive

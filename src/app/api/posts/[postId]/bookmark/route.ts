@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
+import { togglePostBookmark } from "@/features/feed/lib/post-actions-service";
 import { buildPostErrorResponse } from "@/features/feed/lib/posts-http";
-import { setPostBookmark } from "@/features/feed/lib/posts-repository";
 import type { PostMutationResponse } from "@/features/feed/types";
 
 export const runtime = "nodejs";
@@ -36,7 +36,7 @@ export async function POST(
 
     const { postId } = await params;
     const payload = (await request.json()) as PostBookmarkPayload;
-    const post = await setPostBookmark({
+    const post = await togglePostBookmark({
       actor: currentUser,
       bookmarked: Boolean(payload.bookmarked),
       postId,

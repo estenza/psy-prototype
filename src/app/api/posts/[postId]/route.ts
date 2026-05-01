@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { buildPostErrorResponse } from "@/features/feed/lib/posts-http";
 import {
-  deletePost,
-  findPostById,
-  updatePost,
-} from "@/features/feed/lib/posts-repository";
+  removePost,
+  revisePost,
+} from "@/features/feed/lib/post-actions-service";
+import { buildPostErrorResponse } from "@/features/feed/lib/posts-http";
+import { getPostForViewer } from "@/features/feed/lib/post-query-service";
 import type {
   PostMutationPayload,
   PostMutationResponse,
@@ -26,7 +26,7 @@ export async function GET(
   try {
     const { postId } = await params;
     const currentUser = await getCurrentUser();
-    const post = await findPostById(postId, currentUser);
+    const post = await getPostForViewer(postId, currentUser);
 
     if (!post) {
       return NextResponse.json(
@@ -68,13 +68,7 @@ export async function PATCH(
 
     const { postId } = await params;
     const payload = (await request.json()) as PostMutationPayload;
-    const post = await updatePost(postId, {
-      author: currentUser,
-      content: payload.content,
-      intent: payload.intent,
-      title: payload.title,
-      topic: payload.topic,
-    });
+    const post = await revisePost(currentUser, postId, payload);
 
     return NextResponse.json<PostMutationResponse>({
       ok: true,
@@ -104,7 +98,7 @@ export async function DELETE(
     }
 
     const { postId } = await params;
-    await deletePost(postId, currentUser);
+    await removePost(currentUser, postId);
 
     return NextResponse.json({
       ok: true,

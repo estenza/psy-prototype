@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { setPostFollow } from "@/features/notifications/lib/notifications-repository";
+import { buildFollowErrorResponse } from "@/features/social/lib/follows-http";
+import { togglePostFollow } from "@/features/social/lib/follow-service";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,7 @@ export async function POST(
     const { postId } = await params;
     const payload = (await request.json().catch(() => null)) as PostFollowPayload | null;
 
-    await setPostFollow({
+    await togglePostFollow({
       actor: currentUser,
       following: payload?.following !== false,
       postId,
@@ -39,13 +40,6 @@ export async function POST(
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Не удалось обновить уведомления по посту.",
-      },
-      {
-        status: 500,
-      },
-    );
+    return buildFollowErrorResponse(error);
   }
 }

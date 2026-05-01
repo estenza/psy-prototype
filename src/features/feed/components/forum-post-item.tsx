@@ -31,6 +31,7 @@ export function ForumPostItem({
           <span className="inline-flex items-center gap-2">
             <UserAvatar
               avatarUrl={post.author.avatarUrl ?? null}
+              avatarSeed={post.author.handle}
               name={post.author.name}
               size="comment-sm"
             />

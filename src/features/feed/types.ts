@@ -46,6 +46,11 @@ export type FeedSortMode = "Новые" | "Горячее" | "Без ответ�
 
 export type FeedTopicFilter = PostTopic | "all";
 
+export type FeedPageInfo = {
+  endCursor: string | null;
+  hasNextPage: boolean;
+};
+
 export type ApiPostRecord = {
   id: string;
   created_at_iso: string;
@@ -103,5 +108,6 @@ export type PostRouteErrorResponse = {
 };
 
 export type PostsResponsePayload = {
+  pageInfo?: FeedPageInfo;
   posts: Post[];
 };

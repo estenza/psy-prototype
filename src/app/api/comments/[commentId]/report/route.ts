@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { CommentsServiceError, reportComment } from "@/features/comments/lib/comments-service";
+import { reportComment } from "@/features/comments/lib/comments-service";
+import { buildCommentsErrorResponse } from "@/features/comments/lib/comments-http";
 
 export const runtime = "nodejs";
 
@@ -26,26 +27,10 @@ export async function POST(
       ok: true,
     });
   } catch (error) {
-    if (error instanceof CommentsServiceError) {
-      return NextResponse.json(
-        {
-          error: error.message,
-        },
-        {
-          status: error.status,
-        },
-      );
-    }
-
-    console.error("[api/comments/report]", error);
-
-    return NextResponse.json(
-      {
-        error: "Не удалось отправить жалобу на комментарий.",
-      },
-      {
-        status: 500,
-      },
+    return buildCommentsErrorResponse(
+      error,
+      "Не удалось отправить жалобу на комментарий.",
+      "api/comments/report",
     );
   }
 }

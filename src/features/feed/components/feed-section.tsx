@@ -8,19 +8,23 @@ import { FeedToolbar } from "@/features/feed/components/feed-toolbar";
 import { PostFeedItem } from "@/features/feed/components/post-feed-item";
 import { useFeed } from "@/features/feed/hooks/use-feed";
 import { isInteractivePostCardTarget } from "@/features/feed/lib/post-card-navigation";
-import type { Post } from "@/features/feed/types";
+import type { FeedPageInfo, Post } from "@/features/feed/types";
 
 type FeedSectionProps = {
+  initialPageInfo?: FeedPageInfo;
   initialPosts: Post[];
 };
 
-export function FeedSection({ initialPosts }: FeedSectionProps) {
+export function FeedSection({ initialPageInfo, initialPosts }: FeedSectionProps) {
   const router = useRouter();
   const {
     activeTopic,
     feed,
     handlePostMenuAction,
     highlightedPostId,
+    isLoadingMore,
+    loadMorePosts,
+    pageInfo,
     setActiveTopic,
     sortMode,
     setSortMode,
@@ -28,7 +32,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
     setViewMode,
     toggleBookmark,
     toggleLike,
-  } = useFeed({ initialPosts });
+  } = useFeed({ initialPageInfo, initialPosts });
 
   return (
     <section className="mx-auto w-full min-w-0 max-w-[672px]">
@@ -41,7 +45,7 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
         onViewModeChange={setViewMode}
       />
 
-      <div className="px-0 pb-8 min-[481px]:pb-12 min-[481px]:pb-24">
+      <div className="px-0 min-[481px]:pb-12 min-[481px]:pb-24">
         <div className="space-y-2 min-[481px]:space-y-3 min-[481px]:space-y-4">
           {feed.length > 0 ? (
             feed.map((post) => {
@@ -111,6 +115,22 @@ export function FeedSection({ initialPosts }: FeedSectionProps) {
               ) : null}
             />
           )}
+
+          {pageInfo?.hasNextPage ? (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                disabled={isLoadingMore}
+                onClick={loadMorePosts}
+                className={buttonClassName({
+                  className: "type-body-md-medium h-11 px-6 disabled:cursor-wait disabled:opacity-70",
+                  variant: "secondary",
+                })}
+              >
+                {isLoadingMore ? "Загружаем..." : "Показать еще"}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

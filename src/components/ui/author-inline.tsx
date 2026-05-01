@@ -53,6 +53,7 @@ export function AuthorInline({
     <div className={`flex min-w-0 items-center gap-3 ${className}`.trim()}>
       <UserAvatarAction
         avatarUrl={avatarUrl}
+        avatarSeed={handle}
         fallbackText={getHandleInitial(handle, name)}
         name={name}
         showStatusDot={showStatusDot}

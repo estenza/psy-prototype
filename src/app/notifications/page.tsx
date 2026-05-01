@@ -3,10 +3,7 @@ import { AccountSectionShell } from "@/components/layout/account-section-shell";
 import { HistoryPageHeader } from "@/components/layout/history-page-header";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import { NotificationsPageContent } from "@/features/notifications/components/notifications-page-content";
-import {
-  countUnreadNotifications,
-  listNotifications,
-} from "@/features/notifications/lib/notifications-repository";
+import { getNotificationsOverview } from "@/features/notifications/lib/notifications-service";
 
 export default async function NotificationsPage() {
   const currentUser = await getCurrentUser();
@@ -15,10 +12,7 @@ export default async function NotificationsPage() {
     redirect("/");
   }
 
-  const [notifications, unreadCount] = await Promise.all([
-    listNotifications(currentUser.id),
-    countUnreadNotifications(currentUser.id),
-  ]);
+  const { notifications, unreadCount } = await getNotificationsOverview(currentUser);
 
   return (
     <AccountSectionShell

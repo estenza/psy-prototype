@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { AppToastProvider } from "@/components/feedback/app-toast-provider";
 import { EnvironmentAttributes } from "@/components/layout/environment-attributes";
@@ -6,12 +6,46 @@ import { AppThemeProvider } from "@/components/theme/app-theme-provider";
 import { AuthRequiredProvider } from "@/features/auth/components/auth-required-provider";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import { getAppEnvironment } from "@/lib/app-env";
+import { buildPublicAppUrl } from "@/lib/app-url";
 import { APP_THEME_COOKIE_NAME } from "@/components/theme/theme-constants";
 import "./globals.css";
 
+const SITE_DESCRIPTION = "Психологическая платформа";
+const publicAppUrl = buildPublicAppUrl();
+
 export const metadata: Metadata = {
+  metadataBase: new URL(publicAppUrl),
   title: "внутри",
-  description: "Анонимная платформа для психологических историй и поддержки",
+  applicationName: "внутри",
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    url: publicAppUrl,
+    siteName: "внутри",
+    title: "внутри",
+    description: SITE_DESCRIPTION,
+    locale: "ru_RU",
+  },
+  twitter: {
+    card: "summary",
+    title: "внутри",
+    description: SITE_DESCRIPTION,
+  },
+  formatDetection: {
+    address: false,
+    date: false,
+    email: false,
+    telephone: false,
+    url: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  height: "device-height",
+  initialScale: 1,
+  viewportFit: "cover",
+  userScalable: false,
 };
 
 const themeInitializationScript = `
@@ -74,7 +108,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <AppThemeProvider>
+        <AppThemeProvider initialThemePreference={initialThemePreference}>
           <EnvironmentAttributes />
           <AuthRequiredProvider initialUser={currentUser}>
             {children}

@@ -4,6 +4,7 @@ import { UserAvatar } from "@/features/auth/components/user-avatar";
 
 type UserAvatarActionProps = {
   avatarUrl: string | null | undefined;
+  avatarSeed?: string | null;
   fallbackText?: string;
   name: string;
   showStatusDot?: boolean;
@@ -24,6 +25,7 @@ const interactiveAvatarBaseClassName = [
 
 export function UserAvatarAction({
   avatarUrl,
+  avatarSeed,
   fallbackText,
   name,
   showStatusDot = false,
@@ -41,6 +43,7 @@ export function UserAvatarAction({
   const avatarNode = (
     <UserAvatar
       avatarUrl={avatarUrl ?? null}
+      avatarSeed={avatarSeed}
       fallbackText={fallbackText}
       name={name}
       showStatusDot={showStatusDot}

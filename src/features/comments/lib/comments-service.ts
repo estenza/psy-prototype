@@ -8,6 +8,7 @@ import {
   createPostComment,
   deletePostComment,
   getPostCommentsSection,
+  listPublishedCommentsByAuthorUserId,
   listPostCommentReports,
   moderatePostComment,
   reportPostComment,
@@ -129,6 +130,20 @@ export async function getCommentsSection(params: {
       sort: params.sort,
       viewer,
     });
+  } catch (error) {
+    throw toServiceError(error);
+  }
+}
+
+export async function listAuthorPublishedComments(params: {
+  authorUserId: string;
+  viewerUserId?: string | null;
+}) {
+  try {
+    return await listPublishedCommentsByAuthorUserId(
+      params.authorUserId,
+      params.viewerUserId ?? null,
+    );
   } catch (error) {
     throw toServiceError(error);
   }

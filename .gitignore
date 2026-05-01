@@ -42,6 +42,7 @@ yarn-error.log*
 # local app data
 /data/*.db
 /data/*.db-*
+/data/*.db.backup-*
 
 # vercel
 .vercel

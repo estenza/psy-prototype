@@ -45,7 +45,7 @@ export function ProfilePostsSection({
   return (
     <section className="mx-auto w-full min-w-0 max-w-[672px]">
       <div
-        className={`px-2 pb-8 min-[481px]:px-3 min-[481px]:pb-12 min-[481px]:px-0 min-[481px]:pb-24 ${
+        className={`pb-8 min-[481px]:pb-24 ${
           flushTop ? "" : "pt-8"
         }`.trim()}
       >

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
+import { togglePostLike } from "@/features/feed/lib/post-actions-service";
 import { buildPostErrorResponse } from "@/features/feed/lib/posts-http";
-import { setPostLike } from "@/features/feed/lib/posts-repository";
 import type { PostMutationResponse } from "@/features/feed/types";
 
 export const runtime = "nodejs";
@@ -36,7 +36,7 @@ export async function POST(
 
     const { postId } = await params;
     const payload = (await request.json()) as PostLikePayload;
-    const post = await setPostLike({
+    const post = await togglePostLike({
       actor: currentUser,
       liked: Boolean(payload.liked),
       postId,

@@ -11,6 +11,7 @@ type CommentsSectionProps = {
   pageId: string;
   highlightedCommentId?: string | null;
   highlightedCommentIds?: string[];
+  onTotalCountChange?: (totalCount: number) => void;
 };
 
 const COMMENTS_AUTH_MODAL_TITLE = "Войдите, чтобы оставлять ответы";
@@ -67,6 +68,7 @@ export function CommentsSection({
   pageId,
   highlightedCommentId = null,
   highlightedCommentIds = EMPTY_HIGHLIGHTED_COMMENT_IDS,
+  onTotalCountChange,
 }: CommentsSectionProps) {
   const { isAuthenticated, openAuthModal, runIfAuthorized } = useAuthRequiredAction();
   const highlightedCommentIdsFromProps = useMemo(
@@ -162,6 +164,14 @@ export function CommentsSection({
     };
   }, [activeHighlightedCommentIds, data, highlightedCommentIdsKey]);
 
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    onTotalCountChange?.(data.totalCount);
+  }, [data, onTotalCountChange]);
+
   return (
     <section className="flex w-full flex-col gap-6">
       <div className="comments-top flex flex-col gap-4">
@@ -246,17 +256,6 @@ export function CommentsSection({
             onReport={reportComment}
             highlightedCommentIds={activeHighlightedCommentIds}
           />
-        ) : null}
-
-        {data && data.comments.length === 0 && status === "ready" ? (
-          <div className="border-separator rounded-[20px] border border-dashed px-4 py-5">
-            <p className="type-body-md-medium text-label-primary">
-              Пока нет комментариев
-            </p>
-            <p className="type-caption text-label-secondary mt-1">
-              Станьте первым, кто откликнется на этот пост.
-            </p>
-          </div>
         ) : null}
 
         {error && status === "error" ? (

@@ -1,15 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ToggleButton, cn, toast } from "@heroui/react";
+import { Dropdown, Label, ToggleButton, cn, toast } from "@heroui/react";
+import { useState } from "react";
 import {
   BookmarkIcon,
   ChatIcon,
+  LinkActionIcon,
   PostHeartIcon,
   ShareIcon,
+  TelegramIcon,
 } from "@/components/ui/icons";
+import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
 import type { Post } from "@/features/feed/types";
+import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 
 type PostActionsProps = {
   post: Post;
@@ -27,6 +32,7 @@ export function PostActions({
   postHref,
 }: PostActionsProps) {
   const router = useRouter();
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const resolvedPostHref = postHref ?? `/posts/${post.id}`;
   const likedActionClassName =
     "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)] active:text-[var(--danger)] data-[pressed=true]:text-[var(--danger)]";
@@ -39,27 +45,34 @@ export function PostActions({
   const bookmarkIconOnlyActionClassName =
     "post-action-button interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full font-normal transition-colors button--icon-only w-9 px-0 text-[var(--label-secondary)]";
 
-  async function handleShare() {
-    const postUrl = new URL(`/posts/${post.id}`, window.location.origin).toString();
+  function getPostUrl() {
+    return new URL(`/posts/${post.id}`, window.location.origin).toString();
+  }
 
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: post.content.title,
-          text: post.content.excerpt,
-          url: postUrl,
-        });
-        return;
-      }
+  async function handleCopyLink() {
+    const copied = await copyTextToClipboard(getPostUrl());
 
-      await navigator.clipboard.writeText(postUrl);
+    if (copied) {
       toast.success("Ссылка на пост скопирована.");
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
+      return;
+    }
 
-      toast.danger("Не удалось поделиться ссылкой.");
+    toast.danger("Не удалось скопировать ссылку.");
+  }
+
+  function handleTelegramShare() {
+    const telegramShareUrl = new URL("https://t.me/share/url");
+    telegramShareUrl.searchParams.set("url", getPostUrl());
+    telegramShareUrl.searchParams.set("text", post.content.title);
+
+    const openedWindow = window.open(
+      telegramShareUrl.toString(),
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    if (!openedWindow) {
+      window.location.href = telegramShareUrl.toString();
     }
   }
 
@@ -120,22 +133,67 @@ export function PostActions({
         </button>
       </HoverTooltip>
 
-      <HoverTooltip label="Поделиться">
-        <button
-          type="button"
-          aria-label="Поделиться"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void handleShare();
-          }}
-          className={cn(tertiaryIconOnlyActionClassName, "pointer-events-auto")}
+      <Dropdown.Root isOpen={isShareMenuOpen} onOpenChange={setIsShareMenuOpen}>
+        <HoverTooltip
+          label="Поделиться"
+          isDisabled={isShareMenuOpen}
+          triggerClassName="inline-flex"
         >
-          <span className="flex h-5 w-5 flex-none items-center justify-center">
-            <ShareIcon />
-          </span>
-        </button>
-      </HoverTooltip>
+          <Dropdown.Trigger
+            aria-label="Поделиться"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            className={cn(tertiaryIconOnlyActionClassName, "pointer-events-auto")}
+          >
+            <span className="flex h-5 w-5 flex-none items-center justify-center">
+              <ShareIcon />
+            </span>
+          </Dropdown.Trigger>
+        </HoverTooltip>
+
+        <DropdownPopover placement="bottom start" className="min-w-[230px]">
+          <Dropdown.Menu
+            aria-label="Поделиться постом"
+            selectionMode="none"
+            className="dropdown-menu-default"
+            onAction={(key) => {
+              setIsShareMenuOpen(false);
+
+              if (key === "copy-link") {
+                void handleCopyLink();
+                return;
+              }
+
+              if (key === "telegram") {
+                handleTelegramShare();
+              }
+            }}
+          >
+            <Dropdown.Item id="copy-link" textValue="Копировать ссылку">
+              <div className="flex w-full items-center gap-3">
+                <span className="inline-flex h-5 w-5 flex-none items-center justify-center text-[var(--label-secondary)]">
+                  <LinkActionIcon />
+                </span>
+                <Label className="min-w-0 flex-1 truncate">
+                  Копировать ссылку
+                </Label>
+              </div>
+            </Dropdown.Item>
+            <Dropdown.Item id="telegram" textValue="Поделиться в Telegram">
+              <div className="flex w-full items-center gap-3">
+                <span className="inline-flex h-5 w-5 flex-none items-center justify-center text-[var(--label-secondary)]">
+                  <TelegramIcon />
+                </span>
+                <Label className="min-w-0 flex-1 truncate">
+                  Поделиться в Telegram
+                </Label>
+              </div>
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </DropdownPopover>
+      </Dropdown.Root>
 
       <HoverTooltip
         label={post.viewer.bookmarked ? "Убрать из закладок" : "Добавить в закладки"}

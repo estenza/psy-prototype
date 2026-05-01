@@ -524,6 +524,7 @@ export function CreateTopicScreen() {
 
       <div className="min-[481px]:pt-[var(--app-header-height)]">
         <DesktopAppShell
+          activeSection={null}
           centerClassName="w-full max-w-[672px]"
           fitCenterToContent
         >

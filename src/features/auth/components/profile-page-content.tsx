@@ -1,16 +1,17 @@
-import Link from "next/link";
 import { AccountSectionShell } from "@/components/layout/account-section-shell";
 import { HistoryPageHeader } from "@/components/layout/history-page-header";
 import { ProfileActivityTabs } from "@/features/auth/components/profile-activity-tabs";
+import { ProfileFollowPanel } from "@/features/auth/components/profile-follow-panel";
 import { ProfileMoreMenu } from "@/features/auth/components/profile-more-menu";
 import { UserAvatar } from "@/features/auth/components/user-avatar";
 import { getUserHandle } from "@/features/auth/lib/profile";
-import type { AuthUser } from "@/features/auth/types";
+import type { AuthUser, AuthorFollowSummary } from "@/features/auth/types";
 import type { ProfileCommentItem } from "@/features/comments/types";
 import type { Post } from "@/features/feed/types";
 
 export function ProfilePageContent({
   favoritePosts,
+  followSummary,
   posts,
   profilePath,
   replies,
@@ -18,6 +19,7 @@ export function ProfilePageContent({
   viewerIsOwner,
 }: {
   favoritePosts: Post[];
+  followSummary: AuthorFollowSummary;
   posts: Post[];
   profilePath: string;
   replies: ProfileCommentItem[];
@@ -25,17 +27,17 @@ export function ProfilePageContent({
   viewerIsOwner: boolean;
 }) {
   const profileHandle = getUserHandle(user);
-  const profileMetaLinkClassName =
-    "rounded-none p-0 no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4";
 
   return (
     <AccountSectionShell
-      activeSection="profile"
+      activeSection={viewerIsOwner ? "profile" : null}
       contentClassName="flex w-full min-w-0 flex-col gap-0"
       header={<HistoryPageHeader alwaysUseFallback title="Профиль" />}
       sectionClassName="w-full min-w-0"
     >
-      <section className="surface-elevated relative rounded-[28px] p-6">
+      <section
+        className={`surface-elevated relative rounded-[28px] p-6 ${viewerIsOwner ? "" : "pb-20"}`.trim()}
+      >
         <div className="absolute right-6 top-6">
           <ProfileMoreMenu
             profilePath={profilePath}
@@ -48,6 +50,7 @@ export function ProfilePageContent({
         <div className="flex flex-col gap-6 min-[481px]:flex-row min-[481px]:items-start">
           <UserAvatar
             avatarUrl={user.avatarUrl}
+            avatarSeed={user.nickname || user.id}
             name={user.displayName}
             size="profile-xl"
           />
@@ -65,20 +68,13 @@ export function ProfilePageContent({
 
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-4">
-              <Link
-                href={`${profilePath}?view=followers`}
-                className={`${profileMetaLinkClassName} text-[16px] leading-6 text-[var(--label-primary)]`.trim()}
-              >
-                <span className="font-medium">0</span> подписчиков
-              </Link>
-              <Link
-                href={`${profilePath}?view=following`}
-                className={`${profileMetaLinkClassName} text-[16px] leading-6 text-[var(--label-primary)]`.trim()}
-              >
-                <span className="font-medium">0</span> подписок
-              </Link>
-            </div>
+            <ProfileFollowPanel
+              followedUserId={user.id}
+              initialSummary={followSummary}
+              profilePath={profilePath}
+              userHandle={profileHandle}
+              viewerIsOwner={viewerIsOwner}
+            />
 
             {user.profileDescription ? (
               <p className="pt-4 whitespace-pre-wrap text-[14px] leading-6 text-[var(--label-primary)]">

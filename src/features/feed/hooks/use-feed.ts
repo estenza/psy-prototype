@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { toast } from "@heroui/react";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
@@ -35,13 +35,16 @@ import {
   getCurrentPathWithSearchAndHash,
 } from "@/features/topic-creation/lib/create-topic-navigation";
 import type {
+  FeedPageInfo,
   FeedSortMode,
   FeedTopicFilter,
   Post,
+  PostsResponsePayload,
   ViewMode,
 } from "@/features/feed/types";
 
 type UseFeedOptions = {
+  initialPageInfo?: FeedPageInfo;
   initialPosts: Post[];
   initialViewMode?: ViewMode;
   initialSortMode?: FeedSortMode;
@@ -85,6 +88,7 @@ function sortFeed(posts: Post[], sortMode: FeedSortMode): Post[] {
 }
 
 export function useFeed({
+  initialPageInfo,
   initialPosts,
   initialViewMode = DEFAULT_VIEW_MODE,
   initialSortMode = DEFAULT_FEED_SORT_MODE,
@@ -94,6 +98,8 @@ export function useFeed({
   const { user } = useAuthClient();
   const { runIfAuthorized } = useAuthRequiredAction();
   const [posts, setPosts] = useState<Post[]>(() => normalizePostsDates(initialPosts));
+  const [pageInfo, setPageInfo] = useState<FeedPageInfo | null>(initialPageInfo ?? null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(
     null,
   );
@@ -106,9 +112,57 @@ export function useFeed({
       : posts.filter((post) => post.topic === activeTopic);
   const feed = sortFeed(filteredPosts, sortMode);
 
-  useEffect(() => {
-    setPosts(normalizePostsDates(initialPosts));
-  }, [initialPosts]);
+  const loadMorePosts = () => {
+    if (isLoadingMore || !pageInfo?.hasNextPage || !pageInfo.endCursor) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+
+    const searchParams = new URLSearchParams();
+    searchParams.set("cursor", pageInfo.endCursor);
+
+    if (activeTopic !== "all") {
+      searchParams.set("topic", activeTopic);
+    }
+
+    void fetch(`/api/posts?${searchParams.toString()}`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null) as PostsResponsePayload | PostRouteErrorResponse | null;
+
+        if (!response.ok) {
+          throw new Error(
+            payload && "error" in payload
+              ? payload.error
+              : "Не удалось загрузить еще посты.",
+          );
+        }
+
+        const postsPayload = payload as PostsResponsePayload;
+        const nextPosts = normalizePostsDates(postsPayload.posts);
+
+        setPosts((currentPosts) => {
+          const existingIds = new Set(currentPosts.map((post) => post.id));
+          return [
+            ...currentPosts,
+            ...nextPosts.filter((post) => !existingIds.has(post.id)),
+          ];
+        });
+        setPageInfo(postsPayload.pageInfo ?? null);
+      })
+      .catch((error: unknown) => {
+        toast.danger(
+          error instanceof Error
+            ? error.message
+            : "Не удалось загрузить еще посты.",
+        );
+      })
+      .finally(() => {
+        setIsLoadingMore(false);
+      });
+  };
 
   useLayoutEffect(() => {
     const nextHighlightedPostId = readHighlightedPublishedPostId();
@@ -417,6 +471,9 @@ export function useFeed({
     feed,
     handlePostMenuAction,
     highlightedPostId,
+    isLoadingMore,
+    loadMorePosts,
+    pageInfo,
     setActiveTopic,
     sortMode,
     setSortMode,

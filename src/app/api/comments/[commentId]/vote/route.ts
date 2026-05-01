@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
-import { CommentsServiceError, voteComment } from "@/features/comments/lib/comments-service";
+import { voteComment } from "@/features/comments/lib/comments-service";
+import { buildCommentsErrorResponse } from "@/features/comments/lib/comments-http";
 
 export const runtime = "nodejs";
 
@@ -26,26 +27,6 @@ export async function POST(
       ok: true,
     });
   } catch (error) {
-    if (error instanceof CommentsServiceError) {
-      return NextResponse.json(
-        {
-          error: error.message,
-        },
-        {
-          status: error.status,
-        },
-      );
-    }
-
-    console.error("[api/comments/vote]", error);
-
-    return NextResponse.json(
-      {
-        error: "Не удалось поставить лайк.",
-      },
-      {
-        status: 500,
-      },
-    );
+    return buildCommentsErrorResponse(error, "Не удалось поставить лайк.", "api/comments/vote");
   }
 }

@@ -79,6 +79,7 @@ export function PostViewScreen({
   const [post, setPost] = useState<Post | null>(
     initialPost ? normalizePostDates(initialPost) : null,
   );
+  const [commentsCount, setCommentsCount] = useState(initialPost?.stats.comments ?? 0);
   const returnTo = normalizePostReturnTo(initialReturnTo);
 
   const detailedPost = post
@@ -90,6 +91,7 @@ export function PostViewScreen({
         },
       }
     : null;
+  const hasComments = commentsCount > 0;
 
   function handleBack() {
     startTransition(() => {
@@ -348,7 +350,7 @@ export function PostViewScreen({
             <PageHeader onBack={handleBack} />
 
             {detailedPost ? (
-              <div className="space-y-2 px-2 pb-8 min-[481px]:space-y-3 min-[481px]:px-3 min-[481px]:pb-12 min-[481px]:space-y-4 min-[481px]:px-0 min-[481px]:pb-24">
+              <div className="space-y-2 pb-8 min-[481px]:space-y-4 min-[481px]:pb-24">
                 <div className="surface-card px-3 py-4 min-[481px]:px-5 min-[481px]:px-6">
                   <CardPostItem
                     post={detailedPost}
@@ -359,16 +361,21 @@ export function PostViewScreen({
                   />
                 </div>
 
-                <div className="surface-card feed-card-surface px-3 pb-8 pt-0 min-[481px]:px-5 min-[481px]:px-6">
+                <div
+                  className={`surface-card feed-card-surface px-3 pt-0 min-[481px]:px-5 min-[481px]:px-6 ${
+                    hasComments ? "pb-8" : "pb-0"
+                  }`.trim()}
+                >
                   <CommentsSection
                     pageId={`post:${detailedPost.id}`}
                     highlightedCommentId={initialHighlightedCommentId}
                     highlightedCommentIds={initialHighlightedCommentIds}
+                    onTotalCountChange={setCommentsCount}
                   />
                 </div>
               </div>
             ) : (
-              <div className="px-2 pb-8 min-[481px]:px-3 min-[481px]:pb-12 min-[481px]:px-0 min-[481px]:pb-24">
+              <div className="pb-8 min-[481px]:pb-24">
                 <ContentPlaceholder
                   titleAs="h1"
                   title="Пост не найден"

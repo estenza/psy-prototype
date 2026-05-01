@@ -9,6 +9,9 @@
     "dev:admin-local": "yarn dev",
     "build": "next build",
     "check:icons": "node scripts/check-icon-exports.mjs",
+    "check:layout": "node tests/visual/shell-layout-smoke.mjs",
+    "test:integration": "node --test tests/integration/*.mjs",
+    "migrate:auth:postgres:schema": "node scripts/migrate-auth-postgres.mjs",
     "migrate:auth:postgres": "node scripts/migrate-auth-sqlite-to-postgres.mjs",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "eslint && yarn check:icons"
@@ -46,6 +49,7 @@
     "@tiptap/starter-kit": "3.22.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.15.6",

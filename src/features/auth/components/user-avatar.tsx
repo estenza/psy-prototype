@@ -2,14 +2,17 @@
 
 import { Avatar } from "@heroui/react";
 import { useState } from "react";
+import { buildLoreleiAvatarUrl } from "@/lib/dicebear-avatar";
 import { getUserAvatarTone } from "@/lib/avatar-tone";
 
 type UserAvatarProps = {
   avatarUrl: string | null;
+  avatarSeed?: string | null;
   fallbackText?: string;
   name: string;
   showStatusDot?: boolean;
   size?: "comment-md" | "comment-sm" | "header" | "lg" | "md" | "menu" | "profile-xl" | "sm";
+  useGeneratedFallback?: boolean;
 };
 
 const avatarSizeClasses = {
@@ -46,16 +49,26 @@ export function getUserInitials(name: string) {
 
 export function UserAvatar({
   avatarUrl,
+  avatarSeed,
   fallbackText,
   name,
   showStatusDot = false,
   size = "md",
+  useGeneratedFallback = true,
 }: UserAvatarProps) {
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const avatarClassName = avatarSizeClasses[size];
   const statusDotClassName = statusDotClasses[size];
   const initials = fallbackText?.trim() || getUserInitials(name);
-  const shouldShowImage = Boolean(avatarUrl) && avatarUrl !== failedAvatarUrl;
+  const uploadedAvatarUrl = avatarUrl?.trim() || null;
+  const generatedAvatarUrl = useGeneratedFallback
+    ? buildLoreleiAvatarUrl(avatarSeed?.trim() || name)
+    : null;
+  const resolvedAvatarUrl =
+    uploadedAvatarUrl && uploadedAvatarUrl !== failedAvatarUrl
+      ? uploadedAvatarUrl
+      : (generatedAvatarUrl !== failedAvatarUrl ? generatedAvatarUrl : null);
+  const shouldShowImage = Boolean(resolvedAvatarUrl);
   const fallbackClassName = shouldShowImage
     ? "bg-[var(--surface-secondary)] text-transparent"
     : `${getUserAvatarTone(name)} inline-flex items-center justify-center`;
@@ -65,12 +78,12 @@ export function UserAvatar({
       <Avatar.Root className={avatarClassName}>
         {shouldShowImage ? (
           <Avatar.Image
-            src={avatarUrl ?? undefined}
+            src={resolvedAvatarUrl ?? undefined}
             alt={name}
             className="pointer-events-none select-none object-cover"
             loading="eager"
             draggable={false}
-            onError={() => setFailedAvatarUrl(avatarUrl)}
+            onError={() => setFailedAvatarUrl(resolvedAvatarUrl)}
           />
         ) : null}
         <Avatar.Fallback className={fallbackClassName}>

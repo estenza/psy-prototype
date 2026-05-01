@@ -253,7 +253,12 @@ function DetailsModal({
               </div>
 
               <div className="mt-6 flex items-center gap-4">
-                <UserAvatar avatarUrl={user.avatarUrl} name={user.displayName} size="lg" />
+                <UserAvatar
+                  avatarUrl={user.avatarUrl}
+                  avatarSeed={user.nickname || user.id}
+                  name={user.displayName}
+                  size="lg"
+                />
                 <div className="min-w-0">
                   <div className="text-[22px] font-semibold text-[var(--label-primary)]">
                     {primaryName}
@@ -423,7 +428,12 @@ export function AdminAccountsTable({ section, users }: AdminAccountsTableProps) 
                   <Table.Row key={user.id} id={user.id}>
                     <Table.Cell>
                       <div className="flex min-w-0 items-center gap-3">
-                        <UserAvatar avatarUrl={user.avatarUrl} name={user.displayName} size="sm" />
+                        <UserAvatar
+                          avatarUrl={user.avatarUrl}
+                          avatarSeed={user.nickname || user.id}
+                          name={user.displayName}
+                          size="sm"
+                        />
                         <div className="min-w-0">
                           <div>{primaryName}</div>
                           {secondaryName ? <div>{secondaryName}</div> : null}

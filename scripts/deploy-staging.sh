@@ -25,12 +25,14 @@ require_env() {
 }
 
 require_env AUTH_DATABASE_URL
+require_env DOMAIN_EVENTS_WORKER_SECRET
 
 ENV_VARS=(
   "APP_ENV=staging"
   "AUTH_APP_URL=${STAGING_APP_URL}"
   "AUTH_DATABASE_URL=${AUTH_DATABASE_URL}"
   "AUTH_DATABASE_SSL=${AUTH_DATABASE_SSL:-false}"
+  "DOMAIN_EVENTS_WORKER_SECRET=${DOMAIN_EVENTS_WORKER_SECRET}"
   "HYVOR_TALK_WEBSITE_ID=${HYVOR_TALK_WEBSITE_ID}"
 )
 
@@ -50,6 +52,9 @@ for optional_name in \
 done
 
 echo "Using registry ${REGISTRY_NAME} (${REGISTRY_ID})"
+echo "Applying PostgreSQL migrations"
+npm run migrate:auth:postgres:schema
+
 echo "Building and pushing ${IMAGE}"
 
 yc container registry configure-docker

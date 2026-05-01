@@ -24,6 +24,7 @@ require_env() {
 }
 
 require_env AUTH_DATABASE_URL
+require_env DOMAIN_EVENTS_WORKER_SECRET
 require_env HYVOR_TALK_DATA_API_KEY
 require_env HYVOR_TALK_CONSOLE_API_KEY
 
@@ -32,6 +33,7 @@ ENV_VARS=(
   "AUTH_APP_URL=${APP_URL}"
   "AUTH_DATABASE_URL=${AUTH_DATABASE_URL}"
   "AUTH_DATABASE_SSL=${AUTH_DATABASE_SSL:-false}"
+  "DOMAIN_EVENTS_WORKER_SECRET=${DOMAIN_EVENTS_WORKER_SECRET}"
   "HYVOR_TALK_WEBSITE_ID=${HYVOR_TALK_WEBSITE_ID}"
   "HYVOR_TALK_DATA_API_KEY=${HYVOR_TALK_DATA_API_KEY}"
   "HYVOR_TALK_CONSOLE_API_KEY=${HYVOR_TALK_CONSOLE_API_KEY}"
@@ -51,6 +53,9 @@ for optional_name in \
 done
 
 echo "Using registry ${REGISTRY_NAME} (${REGISTRY_ID})"
+echo "Applying PostgreSQL migrations"
+npm run migrate:auth:postgres:schema
+
 echo "Building and pushing ${IMAGE}"
 
 yc container registry configure-docker

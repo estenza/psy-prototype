@@ -123,6 +123,12 @@ export type IgnoredAuthorSummary = {
   role: UserRole | null;
 };
 
+export type AuthorFollowSummary = {
+  followersCount: number;
+  followingCount: number;
+  viewerFollowing: boolean;
+};
+
 export type NotificationPreferenceKey =
   | "postReplies"
   | "directReplies"

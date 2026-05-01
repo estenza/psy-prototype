@@ -87,16 +87,42 @@ function applyTheme(theme: AppTheme) {
 
 export function AppThemeProvider({
   children,
+  initialThemePreference = "light",
 }: {
   children: React.ReactNode;
+  initialThemePreference?: AppThemePreference;
 }) {
-  const [themePreference, setThemePreferenceState] = useState<AppThemePreference>(
-    resolveInitialThemePreference,
-  );
-  const [systemTheme, setSystemTheme] = useState<AppTheme>(resolveSystemTheme);
+  const [themePreference, setThemePreferenceState] =
+    useState<AppThemePreference>(initialThemePreference);
+  const [systemTheme, setSystemTheme] = useState<AppTheme>("light");
+  const [hasResolvedClientTheme, setHasResolvedClientTheme] = useState(false);
   const theme = themePreference === "system" ? systemTheme : themePreference;
 
   useEffect(() => {
+    let isCancelled = false;
+
+    queueMicrotask(() => {
+      if (isCancelled) {
+        return;
+      }
+
+      const resolvedThemePreference = resolveInitialThemePreference();
+
+      setThemePreferenceState(resolvedThemePreference);
+      setSystemTheme(resolveSystemTheme());
+      setHasResolvedClientTheme(true);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasResolvedClientTheme) {
+      return;
+    }
+
     applyTheme(theme);
     document.documentElement.dataset.themePreference = themePreference;
 
@@ -107,7 +133,7 @@ export function AppThemeProvider({
     }
 
     document.cookie = `${APP_THEME_COOKIE_NAME}=${themePreference};path=/;max-age=${APP_THEME_COOKIE_MAX_AGE};SameSite=Lax`;
-  }, [theme, themePreference]);
+  }, [hasResolvedClientTheme, theme, themePreference]);
 
   useEffect(() => {
     function handleStorage(event: StorageEvent) {
