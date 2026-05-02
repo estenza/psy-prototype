@@ -205,18 +205,18 @@ async function applyPostgresMigrations() {
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock($1)", [AUTH_POSTGRES_MIGRATION_LOCK_ID]);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
 
     for (const migration of readAuthPostgresMigrationFiles()) {
       const existing = await client.query(
         "SELECT 1 FROM schema_migrations WHERE version = $1 LIMIT 1",
         [migration.version],
-      ).catch((error) => {
-        if (error?.code === "42P01") {
-          return { rowCount: 0 } as QueryResult;
-        }
-
-        throw error;
-      });
+      );
 
       if (existing.rowCount) {
         continue;
