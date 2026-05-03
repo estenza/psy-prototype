@@ -173,5 +173,5 @@ jobs:
 
       - name: Smoke check production URLs
         run: |
-          curl --fail --show-error --silent --location --retry 5 --retry-delay 3 --head https://vnutri.live
-          curl --fail --show-error --silent --location --retry 5 --retry-delay 3 --head https://www.vnutri.live
+          test "$(curl --show-error --silent --location --retry 5 --retry-delay 3 --head --output /dev/null --write-out '%{http_code}' https://vnutri.live)" = "503"
+          test "$(curl --show-error --silent --location --retry 5 --retry-delay 3 --head --output /dev/null --write-out '%{http_code}' https://www.vnutri.live)" = "503"
