@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cn, toast } from "@heroui/react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { buttonClassName } from "@/components/ui/button-styles";
 import { CheckIndicatorIcon } from "@/components/ui/icons";
@@ -9,6 +10,7 @@ import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-a
 import type { AuthorFollowSummary } from "@/features/auth/types";
 
 type ProfileFollowPanelProps = {
+  children?: ReactNode;
   followedUserId: string;
   initialSummary: AuthorFollowSummary;
   profilePath: string;
@@ -26,6 +28,7 @@ const profileMetaLinkClassName =
   "rounded-none p-0 no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4";
 
 export function ProfileFollowPanel({
+  children,
   followedUserId,
   initialSummary,
   profilePath,
@@ -100,7 +103,9 @@ export function ProfileFollowPanel({
   }
 
   return (
-    <>
+    <div className="flex min-w-0 flex-1 flex-col">
+      {children}
+
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-4">
         <Link
           href={`${profilePath}?view=followers`}
@@ -116,8 +121,8 @@ export function ProfileFollowPanel({
         </Link>
       </div>
 
-      {viewerIsOwner ? null : (
-        <div className="absolute bottom-6 right-6">
+      {!viewerIsOwner ? (
+        <div className="absolute right-16 top-4 z-20 flex min-[481px]:right-[72px] min-[481px]:top-6">
           <button
             type="button"
             disabled={isPending}
@@ -125,7 +130,7 @@ export function ProfileFollowPanel({
             className={buttonClassName({
               variant: summary.viewerFollowing ? "secondary" : "primary",
               className: cn(
-                "h-11 px-5 text-[15px] font-medium",
+                "h-9 px-4 text-[15px] font-medium",
                 summary.viewerFollowing ? "gap-2" : "",
               ),
             })}
@@ -138,7 +143,7 @@ export function ProfileFollowPanel({
             <span>{summary.viewerFollowing ? "Вы подписаны" : "Подписаться"}</span>
           </button>
         </div>
-      )}
-    </>
+      ) : null}
+    </div>
   );
 }

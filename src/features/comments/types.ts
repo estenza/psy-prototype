@@ -57,6 +57,7 @@ export type CommentNode = {
   userVote: "up" | "down" | null;
   viewerOwnsComment: boolean;
   replyCount: number;
+  hasReplyContext: boolean;
   replies: CommentNode[];
   capabilities: {
     canReply: boolean;

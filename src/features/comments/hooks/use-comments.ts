@@ -83,22 +83,6 @@ export function useComments(pageId: string) {
     void loadComments(sort);
   }, [loadComments, pageId, sort]);
 
-  useEffect(() => {
-    const refreshComments = () => {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
-      void loadComments(sort);
-    };
-
-    const intervalId = window.setInterval(refreshComments, 15_000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [loadComments, sort]);
-
   async function submitComment({
     body,
     parentId = null,

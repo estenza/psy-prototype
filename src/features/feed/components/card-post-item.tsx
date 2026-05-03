@@ -35,6 +35,7 @@ export function CardPostItem({
           compactMeta={post.activity.compactPublishedAtLabel}
           profileHref={buildPublicProfilePathFromHandle(post.author.handle)}
           showStatusDot={post.author.role === "specialist"}
+          className="min-w-0 flex-1"
         />
         <PostMoreMenu post={post} onAction={onPostMenuAction} />
       </div>

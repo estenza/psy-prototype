@@ -24,6 +24,7 @@ export type AuthUser = {
   avatarUrl: string | null;
   avatarSourceUrl: string | null;
   avatarCardUrl: string | null;
+  profileCoverUrl: string | null;
   profileDescription: string | null;
   specialties: string[];
   role: UserRole;
@@ -100,6 +101,8 @@ export type AuthFieldErrorName =
   | "passwordConfirmation"
   | "token"
   | "role"
+  | "displayName"
+  | "profileDescription"
   | "nickname"
   | "firstName"
   | "lastName"

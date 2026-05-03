@@ -1,6 +1,6 @@
 "use client";
 
-import { CommentItem } from "@/features/comments/components/comment-item";
+import { CommentItem, shouldRenderCommentNode } from "@/features/comments/components/comment-item";
 import type { CommentNode, CommentsViewer } from "@/features/comments/types";
 
 type CommentListProps = {
@@ -36,9 +36,11 @@ export function CommentList({
   onReport,
   highlightedCommentIds = [],
 }: CommentListProps) {
+  const renderableComments = comments.filter(shouldRenderCommentNode);
+
   return (
     <div className="flex w-full flex-col gap-5">
-      {comments.map((comment) => (
+      {renderableComments.map((comment) => (
         <CommentItem
           key={comment.id}
           comment={comment}

@@ -18,7 +18,7 @@ export default async function BookmarksPage() {
     <AccountSectionShell
       activeSection="bookmarks"
       header={<HistoryPageHeader title="Закладки" />}
-      contentClassName="flex w-full min-w-0 flex-col gap-4"
+      contentClassName="flex w-full min-w-0 flex-col gap-0"
     >
       <ProfilePostsSection
         emptyTitle="Пока нет закладок"

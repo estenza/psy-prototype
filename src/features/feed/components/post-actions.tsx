@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   BookmarkIcon,
   ChatIcon,
+  EyeIcon,
   LinkActionIcon,
   PostHeartIcon,
   ShareIcon,
@@ -195,9 +196,20 @@ export function PostActions({
         </DropdownPopover>
       </Dropdown.Root>
 
+      <div
+        aria-label={`Просмотров: ${post.stats.views}`}
+        className="ml-auto mr-2 inline-flex h-9 items-center gap-1.5 text-[var(--label-quaternary)]"
+      >
+        <span className="flex h-5 w-5 flex-none items-center justify-center">
+          <EyeIcon />
+        </span>
+        <span className="type-body-md flex items-center leading-5">
+          {post.stats.views}
+        </span>
+      </div>
+
       <HoverTooltip
         label={post.viewer.bookmarked ? "Убрать из закладок" : "Добавить в закладки"}
-        triggerClassName="ml-auto"
       >
         <ToggleButton
           aria-label={post.viewer.bookmarked ? "Убрать из закладок" : "Добавить в закладки"}

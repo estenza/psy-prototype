@@ -42,6 +42,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
     stats: {
       comments: record.counters.comments,
       likes: record.counters.likes,
+      views: record.counters.views ?? 0,
     },
     viewer: {
       isAuthor: false,

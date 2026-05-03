@@ -64,6 +64,11 @@ import type {
   SignUpInput,
 } from "@/features/auth/types";
 
+const PROFILE_COVER_DATA_URL_MAX_LENGTH = 2_500_000;
+const PROFILE_COVER_DATA_URL_PATTERN = /^data:image\/(?:jpeg|png);base64,/;
+const PROFILE_IMAGE_SOURCE_DATA_URL_MAX_LENGTH = 14_000_000;
+const USER_PROFILE_DESCRIPTION_MAX_LENGTH = 150;
+
 export class AuthServiceError extends Error {
   status: number;
   fieldErrors?: Partial<Record<AuthFieldErrorName, string>>;
@@ -421,6 +426,125 @@ function validateUserProfileDisplayName(displayName: string) {
   }
 
   return displayName;
+}
+
+function normalizeOwnProfileDisplayName(value: unknown) {
+  const displayName = sanitizeProfileText(typeof value === "string" ? value : "");
+  const fieldErrors: Partial<Record<AuthFieldErrorName, string>> = {};
+
+  if (!displayName) {
+    fieldErrors.displayName = "Укажите имя.";
+  } else if (displayName.length > PROFILE_NAME_MAX_LENGTH) {
+    fieldErrors.displayName = `Имя должно быть не длиннее ${PROFILE_NAME_MAX_LENGTH} символов.`;
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    throw new AuthServiceError({
+      message: "Проверьте имя.",
+      status: 400,
+      fieldErrors,
+    });
+  }
+
+  return displayName;
+}
+
+function normalizeUserProfileDescription(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new AuthServiceError({
+      message: "Не удалось сохранить описание профиля.",
+      status: 400,
+    });
+  }
+
+  const normalizedValue = value.replace(/\r\n?/g, "\n").trim();
+
+  if (normalizedValue.length > USER_PROFILE_DESCRIPTION_MAX_LENGTH) {
+    throw new AuthServiceError({
+      message: "Описание должно быть не длиннее 150 символов.",
+      status: 400,
+      fieldErrors: {
+        profileDescription: "Описание должно быть не длиннее 150 символов.",
+      },
+    });
+  }
+
+  return normalizedValue || null;
+}
+
+function normalizeProfileCoverUrl(value: unknown) {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new AuthServiceError({
+      message: "Не удалось сохранить обложку профиля.",
+      status: 400,
+    });
+  }
+
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (
+    normalizedValue.length > PROFILE_COVER_DATA_URL_MAX_LENGTH
+    || !PROFILE_COVER_DATA_URL_PATTERN.test(normalizedValue)
+  ) {
+    throw new AuthServiceError({
+      message: "Загрузите JPG или PNG до 10 МБ.",
+      status: 400,
+    });
+  }
+
+  return normalizedValue;
+}
+
+function normalizeProfileImageDataUrl(
+  value: unknown,
+  {
+    maxLength = PROFILE_COVER_DATA_URL_MAX_LENGTH,
+    message = "Загрузите JPG или PNG до 10 МБ.",
+  }: {
+    maxLength?: number;
+    message?: string;
+  } = {},
+) {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new AuthServiceError({
+      message: "Не удалось сохранить изображение профиля.",
+      status: 400,
+    });
+  }
+
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (
+    normalizedValue.length > maxLength
+    || !PROFILE_COVER_DATA_URL_PATTERN.test(normalizedValue)
+  ) {
+    throw new AuthServiceError({
+      message,
+      status: 400,
+    });
+  }
+
+  return normalizedValue;
 }
 
 function validateSpecialistProfileInput(input: CompleteSpecialistProfileInput) {
@@ -807,6 +931,51 @@ export async function completeSpecialistProfile(
     onboardingStep: "complete",
     patronymic: normalizedInput.patronymic,
     role: "specialist",
+    userId: user.id,
+  });
+
+  if (!updatedUser) {
+    throw new AuthServiceError({
+      message: "Пользователь не найден.",
+      status: 404,
+    });
+  }
+
+  return await syncBootstrapModeratorGrant(updatedUser);
+}
+
+export async function updateOwnProfile(
+  user: SessionUser,
+  input: {
+    avatarSourceUrl?: unknown;
+    avatarUrl?: unknown;
+    displayName?: unknown;
+    profileCoverUrl?: unknown;
+    profileDescription?: unknown;
+  },
+) {
+  const updatedUser = await updateUserProfileFields({
+    ...(Object.hasOwn(input, "avatarUrl")
+      ? { avatarUrl: normalizeProfileImageDataUrl(input.avatarUrl) }
+      : {}),
+    ...(Object.hasOwn(input, "avatarSourceUrl")
+      ? {
+          avatarSourceUrl: normalizeProfileImageDataUrl(input.avatarSourceUrl, {
+            maxLength: PROFILE_IMAGE_SOURCE_DATA_URL_MAX_LENGTH,
+          }),
+        }
+      : {}),
+    ...(Object.hasOwn(input, "displayName")
+      ? {
+          displayName: normalizeOwnProfileDisplayName(input.displayName),
+        }
+      : {}),
+    ...(Object.hasOwn(input, "profileCoverUrl")
+      ? { profileCoverUrl: normalizeProfileCoverUrl(input.profileCoverUrl) }
+      : {}),
+    ...(Object.hasOwn(input, "profileDescription")
+      ? { profileDescription: normalizeUserProfileDescription(input.profileDescription) }
+      : {}),
     userId: user.id,
   });
 

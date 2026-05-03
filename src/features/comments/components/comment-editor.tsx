@@ -13,9 +13,10 @@ import {
   TopicEditorImageIcon,
   TopicEditorQuoteIcon,
   TopicEditorStrikethroughIcon,
+  TopicEditorVideoIcon,
 } from "@/features/topic-creation/components/topic-creation-icons";
+import { EmbeddedMedia } from "@/features/topic-creation/extensions/embedded-media";
 import {
-  IMAGE_UPLOAD_ACCEPT,
   IMAGE_UPLOAD_MAX_SIZE_BYTES,
   IMAGE_UPLOAD_MAX_SIZE_LABEL,
   readImageFileAsDataUrl,
@@ -41,7 +42,13 @@ type CommentEditorToolbarButtonProps = {
   onClick?: () => void;
 };
 
-const COMMENT_EDITOR_IMAGE_ACCEPT = Object.entries(IMAGE_UPLOAD_ACCEPT)
+const COMMENT_IMAGE_UPLOAD_ACCEPT: Record<string, readonly string[]> = {
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/gif": [".gif"],
+};
+
+const COMMENT_EDITOR_IMAGE_ACCEPT = Object.entries(COMMENT_IMAGE_UPLOAD_ACCEPT)
   .flatMap(([mimeType, extensions]) => [mimeType, ...extensions])
   .join(",");
 
@@ -125,6 +132,7 @@ export function CommentEditor({
           orderedList: false,
         }),
         Image,
+        EmbeddedMedia,
       ],
       onUpdate({ editor: currentEditor }) {
         onChange(currentEditor.getHTML());
@@ -321,8 +329,8 @@ export function CommentEditor({
       return;
     }
 
-    if (!(file.type in IMAGE_UPLOAD_ACCEPT)) {
-      window.alert("Поддерживаются только JPG, JPEG и PNG.");
+    if (!(file.type in COMMENT_IMAGE_UPLOAD_ACCEPT)) {
+      window.alert("Поддерживаются только JPG, JPEG, PNG и GIF.");
       return;
     }
 
@@ -345,6 +353,33 @@ export function CommentEditor({
     } catch (error) {
       window.alert(
         error instanceof Error ? error.message : "Не удалось загрузить изображение.",
+      );
+    }
+  }
+
+  function handleVideoButtonClick() {
+    if (disabled || !editor) {
+      return;
+    }
+
+    const requestedUrl = window.prompt(
+      "Вставьте embed-ссылку или iframe-код.",
+      "https://",
+    );
+
+    if (!requestedUrl?.trim()) {
+      return;
+    }
+
+    const wasInserted = editor
+      .chain()
+      .focus()
+      .setEmbeddedMedia(requestedUrl.trim())
+      .run();
+
+    if (!wasInserted) {
+      window.alert(
+        "Не удалось встроить этот embed. Проверьте ссылку или iframe-код.",
       );
     }
   }
@@ -407,6 +442,16 @@ export function CommentEditor({
                     onClick={handleImageButtonClick}
                   >
                     <TopicEditorImageIcon />
+                  </CommentEditorToolbarButton>
+                </HoverTooltip>
+                <HoverTooltip label="Встроить видео">
+                  <CommentEditorToolbarButton
+                    ariaLabel="Встроить видео"
+                    active={editor?.isActive("embeddedMedia")}
+                    disabled={disabled}
+                    onClick={handleVideoButtonClick}
+                  >
+                    <TopicEditorVideoIcon />
                   </CommentEditorToolbarButton>
                 </HoverTooltip>
                 <HoverTooltip label="Жирный">

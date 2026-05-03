@@ -3,23 +3,34 @@
 import { switchVariants } from "@heroui/react";
 
 export function ToggleSwitch({
+  "aria-label": ariaLabel,
   checked,
+  disabled = false,
+  onClick,
 }: {
+  "aria-label": string;
   checked: boolean;
+  disabled?: boolean;
+  onClick: () => void;
 }) {
   const slots = switchVariants({
     size: "md",
   });
 
   return (
-    <span
-      aria-hidden="true"
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
       data-selected={checked ? "true" : undefined}
-      className={slots.base()}
+      disabled={disabled}
+      className={`${slots.base()} cursor-pointer disabled:cursor-wait disabled:opacity-70`}
+      onClick={onClick}
     >
-      <span className={slots.control()}>
+      <span aria-hidden="true" className={slots.control()}>
         <span className={slots.thumb()} />
       </span>
-    </span>
+    </button>
   );
 }

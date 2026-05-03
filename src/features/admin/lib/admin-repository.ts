@@ -18,6 +18,7 @@ type AdminUserRow = {
   avatar_url: string | null;
   avatar_source_url: string | null;
   avatar_card_url: string | null;
+  profile_cover_url: string | null;
   profile_description: string | null;
   specialties_json: string | null;
   role: UserRole;
@@ -41,6 +42,7 @@ const PG_ADMIN_USER_COLUMNS = `
   avatar_url,
   avatar_source_url,
   avatar_card_url,
+  profile_cover_url,
   profile_description,
   specialties_json,
   role,
@@ -85,6 +87,7 @@ function mapAdminUser(row: AdminUserRow): AdminListedUser {
     avatarUrl: row.avatar_url,
     avatarSourceUrl: row.avatar_source_url,
     avatarCardUrl: row.avatar_card_url,
+    profileCoverUrl: row.profile_cover_url,
     profileDescription: row.profile_description,
     specialties: parseSpecialties(row.specialties_json),
     role: row.role,
@@ -152,6 +155,7 @@ export async function listAdminUsers(filters: AdminUsersFilters) {
         avatar_url,
         avatar_source_url,
         avatar_card_url,
+        profile_cover_url,
         profile_description,
         specialties_json,
         role,

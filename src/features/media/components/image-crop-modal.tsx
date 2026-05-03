@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal } from "@heroui/react";
+import { Modal, Slider } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import { Button } from "@/components/ui/button";
@@ -80,18 +80,9 @@ export function ImageCropModal({
     >
       <Modal.Container className="flex min-h-dvh items-center justify-center p-4">
       <Modal.Dialog
-        aria-label="Редактировать аватар"
+        aria-label="Редактировать изображение"
         className="modal-surface relative w-fit max-w-[calc(100vw-32px)] p-5"
       >
-        <div className="pr-10">
-          <h3
-            id="image-crop-modal-title"
-            className="font-helvetica text-[26px] font-bold leading-none"
-          >
-            Редактировать аватар
-          </h3>
-        </div>
-
         <button
           type="button"
           className="interactive-tertiary absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--label-primary)] text-lg"
@@ -128,7 +119,7 @@ export function ImageCropModal({
           </svg>
         </button>
 
-        <div className="mt-5 grid w-[400px] max-w-full gap-5">
+        <div className="mt-10 grid w-[400px] max-w-full gap-5">
           <div className="border-separator relative min-h-[360px] overflow-hidden rounded-[16px] border bg-[var(--background-primary)]">
             <Cropper
               key={`${imageSrc}-${aspectRatio}`}
@@ -149,15 +140,22 @@ export function ImageCropModal({
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <input
-              type="range"
-              min="1"
-              max="3"
-              step="0.05"
+            <Slider
+              aria-label="Масштаб изображения"
+              minValue={1}
+              maxValue={3}
+              step={0.05}
               value={zoom}
-              onChange={(event) => setZoom(Number(event.target.value))}
-              className="crop-slider w-[200px] shrink-0"
-            />
+              onChange={(nextValue) => {
+                setZoom(Array.isArray(nextValue) ? nextValue[0] : nextValue);
+              }}
+              className="w-[200px] shrink-0"
+            >
+              <Slider.Track>
+                <Slider.Fill />
+                <Slider.Thumb />
+              </Slider.Track>
+            </Slider>
             <Button
               type="button"
               variant="primary"
@@ -169,64 +167,10 @@ export function ImageCropModal({
                 });
               }}
             >
-              Применить
+              Готово
             </Button>
           </div>
         </div>
-
-        <style jsx>{`
-          .crop-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            height: 20px;
-            background: transparent;
-          }
-
-          .crop-slider:focus {
-            outline: none;
-          }
-
-          .crop-slider::-webkit-slider-runnable-track {
-            height: 4px;
-            border-radius: 999px;
-            background: var(--fill-secondary);
-          }
-
-          .crop-slider::-moz-range-track {
-            height: 4px;
-            border-radius: 999px;
-            background: var(--fill-secondary);
-          }
-
-          .crop-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            margin-top: -6px;
-            border: none;
-            border-radius: 999px;
-            background: var(--accent-primary);
-            transition: background-color 0s;
-          }
-
-          .crop-slider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            border: none;
-            border-radius: 999px;
-            background: var(--accent-primary);
-            transition: background-color 0s;
-          }
-
-          .crop-slider::-webkit-slider-thumb:hover {
-            background: var(--color-accent-hover);
-          }
-
-          .crop-slider::-moz-range-thumb:hover {
-            background: var(--color-accent-hover);
-          }
-        `}</style>
       </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>

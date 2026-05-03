@@ -490,7 +490,7 @@ export function TopicEditor({
     }
 
     const requestedUrl = window.prompt(
-      "Вставьте ссылку на YouTube, Vimeo или прямой mp4/webm/ogg.",
+      "Вставьте embed-ссылку или iframe-код.",
       "https://",
     );
 
@@ -501,12 +501,12 @@ export function TopicEditor({
     const wasInserted = editor
       .chain()
       .focus()
-      .setEmbeddedMedia(normalizeUrl(requestedUrl.trim()))
+      .setEmbeddedMedia(requestedUrl.trim())
       .run();
 
     if (!wasInserted) {
       window.alert(
-        "Не удалось встроить это видео. Используйте ссылку на YouTube, Vimeo или прямой видеофайл.",
+        "Не удалось встроить этот embed. Проверьте ссылку или iframe-код.",
       );
     }
   }

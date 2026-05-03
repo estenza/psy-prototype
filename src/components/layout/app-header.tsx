@@ -3,9 +3,10 @@
 import { SearchField as HeroSearchField } from "@heroui/react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import {
+  MenuRailIcon,
   NavIcon,
   NotificationIcon,
   PlusCircleIcon,
@@ -33,185 +34,6 @@ type AppHeaderProps = {
 };
 
 const desktopHeaderSearchInputId = "app-header-search-input-desktop";
-const mobilePullThreshold = 58;
-const mobilePullMaxDistance = 88;
-
-function getActiveScrollTop(target: EventTarget | null) {
-  let maxScrollTop = Math.max(
-    window.scrollY,
-    document.documentElement.scrollTop,
-    document.body.scrollTop,
-    document.scrollingElement?.scrollTop ?? 0,
-  );
-
-  if (!(target instanceof Element)) {
-    return maxScrollTop;
-  }
-
-  let element: Element | null = target;
-
-  while (element && element !== document.body && element !== document.documentElement) {
-    if (element instanceof HTMLElement && element.scrollHeight > element.clientHeight + 1) {
-      maxScrollTop = Math.max(maxScrollTop, element.scrollTop);
-    }
-
-    element = element.parentElement;
-  }
-
-  return maxScrollTop;
-}
-
-function MobilePullToRefresh({ disabled = false }: { disabled?: boolean }) {
-  const router = useRouter();
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [, startTransition] = useTransition();
-  const startYRef = useRef(0);
-  const isTrackingRef = useRef(false);
-  const isPullingRef = useRef(false);
-  const pullDistanceRef = useRef(0);
-  const hideTimerRef = useRef<number | null>(null);
-  const isReadyToRefresh = pullDistance >= mobilePullThreshold;
-
-  useEffect(() => {
-    return () => {
-      if (hideTimerRef.current !== null) {
-        window.clearTimeout(hideTimerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 480px)");
-
-    function resetPull() {
-      isTrackingRef.current = false;
-      isPullingRef.current = false;
-      pullDistanceRef.current = 0;
-      setPullDistance(0);
-    }
-
-    function handleTouchStart(event: TouchEvent) {
-      if (
-        disabled ||
-        isRefreshing ||
-        !mediaQuery.matches ||
-        event.touches.length !== 1 ||
-        getActiveScrollTop(event.target) > 1
-      ) {
-        resetPull();
-        return;
-      }
-
-      startYRef.current = event.touches[0]?.clientY ?? 0;
-      isTrackingRef.current = true;
-      isPullingRef.current = false;
-    }
-
-    function handleTouchMove(event: TouchEvent) {
-      if (!isTrackingRef.current || disabled || isRefreshing || !mediaQuery.matches) {
-        return;
-      }
-
-      const currentY = event.touches[0]?.clientY ?? 0;
-      const deltaY = currentY - startYRef.current;
-
-      if (deltaY <= 0) {
-        resetPull();
-        return;
-      }
-
-      if (getActiveScrollTop(event.target) > 1) {
-        resetPull();
-        return;
-      }
-
-      isPullingRef.current = true;
-
-      if (event.cancelable) {
-        event.preventDefault();
-      }
-
-      const resistedDistance = Math.min(
-        mobilePullMaxDistance,
-        Math.round(deltaY * 0.46),
-      );
-
-      pullDistanceRef.current = resistedDistance;
-      setPullDistance(resistedDistance);
-    }
-
-    function handleTouchEnd() {
-      if (!isTrackingRef.current) {
-        return;
-      }
-
-      const shouldRefresh = isPullingRef.current
-        && pullDistanceRef.current >= mobilePullThreshold;
-
-      isTrackingRef.current = false;
-      isPullingRef.current = false;
-      pullDistanceRef.current = 0;
-
-      if (!shouldRefresh) {
-        setPullDistance(0);
-        return;
-      }
-
-      setPullDistance(mobilePullThreshold);
-      setIsRefreshing(true);
-
-      startTransition(() => {
-        router.refresh();
-      });
-
-      if (hideTimerRef.current !== null) {
-        window.clearTimeout(hideTimerRef.current);
-      }
-
-      hideTimerRef.current = window.setTimeout(() => {
-        setIsRefreshing(false);
-        setPullDistance(0);
-        hideTimerRef.current = null;
-      }, 750);
-    }
-
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
-    window.addEventListener("touchcancel", resetPull, { passive: true });
-
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-      window.removeEventListener("touchcancel", resetPull);
-    };
-  }, [disabled, isRefreshing, router, startTransition]);
-
-  return (
-    <div
-      aria-hidden="true"
-      className={`app-mobile-pull-refresh min-[481px]:hidden ${
-        pullDistance > 0 || isRefreshing ? "app-mobile-pull-refresh--visible" : ""
-      } ${isReadyToRefresh ? "app-mobile-pull-refresh--ready" : ""} ${
-        isRefreshing ? "app-mobile-pull-refresh--refreshing" : ""
-      }`.trim()}
-      style={{
-        "--app-mobile-pull-distance": `${pullDistance}px`,
-        "--app-mobile-pull-offset": `${Math.round(
-          Math.min(18, Math.max(0, pullDistance - 16) * 0.45),
-        )}px`,
-      } as CSSProperties}
-    >
-      {isRefreshing ? (
-        <span className="app-mobile-pull-refresh__spinner" />
-      ) : (
-        <span className="app-mobile-pull-refresh__arrow" />
-      )}
-    </div>
-  );
-}
 
 type CreateTopicButtonProps = {
   ariaLabel?: string;
@@ -254,7 +76,7 @@ function CreateTopicButton({
 
 type MobileTabItem = {
   href: string;
-  key: "create" | "home" | "notifications" | "search";
+  key: "create" | "home" | "notifications" | "profile" | "search";
   label: string;
   requiresAuth?: boolean;
 };
@@ -271,11 +93,13 @@ function MobileTabBar({
   createTopicHref,
   onRequireAuth,
   pathname,
+  profileHref,
   user,
 }: {
   createTopicHref: string;
   onRequireAuth: (nextHref?: string) => void;
   pathname: string | null;
+  profileHref: string;
   user: ReturnType<typeof useAuthClient>["user"];
 }) {
   const items: MobileTabItem[] = [
@@ -283,6 +107,7 @@ function MobileTabBar({
     { key: "search", label: "Поиск", href: "/search" },
     { key: "create", label: "Написать", href: createTopicHref },
     { key: "notifications", label: "Уведомления", href: "/notifications", requiresAuth: true },
+    { key: "profile", label: "Профиль", href: profileHref, requiresAuth: true },
   ];
 
   function isTabActive(item: MobileTabItem) {
@@ -296,6 +121,10 @@ function MobileTabBar({
 
     if (item.key === "notifications") {
       return pathname === "/notifications";
+    }
+
+    if (item.key === "profile") {
+      return pathname === "/profile" || pathname === profileHref;
     }
 
     return pathname === item.href || (pathname?.startsWith(`${item.href}/`) ?? false);
@@ -334,13 +163,29 @@ function MobileTabBar({
               aria-current={isActive ? "page" : undefined}
               className={getMobileTabClassName(isActive)}
             >
-              <span className="flex h-8 w-8 items-center justify-center">
+              <span className="flex h-8 w-8 items-center justify-center [&>svg]:h-6 [&>svg]:w-6">
                 {item.key === "home" ? (
                   <NavIcon name="forum" filled={isActive} />
                 ) : item.key === "search" ? (
                   <SearchIcon />
                 ) : item.key === "create" ? (
                   <PlusCircleIcon />
+                ) : item.key === "profile" ? (
+                  user ? (
+                    <span className="relative flex h-8 w-8 flex-none items-center justify-center rounded-full">
+                      <UserAvatar
+                        avatarUrl={user.avatarUrl}
+                        avatarSeed={user.nickname || user.id}
+                        name={user.displayName || user.email}
+                        size="menu"
+                      />
+                      {isActive ? (
+                        <span className="pointer-events-none absolute h-8 w-8 rounded-full shadow-[0_0_0_2px_var(--accent-primary)]" />
+                      ) : null}
+                    </span>
+                  ) : (
+                    <NavIcon name="profile" />
+                  )
                 ) : (
                   <NotificationIcon filled={isActive} />
                 )}
@@ -353,11 +198,13 @@ function MobileTabBar({
   );
 }
 
-function isMobileTabBarPath(pathname: string | null) {
+function isMobileTabBarPath(pathname: string | null, profileHref: string) {
   return pathname === "/"
     || pathname === "/search"
     || pathname === "/create-topic"
-    || pathname === "/notifications";
+    || pathname === "/notifications"
+    || pathname === "/profile"
+    || pathname === profileHref;
 }
 
 export function AppMobileTabBar() {
@@ -369,8 +216,9 @@ export function AppMobileTabBar() {
     ? `${pathname}${currentSearch ? `?${currentSearch}` : ""}`
     : "/";
   const createTopicHref = buildCreateTopicHref(currentPathWithSearch);
+  const profileHref = user ? (buildOwnProfilePath(user) ?? "/profile") : "/profile";
 
-  if (!isMobileTabBarPath(pathname)) {
+  if (!isMobileTabBarPath(pathname, profileHref)) {
     return null;
   }
 
@@ -379,6 +227,7 @@ export function AppMobileTabBar() {
       createTopicHref={createTopicHref}
       onRequireAuth={(nextHref) => openAuthModal({ nextHref })}
       pathname={pathname}
+      profileHref={profileHref}
       user={user}
     />
   );
@@ -426,8 +275,9 @@ export function AppHeader({
   const profileHref = user ? (buildOwnProfilePath(user) ?? "/profile") : "/profile";
   const activeSection = resolveActiveSection(pathname, profileHref);
   const shouldShowSearch = showSearch && !isAdminHeader;
+  const shouldShowMobileHeader = pathname === "/";
   const mobileMenuItems = navItems.filter((item) => (
-    item.key !== "forum" && item.key !== "drafts"
+    item.key !== "forum" && item.key !== "drafts" && item.key !== "profile"
   ));
 
   useEffect(() => {
@@ -597,48 +447,41 @@ export function AppHeader({
         </div>
       ) : (
         <>
-          <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 px-3 py-3 min-[481px]:hidden">
-            <button
-              type="button"
-              aria-expanded={isMobileMenuOpen}
-              aria-haspopup="dialog"
-              aria-controls="app-mobile-navigation"
-              aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
-              onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
-              className={buttonClassName({
-                className:
-                  "button--icon-only relative h-11 w-11 justify-self-start px-0 text-[var(--label-primary)]",
-                size: "lg",
-                variant: "tertiary",
-              })}
-            >
-              {user ? (
-                <UserAvatar
-                  avatarUrl={user.avatarUrl}
-                  avatarSeed={user.nickname || user.id}
-                  name={user.displayName || user.email}
-                  size="menu"
-                />
-              ) : (
+          {shouldShowMobileHeader ? (
+            <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 px-3 py-2 min-[481px]:hidden">
+              <button
+                type="button"
+                aria-expanded={isMobileMenuOpen}
+                aria-haspopup="dialog"
+                aria-controls="app-mobile-navigation"
+                aria-label={isMobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
+                onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
+                className={buttonClassName({
+                  className:
+                    "button--icon-only relative h-11 w-11 justify-self-start px-0 text-[var(--label-primary)]",
+                  size: "lg",
+                  variant: "tertiary",
+                })}
+              >
                 <span className="flex h-8 w-8 items-center justify-center">
-                  <NavIcon name="profile" />
+                  <MenuRailIcon />
                 </span>
-              )}
-            </button>
+              </button>
 
-            <Link
-              href={homeHref}
-              aria-label="внутри"
-              className="inline-flex w-fit max-w-full cursor-pointer justify-self-center"
-            >
-              <AppBrand
-                wordmarkClassName="h-7 w-auto shrink-0"
-                labelClassName="h-[18px] w-auto shrink-0"
-              />
-            </Link>
+              <Link
+                href={homeHref}
+                aria-label="внутри"
+                className="inline-flex w-fit max-w-full cursor-pointer justify-self-center"
+              >
+                <AppBrand
+                  wordmarkClassName="h-7 w-auto shrink-0"
+                  labelClassName="h-[18px] w-auto shrink-0"
+                />
+              </Link>
 
-            <div aria-hidden="true" />
-          </div>
+              <div aria-hidden="true" />
+            </div>
+          ) : null}
 
           <div className="relative z-10 hidden w-full min-w-0 min-[481px]:flex min-[481px]:h-[var(--app-header-height)] min-[481px]:overflow-x-clip min-[481px]:overflow-y-visible">
             <div className="relative z-[3] flex h-full min-w-0 shrink-0 flex-col items-start min-[481px]:w-[max(calc(var(--app-shell-nav-compact-width)+24px),calc((100vw-var(--app-shell-primary-column-width))/2))] min-[1140px]:w-auto min-[1140px]:grow min-[1140px]:basis-auto min-[1296px]:items-end">
@@ -716,11 +559,7 @@ export function AppHeader({
       )}
       </header>
 
-      {!isAdminHeader ? (
-        <MobilePullToRefresh disabled={isMobileMenuOpen} />
-      ) : null}
-
-      {!isAdminHeader ? (
+      {!isAdminHeader && shouldShowMobileHeader ? (
         <div
           className={`fixed inset-0 z-[120] min-[481px]:hidden ${
             isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"

@@ -4,6 +4,7 @@ import { Tabs } from "@heroui/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { buttonClassName } from "@/components/ui/button-styles";
 import { ContentPlaceholder } from "@/components/ui/content-placeholder";
 import { ArrowTurnRightIcon } from "@/components/ui/icons";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
@@ -11,6 +12,7 @@ import { CommentItem } from "@/features/comments/components/comment-item";
 import type { ProfileCommentItem } from "@/features/comments/types";
 import { ProfilePostsSection } from "@/features/feed/components/profile-posts-section";
 import { buildPostHref } from "@/features/feed/lib/post-navigation";
+import { buildCreateTopicHref } from "@/features/topic-creation/lib/create-topic-navigation";
 import type { CommentNode, CommentsViewer } from "@/features/comments/types";
 import type { Post } from "@/features/feed/types";
 
@@ -60,6 +62,7 @@ function mapProfileReplyToCommentNode(reply: ProfileCommentItem): CommentNode {
     userVote: reply.userVote,
     viewerOwnsComment: false,
     replyCount: 0,
+    hasReplyContext: false,
     replies: [],
     capabilities: {
       canReply: false,
@@ -232,6 +235,10 @@ export function ProfileActivityTabs({
   const favoritePostsCount = favoritePosts.length;
   const postsCount = posts.length;
   const repliesCount = replies.length;
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentProfilePath = `${pathname}${searchParams.size > 0 ? `?${searchParams.toString()}` : ""}`;
+  const createPostHref = buildCreateTopicHref(currentProfilePath);
   const getCounterClassName = (tabKey: ProfileActivityTabKey) =>
     tabKey === selectedKey
       ? "text-[var(--label-tertiary)]"
@@ -244,7 +251,7 @@ export function ProfileActivityTabs({
       onSelectionChange={(key) => setSelectedKey(String(key) as ProfileActivityTabKey)}
       className="w-full gap-0"
     >
-      <Tabs.ListContainer className="px-6 pt-6">
+      <Tabs.ListContainer className="px-1 pt-4 min-[481px]:px-4">
         <Tabs.List aria-label="Разделы активности профиля">
           <Tabs.Tab key="posts" id="posts" className="h-10 text-[16px] leading-6">
             <span className="inline-flex items-center gap-1.5">
@@ -274,11 +281,22 @@ export function ProfileActivityTabs({
         <ProfilePostsSection
           initialPosts={posts}
           emptyTitle={viewerIsOwner
-            ? "У вас пока нет опубликованных постов"
+            ? "Тут будут ваши посты"
             : `${displayName} пока не создал(а) постов`}
           emptyDescription={viewerIsOwner
-            ? "Когда вы опубликуете первый пост, он появится здесь в той же ленте, что и на главной."
+            ? "Напишите ваш первый пост"
             : "Когда здесь появятся публикации, они будут показаны в таком же формате, как на главной странице."}
+          emptyAction={viewerIsOwner ? (
+            <Link
+              href={createPostHref}
+              className={buttonClassName({
+                className: "type-body-md-medium h-11 px-6",
+                variant: "primary",
+              })}
+            >
+              Написать
+            </Link>
+          ) : null}
         />
       </Tabs.Panel>
 
@@ -294,10 +312,10 @@ export function ProfileActivityTabs({
         <ProfilePostsSection
           initialPosts={favoritePosts}
           emptyTitle={viewerIsOwner
-            ? "У вас пока нет избранного"
+            ? "Тут пока пусто"
             : `${displayName} пока ничего не добавил(а) в избранное`}
           emptyDescription={viewerIsOwner
-            ? "Когда вы добавите пост в профиль, он появится здесь."
+            ? "Добавляйте посты в избранное, чтобы сохранять их у себя в профиле"
             : "Когда здесь появятся посты, их можно будет открыть из профиля."}
           removeFromFeedWhenProfileFavoriteRemoved={viewerIsOwner}
         />

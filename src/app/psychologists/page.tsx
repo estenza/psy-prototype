@@ -7,7 +7,7 @@ export default function PsychologistsPage() {
     <AccountSectionShell
       activeSection="psychologists"
       header={<HistoryPageHeader title="Психологи" />}
-      contentClassName="flex w-full min-w-0 flex-col gap-4"
+      contentClassName="flex w-full min-w-0 flex-col gap-0"
     >
       <ContentPlaceholder
         title="Психологи скоро появятся"

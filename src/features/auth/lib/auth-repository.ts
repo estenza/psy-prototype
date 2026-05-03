@@ -25,6 +25,7 @@ type UserRow = {
   avatar_url: string | null;
   avatar_source_url: string | null;
   avatar_card_url: string | null;
+  profile_cover_url: string | null;
   profile_description: string | null;
   specialties_json: string | null;
   role: UserRole;
@@ -66,6 +67,7 @@ const PG_USER_COLUMNS = `
   users.avatar_url,
   users.avatar_source_url,
   users.avatar_card_url,
+  users.profile_cover_url,
   users.profile_description,
   users.specialties_json,
   users.role,
@@ -127,6 +129,7 @@ function mapUser(row: UserRow): AuthUser {
     avatarUrl: row.avatar_url,
     avatarSourceUrl: row.avatar_source_url,
     avatarCardUrl: row.avatar_card_url,
+    profileCoverUrl: row.profile_cover_url,
     profileDescription: row.profile_description,
     specialties: parseSpecialties(row.specialties_json),
     role: row.role,
@@ -856,21 +859,29 @@ export async function findPasswordResetTokenWithUserByTokenHash(tokenHash: strin
 }
 
 export async function updateUserProfileFields({
+  avatarSourceUrl,
+  avatarUrl,
   displayName,
   firstName,
   lastName,
   nickname,
   onboardingStep,
   patronymic,
+  profileCoverUrl,
+  profileDescription,
   role,
   userId,
 }: {
+  avatarSourceUrl?: string | null;
+  avatarUrl?: string | null;
   displayName?: string;
   firstName?: string | null;
   lastName?: string | null;
   nickname?: string | null;
   onboardingStep?: OnboardingStep;
   patronymic?: string | null;
+  profileCoverUrl?: string | null;
+  profileDescription?: string | null;
   role?: UserRole;
   userId: string;
 }) {
@@ -892,10 +903,14 @@ export async function updateUserProfileFields({
           first_name = $3,
           last_name = $4,
           patronymic = $5,
-          role = $6,
-          onboarding_step = $7,
-          updated_at = $8
-        WHERE id = $9
+          avatar_url = $6,
+          avatar_source_url = $7,
+          profile_cover_url = $8,
+          profile_description = $9,
+          role = $10,
+          onboarding_step = $11,
+          updated_at = $12
+        WHERE id = $13
       `,
       [
         displayName ?? currentUser.displayName,
@@ -903,6 +918,10 @@ export async function updateUserProfileFields({
         firstName === undefined ? currentUser.firstName : firstName,
         lastName === undefined ? currentUser.lastName : lastName,
         patronymic === undefined ? currentUser.patronymic : patronymic,
+        avatarUrl === undefined ? currentUser.avatarUrl : avatarUrl,
+        avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
+        profileCoverUrl === undefined ? currentUser.profileCoverUrl : profileCoverUrl,
+        profileDescription === undefined ? currentUser.profileDescription : profileDescription,
         role ?? currentUser.role,
         onboardingStep ?? currentUser.onboardingStep,
         nextUpdatedAt,
@@ -922,6 +941,10 @@ export async function updateUserProfileFields({
         first_name = ?,
         last_name = ?,
         patronymic = ?,
+        avatar_url = ?,
+        avatar_source_url = ?,
+        profile_cover_url = ?,
+        profile_description = ?,
         role = ?,
         onboarding_step = ?,
         updated_at = ?
@@ -933,6 +956,10 @@ export async function updateUserProfileFields({
       firstName === undefined ? currentUser.firstName : firstName,
       lastName === undefined ? currentUser.lastName : lastName,
       patronymic === undefined ? currentUser.patronymic : patronymic,
+      avatarUrl === undefined ? currentUser.avatarUrl : avatarUrl,
+      avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
+      profileCoverUrl === undefined ? currentUser.profileCoverUrl : profileCoverUrl,
+      profileDescription === undefined ? currentUser.profileDescription : profileDescription,
       role ?? currentUser.role,
       onboardingStep ?? currentUser.onboardingStep,
       nextUpdatedAt,

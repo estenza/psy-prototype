@@ -101,34 +101,27 @@ export function NotificationPreferencesCard({
 
   return (
     <section className="surface-elevated overflow-hidden rounded-[28px]">
-      <div className="px-6 pb-4 pt-6">
-        <h3 className="text-[18px] font-semibold text-[var(--label-primary)]">
-          Уведомления
-        </h3>
-        <p className="mt-2 text-[14px] leading-6 text-[var(--label-secondary)]">
-          Выберите, какие события будут появляться в колокольчике.
-        </p>
-      </div>
-
       <div className="divide-y divide-[var(--separator)]">
         {NOTIFICATION_PREFERENCE_ITEMS.map((item) => (
-          <button
+          <div
             key={item.key}
-            type="button"
-            disabled={pendingKey === item.key}
-            className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left transition-colors hover:bg-[var(--fill-quaternary)] disabled:cursor-wait disabled:opacity-70"
-            onClick={() => handleToggle(item.key)}
+            className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
           >
             <span className="min-w-0">
-              <span className="block text-[15px] font-semibold text-[var(--label-primary)]">
+              <span className="block text-[16px] font-medium text-[var(--label-primary)]">
                 {item.title}
               </span>
-              <span className="mt-1 block text-[13px] leading-5 text-[var(--label-secondary)]">
+              <span className="mt-1 block text-[14px] leading-5 text-[var(--label-tertiary)]">
                 {item.description}
               </span>
             </span>
-            <ToggleSwitch checked={preferences[item.key]} />
-          </button>
+            <ToggleSwitch
+              aria-label={item.title}
+              checked={preferences[item.key]}
+              disabled={pendingKey === item.key}
+              onClick={() => handleToggle(item.key)}
+            />
+          </div>
         ))}
       </div>
     </section>

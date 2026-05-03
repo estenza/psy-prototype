@@ -23,6 +23,7 @@ import { getPostBodyText } from "@/features/feed/lib/post-detail";
 import { normalizePostDates } from "@/features/feed/lib/post-normalization";
 import { normalizePostReturnTo } from "@/features/feed/lib/post-navigation";
 import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
+import { usePostViewTracker } from "@/features/feed/hooks/use-post-view-tracker";
 import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
 import type {
   PostMutationResponse,
@@ -81,6 +82,7 @@ export function PostViewScreen({
   );
   const [commentsCount, setCommentsCount] = useState(initialPost?.stats.comments ?? 0);
   const returnTo = normalizePostReturnTo(initialReturnTo);
+  const viewTrackerRef = usePostViewTracker<HTMLDivElement>(post?.id);
 
   const detailedPost = post
     ? {
@@ -347,11 +349,14 @@ export function PostViewScreen({
           fitCenterToContent
         >
           <section className="min-w-0">
-            <PageHeader onBack={handleBack} />
+            <PageHeader onBack={handleBack} title="Пост" />
 
             {detailedPost ? (
               <div className="space-y-2 pb-8 min-[481px]:space-y-4 min-[481px]:pb-24">
-                <div className="surface-card px-3 py-4 min-[481px]:px-5 min-[481px]:px-6">
+                <div
+                  ref={viewTrackerRef}
+                  className="surface-card px-3 py-4 min-[481px]:px-5 min-[481px]:px-6"
+                >
                   <CardPostItem
                     post={detailedPost}
                     blockPointerEvents={false}

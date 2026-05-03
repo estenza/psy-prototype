@@ -18,7 +18,7 @@ export default async function NotificationsPage() {
     <AccountSectionShell
       activeSection={null}
       header={<HistoryPageHeader title="Уведомления" />}
-      contentClassName="flex w-full min-w-0 flex-col gap-4"
+      contentClassName="flex w-full min-w-0 flex-col gap-0"
     >
       <NotificationsPageContent
         initialNotifications={notifications}

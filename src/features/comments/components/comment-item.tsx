@@ -120,6 +120,14 @@ function commentTreeContainsId(comment: CommentNode, targetCommentId: string): b
   return comment.replies.some((reply) => commentTreeContainsId(reply, targetCommentId));
 }
 
+export function shouldRenderCommentNode(comment: CommentNode): boolean {
+  if (comment.status !== "deleted") {
+    return true;
+  }
+
+  return comment.hasReplyContext || comment.replies.some(shouldRenderCommentNode);
+}
+
 export function CommentItem({
   comment,
   viewer,
@@ -146,8 +154,9 @@ export function CommentItem({
   highlightedCommentIds = [],
   onOpen,
 }: CommentItemProps) {
+  const renderableReplies = comment.replies.filter(shouldRenderCommentNode);
   const highlightedReplyIndex = highlightedCommentIds.length > 0
-    ? comment.replies.findIndex((reply) =>
+    ? renderableReplies.findIndex((reply) =>
         highlightedCommentIds.some((commentId) => commentTreeContainsId(reply, commentId)),
       )
     : -1;
@@ -171,9 +180,9 @@ export function CommentItem({
   const canReplyToComment = canPostReply && comment.capabilities.canReply;
   const canStartReply = isViewerAuthenticated ? canReplyToComment : true;
   const profileHref = buildPublicProfilePathFromHandle(comment.author.handle);
-  const hasReplies = !flat && comment.replyCount > 0;
-  const visibleReplies = areExtraRepliesVisible ? comment.replies : comment.replies.slice(0, 3);
-  const hiddenRepliesCount = Math.max(comment.replies.length - visibleReplies.length, 0);
+  const hasReplies = !flat && renderableReplies.length > 0;
+  const visibleReplies = areExtraRepliesVisible ? renderableReplies : renderableReplies.slice(0, 3);
+  const hiddenRepliesCount = Math.max(renderableReplies.length - visibleReplies.length, 0);
   const hasHiddenReplies = hiddenRepliesCount > 0;
   const isHighlighted = highlightedCommentIds.includes(comment.id);
   const bodySurfaceClassName = showAvatar
@@ -245,9 +254,21 @@ export function CommentItem({
       const nextEndOffset =
         (nextReplyCenters.at(-1) ?? COMMENT_AVATAR_SIZE) - COMMENT_BRANCH_ELBOW_RADIUS;
 
-      setBranchGeometry({
-        targetCenters: nextReplyCenters,
-        endOffset: nextEndOffset,
+      setBranchGeometry((currentGeometry) => {
+        const hasSameCenters =
+          currentGeometry.targetCenters.length === nextReplyCenters.length
+          && currentGeometry.targetCenters.every(
+            (currentCenter, index) => currentCenter === nextReplyCenters[index],
+          );
+
+        if (currentGeometry.endOffset === nextEndOffset && hasSameCenters) {
+          return currentGeometry;
+        }
+
+        return {
+          targetCenters: nextReplyCenters,
+          endOffset: nextEndOffset,
+        };
       });
     };
 
@@ -282,6 +303,10 @@ export function CommentItem({
       }
     };
   }, [hasReplies, areRepliesCollapsed, visibleReplies.length, hasHiddenReplies]);
+
+  if (!shouldRenderCommentNode(comment)) {
+    return null;
+  }
 
   return (
     <article
@@ -366,7 +391,7 @@ export function CommentItem({
             {isDeleted ? (
               <div className="flex min-h-10 min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="text-[14px] leading-5 font-normal text-[var(--label-tertiary)]">
-                  Ответ удален пользователем
+                  Ответ удален автором
                 </span>
                 <span aria-hidden="true" className="text-[14px] leading-5 text-[var(--label-tertiary)]">•</span>
                 <span className="flex items-center text-[14px] leading-5 text-[var(--label-tertiary)]">
@@ -526,7 +551,7 @@ export function CommentItem({
               className="w-fit rounded-full pl-1 text-[14px] leading-5 font-medium text-[var(--accent-primary)] transition-colors hover:text-[var(--accent-primary)]"
               onClick={expandReplies}
             >
-              {formatReplyCount(comment.replyCount)}
+              {formatReplyCount(renderableReplies.length)}
             </button>
           </div>
         ) : null}

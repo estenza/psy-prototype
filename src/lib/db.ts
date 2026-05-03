@@ -89,6 +89,7 @@ function createUsersTable(database: DatabaseSync) {
       avatar_url TEXT,
       avatar_source_url TEXT,
       avatar_card_url TEXT,
+      profile_cover_url TEXT,
       profile_description TEXT,
       specialties_json TEXT NOT NULL DEFAULT '[]',
       role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'specialist')),
@@ -120,6 +121,10 @@ function ensureUsersTableColumns(database: DatabaseSync) {
 
   if (!columns.has("profile_description")) {
     database.exec("ALTER TABLE users ADD COLUMN profile_description TEXT;");
+  }
+
+  if (!columns.has("profile_cover_url")) {
+    database.exec("ALTER TABLE users ADD COLUMN profile_cover_url TEXT;");
   }
 
   if (!columns.has("specialties_json")) {
@@ -163,6 +168,7 @@ function createPostsTable(database: DatabaseSync) {
       media_alt TEXT,
       comments_count INTEGER NOT NULL DEFAULT 0,
       likes_count INTEGER NOT NULL DEFAULT 0,
+      views_count INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (author_user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -203,6 +209,14 @@ function createPostsTable(database: DatabaseSync) {
     CREATE INDEX IF NOT EXISTS user_profile_favorite_posts_post_id_idx
       ON user_profile_favorite_posts (post_id);
   `);
+}
+
+function ensurePostsTableColumns(database: DatabaseSync) {
+  const columns = new Set(readTableColumns(database, "posts").map((column) => column.name));
+
+  if (!columns.has("views_count")) {
+    database.exec("ALTER TABLE posts ADD COLUMN views_count INTEGER NOT NULL DEFAULT 0;");
+  }
 }
 
 function createUserIgnoredAuthorsTable(database: DatabaseSync) {
@@ -724,6 +738,7 @@ function initializeDatabase(database: DatabaseSync) {
   ensureUsersTableColumns(database);
   migrateLegacyPostTables(database);
   createPostsTable(database);
+  ensurePostsTableColumns(database);
   createUserIgnoredAuthorsTable(database);
   createUserBookmarksTable(database);
   createUserFollowsTable(database);

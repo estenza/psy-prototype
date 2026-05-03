@@ -167,6 +167,7 @@ function mapComment(
     userVote: null,
     viewerOwnsComment,
     replyCount: replies.length,
+    hasReplyContext: false,
     replies,
     capabilities: {
       canReply: capabilities.canReply,

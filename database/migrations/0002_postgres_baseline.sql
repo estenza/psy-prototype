@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url TEXT,
   avatar_source_url TEXT,
   avatar_card_url TEXT,
+  profile_cover_url TEXT,
   profile_description TEXT,
   specialties_json TEXT NOT NULL DEFAULT '[]',
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'specialist')),
@@ -114,6 +115,7 @@ CREATE TABLE IF NOT EXISTS posts (
   media_alt TEXT,
   comments_count INTEGER NOT NULL DEFAULT 0,
   likes_count INTEGER NOT NULL DEFAULT 0,
+  views_count INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL
 );
@@ -355,6 +357,7 @@ CREATE INDEX IF NOT EXISTS auth_otp_codes_email_idx
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_source_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_card_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_cover_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_description TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS specialties_json TEXT NOT NULL DEFAULT '[]';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE;

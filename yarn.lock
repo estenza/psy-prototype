@@ -6896,6 +6896,7 @@ __metadata:
     react-dom: "npm:19.2.3"
     react-dropzone: "npm:^15.0.0"
     react-easy-crop: "npm:^5.5.7"
+    react-simple-pull-to-refresh: "npm:^1.3.4"
     tailwindcss: "npm:^4"
     typescript: "npm:^5"
   languageName: unknown
@@ -7091,6 +7092,16 @@ __metadata:
     "@types/react":
       optional: true
   checksum: 10c0/b5f3315bead75e72853f492c0b51ba8fb4fa09a4534d7fc42d6fcd59ca3e047cf213279ffc1e35b337e314ef5a04cb2b12544c85e0078802271731c27c09e5aa
+  languageName: node
+  linkType: hard
+
+"react-simple-pull-to-refresh@npm:^1.3.4":
+  version: 1.3.4
+  resolution: "react-simple-pull-to-refresh@npm:1.3.4"
+  peerDependencies:
+    react: ^16.10.2 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^16.10.2 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/2d317191b13bdb8311c0bd360f2d90cd3bd769143cf01e556da835f793e37368315ae2fb0859cd2540f7622fae6f7fb079a7778ecfb884169fc1f5f283aee3a9
   languageName: node
   linkType: hard
 

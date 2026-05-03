@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import PullToRefresh from "react-simple-pull-to-refresh";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AppMobileTabBar } from "@/components/layout/app-header";
 import { MenuColumn } from "@/components/layout/menu-column";
@@ -23,6 +25,59 @@ type DesktopAppShellProps = {
   centerClassName?: string;
   fitCenterToContent?: boolean;
 };
+
+function useIsMobileViewport() {
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 480px)");
+
+    function syncViewport() {
+      setIsMobileViewport(mediaQuery.matches);
+    }
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  return isMobileViewport;
+}
+
+function MobilePullToRefreshShell({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const isMobileViewport = useIsMobileViewport();
+
+  const handleRefresh = useCallback(() => {
+    return new Promise<void>((resolve) => {
+      window.setTimeout(() => {
+        router.refresh();
+        resolve();
+      }, 650);
+    });
+  }, [router]);
+
+  if (!isMobileViewport) {
+    return <>{children}</>;
+  }
+
+  return (
+    <PullToRefresh
+      className="app-mobile-pull-to-refresh"
+      maxPullDownDistance={88}
+      onRefresh={handleRefresh}
+      pullDownThreshold={58}
+      pullingContent={null}
+      refreshingContent={<span className="app-mobile-pull-refresh__spinner" />}
+      resistance={1.35}
+    >
+      {children}
+    </PullToRefresh>
+  );
+}
 
 export function DesktopAppShell({
   children,
@@ -50,6 +105,30 @@ export function DesktopAppShell({
       {sidebarContent}
     </SidebarColumn>
   ) : null;
+  const shellContent = (
+    <div
+      data-testid="mainRailWrapper"
+      className={`app-shell-main-rail ${mainRailClassName} min-[481px]:flex min-[481px]:flex-1 min-[481px]:flex-col`.trim()}
+    >
+      <div
+        data-testid="mainRailInner"
+        className="app-shell-main-rail-inner w-full min-w-0 min-[481px]:flex min-[481px]:flex-1"
+      >
+        <div
+          data-testid="mainColumnsRow"
+          className={`app-shell-main-columns min-w-0 w-full ${
+            showRightSidebar
+              ? "min-[1140px]:flex min-[1140px]:flex-row min-[1140px]:items-start min-[1140px]:gap-[var(--app-shell-column-gap)]"
+              : ""
+          }`.trim()}
+        >
+          {sidebarPlacement === "start" ? sidebarColumn : null}
+          <PrimaryColumn className={primaryColumnClassName}>{children}</PrimaryColumn>
+          {sidebarPlacement === "end" ? sidebarColumn : null}
+        </div>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     function handleWheel(event: WheelEvent) {
@@ -112,28 +191,7 @@ export function DesktopAppShell({
         } min-[481px]:flex min-[481px]:h-full min-[481px]:min-h-0 min-[481px]:grow min-[481px]:basis-auto min-[481px]:flex-shrink min-[481px]:flex-col min-[481px]:items-start min-[481px]:overflow-x-clip min-[481px]:overflow-y-auto`.trim()}
       >
         {/* X-like layout: main itself grows to the right edge, and a narrower rail lives inside it. */}
-        <div
-          data-testid="mainRailWrapper"
-          className={`app-shell-main-rail ${mainRailClassName} min-[481px]:flex min-[481px]:flex-1 min-[481px]:flex-col`.trim()}
-        >
-          <div
-            data-testid="mainRailInner"
-            className="app-shell-main-rail-inner w-full min-w-0 min-[481px]:flex min-[481px]:flex-1"
-          >
-            <div
-              data-testid="mainColumnsRow"
-              className={`app-shell-main-columns min-w-0 w-full ${
-                showRightSidebar
-                  ? "min-[1140px]:flex min-[1140px]:flex-row min-[1140px]:items-start min-[1140px]:gap-[var(--app-shell-column-gap)]"
-                  : ""
-              }`.trim()}
-            >
-              {sidebarPlacement === "start" ? sidebarColumn : null}
-              <PrimaryColumn className={primaryColumnClassName}>{children}</PrimaryColumn>
-              {sidebarPlacement === "end" ? sidebarColumn : null}
-            </div>
-          </div>
-        </div>
+        <MobilePullToRefreshShell>{shellContent}</MobilePullToRefreshShell>
         <AppMobileTabBar />
       </main>
     </div>

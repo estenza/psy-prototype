@@ -3,6 +3,7 @@ import "server-only";
 import {
   FEED_PAGE_SIZE,
   findPostById,
+  incrementPostViews,
   listBookmarkedPostsByUserId,
   listPostsPage,
   listPostsByAuthorUserId,
@@ -32,6 +33,17 @@ export function listFeedPosts(
 
 export function getPostForViewer(postId: string, viewer: SessionUser | null) {
   return findPostById(postId, viewer);
+}
+
+export async function registerPostView(
+  postId: string,
+  viewer: SessionUser | null,
+) {
+  if (!viewer) {
+    return;
+  }
+
+  await incrementPostViews(postId);
 }
 
 export function listAuthorProfilePosts(

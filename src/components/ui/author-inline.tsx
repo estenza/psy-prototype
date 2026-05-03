@@ -41,16 +41,16 @@ export function AuthorInline({
   avatarHref,
   nameHref,
   className = "",
-  metaRowClassName = "flex min-w-0 items-center gap-2",
-  nameClassName = "text-label-primary relative z-10 min-w-0 truncate text-[14px] leading-5 font-medium",
-  handleClassName = "text-label-tertiary min-w-0 truncate text-[14px] leading-5",
+  metaRowClassName = "flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5",
+  nameClassName = "text-label-primary relative z-10 max-w-full break-words text-[14px] leading-5 font-medium",
+  handleClassName = "text-label-tertiary max-w-full break-words text-[14px] leading-5",
   metaClassName = "text-label-tertiary flex shrink-0 items-center gap-1.5 text-[14px] leading-5",
 }: AuthorInlineProps) {
   const resolvedAvatarHref = avatarHref ?? profileHref;
   const resolvedNameHref = nameHref ?? profileHref;
 
   return (
-    <div className={`flex min-w-0 items-center gap-3 ${className}`.trim()}>
+    <div className={`flex min-w-0 items-start gap-3 ${className}`.trim()}>
       <UserAvatarAction
         avatarUrl={avatarUrl}
         avatarSeed={handle}

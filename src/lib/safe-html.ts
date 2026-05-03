@@ -1,7 +1,5 @@
 const SAFE_HTTP_URL_PATTERN = /^https?:\/\//i;
-const SAFE_IMAGE_SRC_PATTERN = /^(https?:\/\/|data:image\/(?:png|jpeg);base64,)/i;
-const SAFE_EMBED_SRC_PATTERN =
-  /^https:\/\/(?:www\.)?(?:youtube\.com\/embed\/|youtube-nocookie\.com\/embed\/|player\.vimeo\.com\/video\/)/i;
+const SAFE_IMAGE_SRC_PATTERN = /^(https?:\/\/|data:image\/(?:png|jpeg|gif);base64,)/i;
 
 export function escapeHtml(value: string) {
   return value
@@ -15,6 +13,106 @@ export function escapeHtml(value: string) {
 function readAttribute(tag: string, attributeName: string) {
   const match = tag.match(new RegExp(`\\s${attributeName}\\s*=\\s*(['"])(.*?)\\1`, "i"));
   return match?.[2]?.trim() ?? "";
+}
+
+function getSafeTweetSource(source: string) {
+  try {
+    const url = new URL(source);
+
+    if (!/^https?:$/i.test(url.protocol)) {
+      return null;
+    }
+
+    if (url.hostname !== "twitter.com" && url.hostname !== "x.com") {
+      return null;
+    }
+
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const statusIndex = pathParts.findIndex((pathPart) => pathPart === "status");
+    const authorHandle = statusIndex > 0 ? pathParts[statusIndex - 1] : "";
+    const tweetId = statusIndex >= 0 ? pathParts[statusIndex + 1] : "";
+
+    if (!authorHandle || !/^\d+$/.test(tweetId ?? "")) {
+      return null;
+    }
+
+    return `https://twitter.com/${authorHandle}/status/${tweetId}`;
+  } catch {
+    return null;
+  }
+}
+
+function getSafeTelegramSource(source: string) {
+  try {
+    const url = new URL(source);
+
+    if (!/^https?:$/i.test(url.protocol)) {
+      return null;
+    }
+
+    if (url.hostname !== "t.me" && url.hostname !== "telegram.me") {
+      return null;
+    }
+
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const [firstPart, secondPart, thirdPart] = pathParts;
+    const channel = firstPart === "s" ? secondPart : firstPart;
+    const postId = firstPart === "s" ? thirdPart : secondPart;
+
+    if (!channel || !/^[a-zA-Z0-9_]+$/.test(channel) || !/^\d+$/.test(postId ?? "")) {
+      return null;
+    }
+
+    return `https://t.me/${channel}/${postId}`;
+  } catch {
+    return null;
+  }
+}
+
+function getSafeInstagramSource(source: string) {
+  try {
+    const url = new URL(source);
+
+    if (!/^https?:$/i.test(url.protocol)) {
+      return null;
+    }
+
+    if (url.hostname !== "instagram.com" && url.hostname !== "www.instagram.com") {
+      return null;
+    }
+
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const [kind, shortcode] = pathParts;
+
+    if (!["p", "reel", "tv"].includes(kind ?? "") || !shortcode) {
+      return null;
+    }
+
+    return `https://www.instagram.com/${kind}/${shortcode}/`;
+  } catch {
+    return null;
+  }
+}
+
+function getSafeTikTokSource(source: string) {
+  try {
+    const url = new URL(source);
+
+    if (!/^https?:$/i.test(url.protocol)) {
+      return null;
+    }
+
+    if (url.hostname === "www.tiktok.com" || url.hostname === "tiktok.com") {
+      const videoId =
+        url.pathname.match(/^\/embed\/v2\/(\d+)/)?.[1]
+        ?? url.pathname.match(/\/video\/(\d+)/)?.[1];
+      return videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : null;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function sanitizeImageTag(tag: string) {
@@ -46,14 +144,51 @@ function sanitizeEmbeddedMediaTag(tag: string) {
 
   if (/^<\s*div\b/i.test(tag) && /\sdata-embedded-media(?:\s|=|>)/i.test(tag)) {
     const kind = readAttribute(tag, "data-kind") || readAttribute(tag, "kind") || "iframe";
-    const safeKind = kind === "video" ? "video" : "iframe";
+    const safeKind = (
+      kind === "audio"
+      || kind === "instagram"
+      || kind === "telegram"
+      || kind === "tiktok"
+      || kind === "tweet"
+      || kind === "video"
+    )
+      ? kind
+      : "iframe";
+
+    if (safeKind === "tweet") {
+      const source = getSafeTweetSource(
+        readAttribute(tag, "data-src") || readAttribute(tag, "src"),
+      );
+
+      if (!source) {
+        return "";
+      }
+
+      return `<div data-embedded-media="true" data-kind="tweet" data-src="${escapeHtml(source)}">`;
+    }
+
+    if (safeKind === "telegram" || safeKind === "instagram" || safeKind === "tiktok") {
+      const source = readAttribute(tag, "data-src") || readAttribute(tag, "src");
+      const safeSource = safeKind === "telegram"
+        ? getSafeTelegramSource(source)
+        : safeKind === "instagram"
+          ? getSafeInstagramSource(source)
+          : getSafeTikTokSource(source);
+
+      if (!safeSource) {
+        return "";
+      }
+
+      return `<div data-embedded-media="true" data-kind="${safeKind}" data-src="${escapeHtml(safeSource)}">`;
+    }
+
     return `<div data-embedded-media="true" data-kind="${safeKind}">`;
   }
 
   if (/^<\s*iframe\b/i.test(tag)) {
     const source = readAttribute(tag, "src");
 
-    if (!source || !SAFE_EMBED_SRC_PATTERN.test(source)) {
+    if (!source || !SAFE_HTTP_URL_PATTERN.test(source)) {
       return "";
     }
 

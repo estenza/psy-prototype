@@ -52,7 +52,7 @@ export function plainTextToHtml(value: string) {
 }
 
 export function sanitizeCommentHtml(value: string) {
-  return sanitizeRichHtml(value);
+  return sanitizeRichHtml(value, { allowEmbeddedMedia: true });
 }
 
 export function buildCommentHtml(value: string) {
@@ -78,7 +78,9 @@ export function getCommentContentTextLength(value: string) {
 export function hasCommentBodyContent(value: string) {
   return (
     getCommentContentTextLength(value) > 0 ||
-    /<img[\s>]/i.test(value)
+    /<img[\s>]/i.test(value) ||
+    /\sdata-embedded-media(?:\s|=|>)/i.test(value) ||
+    /<(?:iframe|video)[\s>]/i.test(value)
   );
 }
 

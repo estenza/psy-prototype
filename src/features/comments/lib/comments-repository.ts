@@ -426,6 +426,7 @@ function buildCommentNode(params: {
   depth: number;
   bodyHtml?: string;
   bodyText?: string;
+  hasReplyContext?: boolean;
 }): CommentNode {
   const {
     capabilities,
@@ -435,6 +436,7 @@ function buildCommentNode(params: {
     depth,
     bodyHtml = row.body_html,
     bodyText = row.body_text,
+    hasReplyContext = false,
   } = params;
   const viewerOwnsComment = Boolean(currentUser && row.author_user_id === currentUser.id);
   const currentUserCanInteract = Boolean(currentUser && !currentUser.isBanned);
@@ -483,6 +485,7 @@ function buildCommentNode(params: {
     userVote: readBoolean(row.viewer_liked) ? "up" : null,
     viewerOwnsComment,
     replyCount: Math.max(replies.length, row.replies_count),
+    hasReplyContext,
     replies,
     capabilities: {
       canReply: capabilities.canReply && row.status === "published",
@@ -559,8 +562,21 @@ function buildCommentsSection(params: {
   viewer: CommentsViewer;
 }): CommentsSectionData {
   const repliesByParentCommentId = new Map<string, PostCommentRow[]>();
+  const replyContextCommentIds = new Set<string>();
 
   params.rows.forEach((row) => {
+    if (row.status === "published") {
+      const { targetCommentId } = extractCommentMentionMeta(row.body_html);
+
+      if (targetCommentId) {
+        replyContextCommentIds.add(targetCommentId);
+      }
+
+      if (row.parent_comment_id) {
+        replyContextCommentIds.add(row.parent_comment_id);
+      }
+    }
+
     const parentId = row.parent_comment_id;
 
     if (!parentId) {
@@ -596,6 +612,7 @@ function buildCommentsSection(params: {
           depth,
           bodyHtml: prefixedBodyHtml,
           bodyText: stripHtml(prefixedBodyHtml),
+          hasReplyContext: replyContextCommentIds.has(replyRow.id),
         }),
         ...buildFlattenedReplies(replyRow.id, replyRow, depth),
       ];
@@ -614,6 +631,7 @@ function buildCommentsSection(params: {
             replies: [],
             row: replyRow,
             depth,
+            hasReplyContext: replyContextCommentIds.has(replyRow.id),
           }),
           ...buildFlattenedReplies(replyRow.id, replyRow, depth),
         ];
@@ -626,6 +644,7 @@ function buildCommentsSection(params: {
           replies: buildRepliesTree(replyRow.id, depth + 1),
           row: replyRow,
           depth,
+          hasReplyContext: replyContextCommentIds.has(replyRow.id),
         }),
       ];
       });
@@ -642,6 +661,7 @@ function buildCommentsSection(params: {
       replies: buildRepliesTree(row.id, 1),
       row,
       depth: 0,
+      hasReplyContext: replyContextCommentIds.has(row.id),
     });
   });
 

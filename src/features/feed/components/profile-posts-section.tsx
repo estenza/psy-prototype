@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ContentPlaceholder } from "@/components/ui/content-placeholder";
 import { PostFeedItem } from "@/features/feed/components/post-feed-item";
@@ -9,6 +10,7 @@ import { isInteractivePostCardTarget } from "@/features/feed/lib/post-card-navig
 import type { Post } from "@/features/feed/types";
 
 type ProfilePostsSectionProps = {
+  emptyAction?: ReactNode;
   emptyTitle: string;
   emptyDescription: string;
   flushTop?: boolean;
@@ -18,6 +20,7 @@ type ProfilePostsSectionProps = {
 };
 
 export function ProfilePostsSection({
+  emptyAction = null,
   emptyTitle,
   emptyDescription,
   flushTop = false,
@@ -103,6 +106,7 @@ export function ProfilePostsSection({
             <ContentPlaceholder
               title={emptyTitle}
               description={emptyDescription}
+              action={emptyAction}
             />
           )}
         </div>

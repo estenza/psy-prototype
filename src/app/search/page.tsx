@@ -7,7 +7,7 @@ export default function SearchPage() {
     <AccountSectionShell
       activeSection={null}
       header={<HistoryPageHeader title="Поиск" />}
-      contentClassName="flex w-full min-w-0 flex-col gap-4"
+      contentClassName="flex w-full min-w-0 flex-col gap-0"
     >
       <ContentPlaceholder
         title="Поиск скоро появится"

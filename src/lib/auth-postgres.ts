@@ -81,7 +81,7 @@ function buildPoolConfig(): PoolConfig {
   };
 }
 
-const LATEST_AUTH_POSTGRES_MIGRATION = "0005_notifications_followed_post_naming_and_author_followed";
+const LATEST_AUTH_POSTGRES_MIGRATION = "0006_post_views_count";
 const AUTH_POSTGRES_MIGRATION_LOCK_ID = 825441337;
 const AUTH_POSTGRES_MIGRATIONS_DIR = join(process.cwd(), "database", "migrations");
 

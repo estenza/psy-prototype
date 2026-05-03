@@ -35,6 +35,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 18,
       likes: 41,
+      views: 286,
     },
     viewer_state: {
       liked: false,
@@ -68,6 +69,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 27,
       likes: 58,
+      views: 413,
     },
     viewer_state: {
       liked: false,
@@ -96,6 +98,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 13,
       likes: 36,
+      views: 239,
     },
     viewer_state: {
       liked: false,
@@ -124,6 +127,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 34,
       likes: 62,
+      views: 524,
     },
     viewer_state: {
       liked: false,
@@ -152,6 +156,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 21,
       likes: 44,
+      views: 351,
     },
     viewer_state: {
       liked: false,
@@ -180,6 +185,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 16,
       likes: 29,
+      views: 208,
     },
     viewer_state: {
       liked: false,
@@ -208,6 +214,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 9,
       likes: 22,
+      views: 176,
     },
     viewer_state: {
       liked: false,
@@ -236,6 +243,7 @@ export const mockApiPosts: ApiPostRecord[] = [
     counters: {
       comments: 31,
       likes: 55,
+      views: 489,
     },
     viewer_state: {
       liked: false,

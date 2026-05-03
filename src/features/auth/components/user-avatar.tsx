@@ -2,7 +2,7 @@
 
 import { Avatar } from "@heroui/react";
 import { useState } from "react";
-import { buildLoreleiAvatarUrl } from "@/lib/dicebear-avatar";
+import { buildGeneratedAvatarUrl } from "@/lib/dicebear-avatar";
 import { getUserAvatarTone } from "@/lib/avatar-tone";
 
 type UserAvatarProps = {
@@ -12,6 +12,7 @@ type UserAvatarProps = {
   name: string;
   showStatusDot?: boolean;
   size?: "comment-md" | "comment-sm" | "header" | "lg" | "md" | "menu" | "profile-xl" | "sm";
+  outerBorderClassName?: string;
   useGeneratedFallback?: boolean;
 };
 
@@ -20,7 +21,7 @@ const avatarSizeClasses = {
   lg: "type-avatar-lg h-20 w-20 shrink-0 rounded-full",
   md: "type-avatar-md h-11 w-11 shrink-0 rounded-full",
   menu: "type-avatar-header h-8 w-8 shrink-0 rounded-full",
-  "profile-xl": "h-[136px] w-[136px] shrink-0 rounded-full text-[34px]",
+  "profile-xl": "h-28 w-28 shrink-0 rounded-full text-[28px] min-[481px]:h-[136px] min-[481px]:w-[136px] min-[481px]:text-[34px]",
   sm: "type-avatar-sm h-10 w-10 shrink-0 rounded-full lg:h-11 lg:w-11 lg:text-sm",
   "comment-md": "type-avatar-comment-md h-9 w-9 shrink-0 rounded-full",
   "comment-sm": "type-avatar-comment-sm h-6 w-6 shrink-0 rounded-full",
@@ -52,6 +53,7 @@ export function UserAvatar({
   avatarSeed,
   fallbackText,
   name,
+  outerBorderClassName,
   showStatusDot = false,
   size = "md",
   useGeneratedFallback = true,
@@ -62,7 +64,7 @@ export function UserAvatar({
   const initials = fallbackText?.trim() || getUserInitials(name);
   const uploadedAvatarUrl = avatarUrl?.trim() || null;
   const generatedAvatarUrl = useGeneratedFallback
-    ? buildLoreleiAvatarUrl(avatarSeed?.trim() || name)
+    ? buildGeneratedAvatarUrl(avatarSeed?.trim() || name)
     : null;
   const resolvedAvatarUrl =
     uploadedAvatarUrl && uploadedAvatarUrl !== failedAvatarUrl
@@ -75,7 +77,9 @@ export function UserAvatar({
 
   return (
     <span className="relative inline-flex flex-none">
-      <Avatar.Root className={avatarClassName}>
+      <Avatar.Root
+        className={`${avatarClassName} ${outerBorderClassName ?? ""}`.trim()}
+      >
         {shouldShowImage ? (
           <Avatar.Image
             src={resolvedAvatarUrl ?? undefined}

@@ -67,7 +67,10 @@ export async function generateMetadata({
     profileUser.profileDescription?.trim()
     || `Профиль ${handle} на психологической платформе внутри.`;
   const canonicalUrl = buildAbsoluteAppUrl(canonicalProfilePath);
-  const imageUrl = resolveMetadataImageUrl(profileUser.avatarCardUrl || profileUser.avatarUrl, appUrl);
+  const imageUrl = resolveMetadataImageUrl(
+    profileUser.profileCoverUrl || profileUser.avatarCardUrl || profileUser.avatarUrl,
+    appUrl,
+  );
 
   return {
     title,

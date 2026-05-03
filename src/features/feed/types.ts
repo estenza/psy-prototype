@@ -20,6 +20,7 @@ export type Post = {
   stats: {
     comments: number;
     likes: number;
+    views: number;
   };
   viewer: {
     isAuthor: boolean;
@@ -81,6 +82,7 @@ export type ApiPostRecord = {
   counters: {
     comments: number;
     likes: number;
+    views?: number;
   };
   viewer_state: {
     is_author?: boolean;

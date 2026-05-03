@@ -506,16 +506,19 @@ export function LogOutIcon() {
 
 export function MenuRailIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M6 8H18" strokeLinecap="round" />
-      <path d="M6 12H18" strokeLinecap="round" />
-      <path d="M6 16H18" strokeLinecap="round" />
+    <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none">
+      <path
+        d="M17.5 15.084C17.9142 15.084 18.25 15.4198 18.25 15.834C18.2497 16.248 17.9141 16.584 17.5 16.584H2.5C2.08595 16.584 1.75026 16.248 1.75 15.834C1.75 15.4198 2.08579 15.084 2.5 15.084H17.5Z"
+        fill="currentColor"
+      />
+      <path
+        d="M17.5 9.25C17.9142 9.25 18.25 9.58579 18.25 10C18.25 10.4142 17.9142 10.75 17.5 10.75H2.5C2.08579 10.75 1.75 10.4142 1.75 10C1.75 9.58579 2.08579 9.25 2.5 9.25H17.5Z"
+        fill="currentColor"
+      />
+      <path
+        d="M17.5 3.41602C17.9142 3.41602 18.25 3.75278 18.25 4.16699C18.2497 4.58098 17.9141 4.91699 17.5 4.91699H2.5C2.08595 4.91699 1.75026 4.58098 1.75 4.16699C1.75 3.75278 2.08579 3.41602 2.5 3.41602H17.5Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }

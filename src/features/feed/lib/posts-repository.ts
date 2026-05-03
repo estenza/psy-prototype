@@ -33,6 +33,7 @@ type PostRow = {
   media_alt: string | null;
   comments_count: number;
   likes_count: number;
+  views_count: number;
   created_at: string;
   updated_at: string;
   author_display_name: string;
@@ -86,6 +87,7 @@ const PG_POST_COLUMNS = `
   posts.media_alt,
   posts.comments_count,
   posts.likes_count,
+  posts.views_count,
   posts.created_at::text AS created_at,
   posts.updated_at::text AS updated_at,
   users.display_name AS author_display_name,
@@ -298,6 +300,7 @@ function mapPost(row: PostRow, currentUser: SessionUser | null): Post {
     stats: {
       comments: row.comments_count,
       likes: row.likes_count,
+      views: row.views_count,
     },
     viewer: {
       isAuthor,
@@ -816,6 +819,20 @@ export async function findPostById(postId: string, currentUser: SessionUser | nu
 
   const row = readPostRow(result);
   return row ? mapPost(row, currentUser) : null;
+}
+
+export async function incrementPostViews(postId: string) {
+  if (isPostgresAuthEnabled()) {
+    await queryAuthPostgres(
+      "UPDATE posts SET views_count = views_count + 1 WHERE id = $1",
+      [postId],
+    );
+    return;
+  }
+
+  getDatabase()
+    .prepare("UPDATE posts SET views_count = views_count + 1 WHERE id = ?")
+    .run(postId);
 }
 
 export async function createPost(input: PostMutationInput) {

@@ -1,15 +1,14 @@
 "use client";
 
 import { Dropdown, Label, toast } from "@heroui/react";
-import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import {
-  EditOutlineIcon,
   FlagIcon,
   IgnoreAuthorIcon,
-  ShareIcon,
+  LinkActionIcon,
+  TelegramIcon,
 } from "@/components/ui/icons";
 import { MoreMenuButton } from "@/components/ui/more-menu-button";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
@@ -28,7 +27,7 @@ type ProfileMoreMenuProps = {
 
 type ProfileMenuItem = {
   icon: ReactNode;
-  id: "edit" | "ignore" | "report" | "share";
+  id: "copy-link" | "ignore" | "report" | "telegram";
   label: string;
   onSelect: () => void | Promise<void>;
 };
@@ -39,25 +38,15 @@ export function ProfileMoreMenu({
   userId,
   viewerIsOwner,
 }: ProfileMoreMenuProps) {
-  const router = useRouter();
   const { runIfAuthorized } = useAuthRequiredAction();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleShare = useCallback(async () => {
-    const profileUrl = new URL(profilePath, window.location.origin).toString();
+  const getProfileUrl = useCallback(() => {
+    return new URL(profilePath, window.location.origin).toString();
+  }, [profilePath]);
 
-    try {
-      if (navigator.share) {
-        await navigator.share({ url: profileUrl });
-        return;
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-    }
-
-    const copied = await copyTextToClipboard(profileUrl);
+  const handleCopyLink = useCallback(async () => {
+    const copied = await copyTextToClipboard(getProfileUrl());
 
     if (copied) {
       toast.success("Ссылка на профиль скопирована.");
@@ -65,26 +54,42 @@ export function ProfileMoreMenu({
     }
 
     toast.danger("Не удалось поделиться ссылкой.");
-  }, [profilePath]);
+  }, [getProfileUrl]);
+
+  const handleTelegramShare = useCallback(() => {
+    const telegramShareUrl = new URL("https://t.me/share/url");
+    telegramShareUrl.searchParams.set("url", getProfileUrl());
+    telegramShareUrl.searchParams.set("text", userHandle);
+
+    const openedWindow = window.open(
+      telegramShareUrl.toString(),
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    if (!openedWindow) {
+      window.location.href = telegramShareUrl.toString();
+    }
+  }, [getProfileUrl, userHandle]);
+
+  const shareItems = useMemo<ProfileMenuItem[]>(() => [
+    {
+      id: "copy-link",
+      label: "Копировать ссылку",
+      icon: <LinkActionIcon />,
+      onSelect: handleCopyLink,
+    },
+    {
+      id: "telegram",
+      label: "Поделиться в Telegram",
+      icon: <TelegramIcon />,
+      onSelect: handleTelegramShare,
+    },
+  ], [handleCopyLink, handleTelegramShare]);
 
   const items = useMemo<ProfileMenuItem[]>(() => {
     if (viewerIsOwner) {
-      return [
-        {
-          id: "edit",
-          label: "Редактировать профиль",
-          icon: <EditOutlineIcon />,
-          onSelect: () => {
-            router.push("/settings/account");
-          },
-        },
-        {
-          id: "share",
-          label: "Поделиться",
-          icon: <ShareIcon />,
-          onSelect: handleShare,
-        },
-      ];
+      return shareItems;
     }
 
     return [
@@ -117,14 +122,9 @@ export function ProfileMoreMenu({
           });
         },
       },
-      {
-        id: "share",
-        label: "Поделиться",
-        icon: <ShareIcon />,
-        onSelect: handleShare,
-      },
+      ...shareItems,
     ];
-  }, [handleShare, router, runIfAuthorized, userHandle, userId, viewerIsOwner]);
+  }, [runIfAuthorized, shareItems, userHandle, userId, viewerIsOwner]);
 
   return (
     <div className="pointer-events-auto relative z-30 shrink-0">
@@ -137,6 +137,7 @@ export function ProfileMoreMenu({
             selectionMode="none"
             className="dropdown-menu-default"
             onAction={(key) => {
+              setIsMenuOpen(false);
               const item = items.find((entry) => entry.id === key);
               void item?.onSelect();
             }}
