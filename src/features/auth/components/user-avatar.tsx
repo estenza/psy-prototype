@@ -11,17 +11,19 @@ type UserAvatarProps = {
   fallbackText?: string;
   name: string;
   showStatusDot?: boolean;
-  size?: "comment-md" | "comment-sm" | "header" | "lg" | "md" | "menu" | "profile-xl" | "sm";
+  size?: "comment-md" | "comment-sm" | "follow-list" | "header" | "lg" | "md" | "menu" | "popover" | "profile-xl" | "sm";
   outerBorderClassName?: string;
   useGeneratedFallback?: boolean;
 };
 
 const avatarSizeClasses = {
   header: "type-avatar-header h-9 w-9 shrink-0 rounded-full",
+  "follow-list": "h-12 w-12 shrink-0 rounded-full text-[16px]",
   lg: "type-avatar-lg h-20 w-20 shrink-0 rounded-full",
   md: "type-avatar-md h-11 w-11 shrink-0 rounded-full",
   menu: "type-avatar-header h-8 w-8 shrink-0 rounded-full",
-  "profile-xl": "h-28 w-28 shrink-0 rounded-full text-[28px] min-[481px]:h-[136px] min-[481px]:w-[136px] min-[481px]:text-[34px]",
+  popover: "h-14 w-14 shrink-0 rounded-full text-[16px]",
+  "profile-xl": "h-28 w-28 shrink-0 rounded-full text-[28px] min-[480px]:h-[136px] min-[480px]:w-[136px] min-[480px]:text-[34px]",
   sm: "type-avatar-sm h-10 w-10 shrink-0 rounded-full lg:h-11 lg:w-11 lg:text-sm",
   "comment-md": "type-avatar-comment-md h-9 w-9 shrink-0 rounded-full",
   "comment-sm": "type-avatar-comment-sm h-6 w-6 shrink-0 rounded-full",
@@ -29,9 +31,11 @@ const avatarSizeClasses = {
 
 const statusDotClasses = {
   header: "bottom-0 right-0 h-2.5 w-2.5 border",
+  "follow-list": "bottom-0 right-0 h-2.5 w-2.5 border",
   lg: "bottom-1 right-1 h-3.5 w-3.5 border-2",
   md: "bottom-0.5 right-0.5 h-2.5 w-2.5 border",
   menu: "bottom-0 right-0 h-2.5 w-2.5 border",
+  popover: "bottom-0.5 right-0.5 h-3 w-3 border",
   "profile-xl": "bottom-2 right-2 h-5 w-5 border-2",
   sm: "bottom-0.5 right-0.5 h-2.5 w-2.5 border",
   "comment-md": "bottom-0 right-0 h-2.5 w-2.5 border",
@@ -78,7 +82,7 @@ export function UserAvatar({
   return (
     <span className="relative inline-flex flex-none">
       <Avatar.Root
-        className={`${avatarClassName} ${outerBorderClassName ?? ""}`.trim()}
+        className={`${avatarClassName} relative overflow-hidden ${outerBorderClassName ?? ""}`.trim()}
       >
         {shouldShowImage ? (
           <Avatar.Image
@@ -93,6 +97,10 @@ export function UserAvatar({
         <Avatar.Fallback className={fallbackClassName}>
           {shouldShowImage ? null : initials}
         </Avatar.Fallback>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--separator-primary)_72%,transparent)]"
+        />
       </Avatar.Root>
 
       {showStatusDot ? (

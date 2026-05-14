@@ -4,15 +4,20 @@ import type { ButtonProps as HeroButtonProps } from "@heroui/react";
 import { Button as HeroButton, cn } from "@heroui/react";
 import type { ReactNode } from "react";
 import {
+  type ButtonSize,
   type ButtonVariant,
+  buttonClassName,
+  buttonSizeMap,
   buttonVariantMap,
 } from "@/components/ui/button-styles";
 
-type IconButtonProps = Omit<HeroButtonProps, "children" | "isDisabled" | "size" | "variant"> & {
+type IconButtonProps = Omit<HeroButtonProps, "children" | "className" | "isDisabled" | "size" | "variant"> & {
+  className?: string;
   disabled?: boolean;
   icon: ReactNode;
   isDisabled?: boolean;
   label: string;
+  size?: ButtonSize;
   variant?: ButtonVariant;
 };
 
@@ -22,8 +27,9 @@ export function IconButton({
   icon,
   isDisabled,
   label,
+  size = "s",
   type = "button",
-  variant = "tertiary",
+  variant = "quaternary",
   ...props
 }: IconButtonProps) {
   return (
@@ -32,9 +38,14 @@ export function IconButton({
       aria-label={label}
       isDisabled={isDisabled ?? disabled}
       isIconOnly
-      size="sm"
+      size={buttonSizeMap[size]}
       variant={buttonVariantMap[variant]}
-      className={cn("h-10 w-10 flex-none min-w-10 rounded-full p-0", className)}
+      className={buttonClassName({
+        className: cn("flex-none", className),
+        isIconOnly: true,
+        size,
+        variant,
+      })}
       {...props}
     >
       <span className="inline-flex items-center justify-center">{icon}</span>

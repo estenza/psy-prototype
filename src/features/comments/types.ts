@@ -30,6 +30,7 @@ export type CommentAuthor = {
   handle: string;
   avatarUrl: string | null;
   role: "user" | "specialist" | null;
+  specialistStatus: "none" | "pending" | "verified" | "rejected" | "suspended" | null;
   initials: string;
   kind: "guest" | "sso" | "hyvor";
 };
@@ -43,6 +44,7 @@ export type CommentNode = {
   author: CommentAuthor;
   createdAt: number;
   deletedAt: number | null;
+  deletedByModerator: boolean;
   deletedRelativeDate: string | null;
   deletedCompactRelativeDate: string | null;
   relativeDate: string;
@@ -138,4 +140,38 @@ export type AdminCommentReportItem = {
 
 export type AdminCommentReportsResponse = {
   reports: AdminCommentReportItem[];
+};
+
+export type AdminCommentStatus = "deleted" | "hidden" | "pending" | "published";
+
+export type AdminCommentsFilters = {
+  search: string;
+  status: AdminCommentStatus | "all";
+};
+
+export type AdminCommentTimelineItem = {
+  id: string;
+  postId: string;
+  postTitle: string;
+  parentId: string | null;
+  rootId: string;
+  depth: number;
+  bodyText: string;
+  status: AdminCommentStatus;
+  hiddenReason: string | null;
+  likesCount: number;
+  repliesCount: number;
+  reportsCount: number;
+  uncheckedReportsCount: number;
+  createdAt: string;
+  updatedAt: string;
+  editedAt: string | null;
+  hiddenAt: string | null;
+  deletedAt: string | null;
+  deletedByModerator: boolean;
+  author: {
+    id: string;
+    name: string;
+    handle: string;
+  };
 };

@@ -114,8 +114,8 @@ export function YandexIdButton({
     <>
       <Button
         variant="secondary"
-        size="lg"
-        className="w-full !rounded-full"
+        size="md"
+              className="w-full"
         icon={<YandexIdLogo />}
         isDisabled={isOpening}
         onClick={handleClick}

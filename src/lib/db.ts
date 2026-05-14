@@ -91,7 +91,16 @@ function createUsersTable(database: DatabaseSync) {
       avatar_card_url TEXT,
       profile_cover_url TEXT,
       profile_description TEXT,
+      education_json TEXT NOT NULL DEFAULT '[]',
       specialties_json TEXT NOT NULL DEFAULT '[]',
+      work_topics_json TEXT NOT NULL DEFAULT '[]',
+      specialist_gender TEXT CHECK (specialist_gender IS NULL OR specialist_gender IN ('female', 'male')),
+      specialist_birth_date TEXT,
+      specialist_phone_country TEXT,
+      specialist_phone_number TEXT,
+      specialist_telegram_url TEXT,
+      specialist_max_url TEXT,
+      specialist_whatsapp_url TEXT,
       role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'specialist')),
       specialist_status TEXT NOT NULL DEFAULT 'none' CHECK (
         specialist_status IN ('none', 'pending', 'verified', 'rejected', 'suspended')
@@ -127,8 +136,44 @@ function ensureUsersTableColumns(database: DatabaseSync) {
     database.exec("ALTER TABLE users ADD COLUMN profile_cover_url TEXT;");
   }
 
+  if (!columns.has("education_json")) {
+    database.exec("ALTER TABLE users ADD COLUMN education_json TEXT NOT NULL DEFAULT '[]';");
+  }
+
   if (!columns.has("specialties_json")) {
     database.exec("ALTER TABLE users ADD COLUMN specialties_json TEXT NOT NULL DEFAULT '[]';");
+  }
+
+  if (!columns.has("work_topics_json")) {
+    database.exec("ALTER TABLE users ADD COLUMN work_topics_json TEXT NOT NULL DEFAULT '[]';");
+  }
+
+  if (!columns.has("specialist_gender")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialist_gender TEXT CHECK (specialist_gender IS NULL OR specialist_gender IN ('female', 'male'));");
+  }
+
+  if (!columns.has("specialist_birth_date")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialist_birth_date TEXT;");
+  }
+
+  if (!columns.has("specialist_phone_country")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialist_phone_country TEXT;");
+  }
+
+  if (!columns.has("specialist_phone_number")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialist_phone_number TEXT;");
+  }
+
+  if (!columns.has("specialist_telegram_url")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialist_telegram_url TEXT;");
+  }
+
+  if (!columns.has("specialist_max_url")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialist_max_url TEXT;");
+  }
+
+  if (!columns.has("specialist_whatsapp_url")) {
+    database.exec("ALTER TABLE users ADD COLUMN specialist_whatsapp_url TEXT;");
   }
 
   if (!columns.has("is_banned")) {
@@ -160,6 +205,7 @@ function createPostsTable(database: DatabaseSync) {
           'hard-states'
         )
       ),
+      subtopic TEXT,
       title TEXT NOT NULL,
       body_html TEXT NOT NULL,
       excerpt TEXT NOT NULL,
@@ -217,6 +263,31 @@ function ensurePostsTableColumns(database: DatabaseSync) {
   if (!columns.has("views_count")) {
     database.exec("ALTER TABLE posts ADD COLUMN views_count INTEGER NOT NULL DEFAULT 0;");
   }
+
+  if (!columns.has("status")) {
+    database.exec("ALTER TABLE posts ADD COLUMN status TEXT NOT NULL DEFAULT 'published';");
+  }
+
+  if (!columns.has("hidden_reason")) {
+    database.exec("ALTER TABLE posts ADD COLUMN hidden_reason TEXT;");
+  }
+
+  if (!columns.has("hidden_at")) {
+    database.exec("ALTER TABLE posts ADD COLUMN hidden_at TEXT;");
+  }
+
+  if (!columns.has("deleted_at")) {
+    database.exec("ALTER TABLE posts ADD COLUMN deleted_at TEXT;");
+  }
+
+  if (!columns.has("subtopic")) {
+    database.exec("ALTER TABLE posts ADD COLUMN subtopic TEXT;");
+  }
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS posts_status_created_at_idx
+      ON posts (status, created_at DESC);
+  `);
 }
 
 function createUserIgnoredAuthorsTable(database: DatabaseSync) {
@@ -568,6 +639,64 @@ function createPostCommentsTables(database: DatabaseSync) {
   `);
 }
 
+function createContentReportsTable(database: DatabaseSync) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS content_reports (
+      id TEXT PRIMARY KEY,
+      object_type TEXT NOT NULL CHECK (object_type IN ('post', 'comment')),
+      object_id TEXT NOT NULL,
+      post_id TEXT,
+      comment_id TEXT,
+      reporter_user_id TEXT NOT NULL,
+      content_author_user_id TEXT NOT NULL,
+      reason TEXT NOT NULL CHECK (
+        reason IN (
+          'spam',
+          'abuse',
+          'illegal',
+          'pornography',
+          'violence',
+          'misleading',
+          'politics',
+          'other'
+        )
+      ),
+      details TEXT,
+      status TEXT NOT NULL DEFAULT 'open' CHECK (
+        status IN ('open', 'reviewed', 'dismissed', 'action_taken')
+      ),
+      resolved_by_user_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      resolved_at TEXT,
+      UNIQUE (object_type, object_id, reporter_user_id),
+      CHECK (
+        (object_type = 'post' AND post_id = object_id AND comment_id IS NULL)
+        OR
+        (object_type = 'comment' AND comment_id = object_id AND post_id IS NOT NULL)
+      ),
+      FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+      FOREIGN KEY (comment_id) REFERENCES post_comments (id) ON DELETE CASCADE,
+      FOREIGN KEY (reporter_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (content_author_user_id) REFERENCES users (id) ON DELETE CASCADE,
+      FOREIGN KEY (resolved_by_user_id) REFERENCES users (id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS content_reports_created_at_idx
+      ON content_reports (created_at DESC);
+    CREATE INDEX IF NOT EXISTS content_reports_status_idx
+      ON content_reports (status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS content_reports_object_type_idx
+      ON content_reports (object_type, created_at DESC);
+    CREATE INDEX IF NOT EXISTS content_reports_reason_idx
+      ON content_reports (reason, created_at DESC);
+    CREATE INDEX IF NOT EXISTS content_reports_reporter_user_id_idx
+      ON content_reports (reporter_user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS content_reports_content_author_user_id_idx
+      ON content_reports (content_author_user_id, created_at DESC);
+  `);
+}
+
 function createSessionsTable(database: DatabaseSync) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -743,6 +872,7 @@ function initializeDatabase(database: DatabaseSync) {
   createUserBookmarksTable(database);
   createUserFollowsTable(database);
   createPostCommentsTables(database);
+  createContentReportsTable(database);
   migrateLegacyNotificationTypes(database);
   createNotificationsTables(database);
   migrateNotificationPreferenceColumns(database);

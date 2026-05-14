@@ -2,7 +2,7 @@
 
 import { Tabs } from "@heroui/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { buttonClassName } from "@/components/ui/button-styles";
 import { ContentPlaceholder } from "@/components/ui/content-placeholder";
@@ -48,6 +48,7 @@ function mapProfileReplyToCommentNode(reply: ProfileCommentItem): CommentNode {
     author: reply.author,
     createdAt: reply.createdAt,
     deletedAt: null,
+    deletedByModerator: false,
     deletedRelativeDate: null,
     deletedCompactRelativeDate: null,
     relativeDate: reply.relativeDate,
@@ -147,7 +148,7 @@ function RepliesPanel({
         };
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "Не удалось оценить ответ.");
+          throw new Error(payload.error ?? "Не удалось оценить комментарий.");
         }
       } catch {
         setItems((currentItems) =>
@@ -169,11 +170,11 @@ function RepliesPanel({
     return (
       <EmptyState
         title={viewerIsOwner
-          ? "У вас пока нет ответов"
-          : `${displayName} пока не оставил(а) ответов`}
+          ? "У вас пока нет комментариев"
+          : `${displayName} пока не оставил(а) комментариев`}
         description={viewerIsOwner
-          ? "Когда вы начнёте отвечать в комментариях, ваши ответы появятся здесь."
-          : "Когда здесь появятся ответы, они будут показаны в отдельной вкладке профиля."}
+          ? "Когда вы начнёте комментировать посты, ваши комментарии появятся здесь."
+          : "Когда здесь появятся комментарии, они будут показаны в отдельной вкладке профиля."}
       />
     );
   }
@@ -187,7 +188,7 @@ function RepliesPanel({
           <div key={reply.id} className="flex min-w-0 flex-col gap-2">
             <Link
               href={replyHref}
-              className="mx-4 inline-flex max-w-full items-center gap-1 rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-tertiary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4 min-[481px]:mx-5 min-[481px]:mx-6"
+              className="mx-4 inline-flex max-w-full items-center gap-1 rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-tertiary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[2px] underline-offset-4 min-[480px]:mx-5 min-[480px]:mx-6"
             >
               <span className="flex-none">
                 <ArrowTurnRightIcon />
@@ -232,6 +233,8 @@ export function ProfileActivityTabs({
   viewerIsOwner,
 }: ProfileActivityTabsProps) {
   const [selectedKey, setSelectedKey] = useState<ProfileActivityTabKey>("posts");
+  const activePanelContentRef = useRef<HTMLDivElement | null>(null);
+  const [panelMinHeight, setPanelMinHeight] = useState(0);
   const favoritePostsCount = favoritePosts.length;
   const postsCount = posts.length;
   const repliesCount = replies.length;
@@ -243,31 +246,63 @@ export function ProfileActivityTabs({
     tabKey === selectedKey
       ? "text-[var(--label-tertiary)]"
       : "text-[var(--label-quaternary)]";
+  const panelMinHeightStyle = panelMinHeight > 0 ? { minHeight: panelMinHeight } : undefined;
+
+  function rememberActivePanelHeight() {
+    const activePanelHeight = activePanelContentRef.current?.offsetHeight ?? 0;
+
+    if (activePanelHeight > 0) {
+      setPanelMinHeight((currentHeight) => Math.max(currentHeight, activePanelHeight));
+    }
+  }
+
+  useLayoutEffect(() => {
+    const activePanelElement = activePanelContentRef.current;
+
+    if (!activePanelElement || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      const nextHeight = entry?.contentRect.height ?? 0;
+
+      if (nextHeight > 0) {
+        setPanelMinHeight((currentHeight) => Math.max(currentHeight, nextHeight));
+      }
+    });
+
+    observer.observe(activePanelElement);
+
+    return () => observer.disconnect();
+  }, [selectedKey]);
 
   return (
     <Tabs
       variant="secondary"
       selectedKey={selectedKey}
-      onSelectionChange={(key) => setSelectedKey(String(key) as ProfileActivityTabKey)}
+      onSelectionChange={(key) => {
+        rememberActivePanelHeight();
+        setSelectedKey(String(key) as ProfileActivityTabKey);
+      }}
       className="w-full gap-0"
     >
-      <Tabs.ListContainer className="px-1 pt-4 min-[481px]:px-4">
-        <Tabs.List aria-label="Разделы активности профиля">
-          <Tabs.Tab key="posts" id="posts" className="h-10 text-[16px] leading-6">
+      <Tabs.ListContainer className="relative px-4 pt-4 after:absolute after:bottom-0 after:left-4 after:right-4 after:border-b after:border-border">
+        <Tabs.List aria-label="Разделы активности профиля" className="relative z-10 !w-fit !border-b-0 justify-start gap-0">
+          <Tabs.Tab key="posts" id="posts" className="h-12 !w-auto flex-none !px-5 text-[16px] leading-6">
             <span className="inline-flex items-center gap-1.5">
               <span>Посты</span>
               <span className={getCounterClassName("posts")}>{postsCount}</span>
             </span>
             <Tabs.Indicator />
           </Tabs.Tab>
-          <Tabs.Tab key="replies" id="replies" className="h-10 text-[16px] leading-6">
+          <Tabs.Tab key="replies" id="replies" className="h-12 !w-auto flex-none !px-5 text-[16px] leading-6">
             <span className="inline-flex items-center gap-1.5">
-              <span>Ответы</span>
+              <span>Комментарии</span>
               <span className={getCounterClassName("replies")}>{repliesCount}</span>
             </span>
             <Tabs.Indicator />
           </Tabs.Tab>
-          <Tabs.Tab key="favorites" id="favorites" className="h-10 text-[16px] leading-6">
+          <Tabs.Tab key="favorites" id="favorites" className="h-12 !w-auto flex-none !px-5 text-[16px] leading-6">
             <span className="inline-flex items-center gap-1.5">
               <span>Избранное</span>
               <span className={getCounterClassName("favorites")}>{favoritePostsCount}</span>
@@ -277,48 +312,54 @@ export function ProfileActivityTabs({
         </Tabs.List>
       </Tabs.ListContainer>
 
-      <Tabs.Panel className="!px-0 !pb-0 pt-0" key="posts" id="posts">
-        <ProfilePostsSection
-          initialPosts={posts}
-          emptyTitle={viewerIsOwner
-            ? "Тут будут ваши посты"
-            : `${displayName} пока не создал(а) постов`}
-          emptyDescription={viewerIsOwner
-            ? "Напишите ваш первый пост"
-            : "Когда здесь появятся публикации, они будут показаны в таком же формате, как на главной странице."}
-          emptyAction={viewerIsOwner ? (
-            <Link
-              href={createPostHref}
-              className={buttonClassName({
-                className: "type-body-md-medium h-11 px-6",
-                variant: "primary",
-              })}
-            >
-              Написать
-            </Link>
-          ) : null}
-        />
+      <Tabs.Panel className="!px-0 !pb-0 pt-0" key="posts" id="posts" style={panelMinHeightStyle}>
+        <div ref={selectedKey === "posts" ? activePanelContentRef : undefined}>
+          <ProfilePostsSection
+            initialPosts={posts}
+            emptyTitle={viewerIsOwner
+              ? "Тут будут ваши посты"
+              : `${displayName} пока не создал(а) постов`}
+            emptyDescription={viewerIsOwner
+              ? "Напишите ваш первый пост"
+              : "Когда здесь появятся публикации, они будут показаны в таком же формате, как на главной странице."}
+            emptyAction={viewerIsOwner ? (
+              <Link
+                href={createPostHref}
+                className={buttonClassName({
+                  className: "type-body-md-medium h-11 px-6",
+                  variant: "primary",
+                })}
+              >
+                Написать
+              </Link>
+            ) : null}
+          />
+        </div>
       </Tabs.Panel>
 
-      <Tabs.Panel className="pt-8 pb-24" key="replies" id="replies">
-        <RepliesPanel
-          displayName={displayName}
-          replies={replies}
-          viewerIsOwner={viewerIsOwner}
-        />
+      <Tabs.Panel className="pt-8 pb-24" key="replies" id="replies" style={panelMinHeightStyle}>
+        <div ref={selectedKey === "replies" ? activePanelContentRef : undefined}>
+          <RepliesPanel
+            displayName={displayName}
+            replies={replies}
+            viewerIsOwner={viewerIsOwner}
+          />
+        </div>
       </Tabs.Panel>
 
-      <Tabs.Panel className="!px-0 !pb-0 pt-0" key="favorites" id="favorites">
-        <ProfilePostsSection
-          initialPosts={favoritePosts}
-          emptyTitle={viewerIsOwner
-            ? "Тут пока пусто"
-            : `${displayName} пока ничего не добавил(а) в избранное`}
-          emptyDescription={viewerIsOwner
-            ? "Добавляйте посты в избранное, чтобы сохранять их у себя в профиле"
-            : "Когда здесь появятся посты, их можно будет открыть из профиля."}
-          removeFromFeedWhenProfileFavoriteRemoved={viewerIsOwner}
-        />
+      <Tabs.Panel className="!px-0 !pb-0 pt-0" key="favorites" id="favorites" style={panelMinHeightStyle}>
+        <div ref={selectedKey === "favorites" ? activePanelContentRef : undefined}>
+          <ProfilePostsSection
+            initialPosts={favoritePosts}
+            emptyTitle={viewerIsOwner
+              ? "Тут пока пусто"
+              : `${displayName} пока ничего не добавил(а) в избранное`}
+            emptyDescription={viewerIsOwner
+              ? "Добавляйте посты в избранное, чтобы сохранять их у себя в профиле"
+              : "Когда здесь появятся посты, их можно будет открыть из профиля."}
+            removeFromFeedWhenProfileFavoriteRemoved={viewerIsOwner}
+          />
+        </div>
       </Tabs.Panel>
     </Tabs>
   );

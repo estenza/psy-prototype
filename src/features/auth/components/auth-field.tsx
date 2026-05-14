@@ -2,6 +2,10 @@
 
 import { ErrorMessage, Input, InputGroup, Label, TextField } from "@heroui/react";
 import { useState, type CSSProperties } from "react";
+import {
+  fieldControlInputClassName,
+  fieldControlLabelClassName,
+} from "@/components/ui/field-control";
 import { EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 
 type AuthFieldProps = {
@@ -52,14 +56,11 @@ export function AuthField({
       isInvalid={Boolean(error)}
       className="flex w-full flex-col gap-2"
     >
-      <Label
-        htmlFor={id}
-        className="type-body-md-medium text-[var(--label-primary)]"
-      >
+      <Label htmlFor={id} className={fieldControlLabelClassName}>
         {label}
       </Label>
       {isPasswordField ? (
-        <InputGroup className="w-full rounded-2xl">
+        <InputGroup className="h-12 min-h-12 w-full rounded-[16px]">
           <InputGroup.Input
             id={id}
             name={name}
@@ -80,7 +81,7 @@ export function AuthField({
             data-form-type={disablePasswordManagerHints ? "other" : undefined}
             data-lpignore={disablePasswordManagerHints ? "true" : undefined}
             style={maskedTextStyle}
-            className="type-input min-w-0 px-4 py-3"
+            className="min-w-0 px-4 py-[12px] text-[16px] leading-6"
           />
           <InputGroup.Suffix className="pr-3">
             <button
@@ -88,7 +89,7 @@ export function AuthField({
               aria-label={isPasswordVisible ? "Скрыть пароль" : "Показать пароль"}
               aria-pressed={isPasswordVisible}
               onClick={() => setIsPasswordVisible((currentState) => !currentState)}
-              className="interactive-tertiary inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)]"
+              className="interactive-quaternary inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)]"
             >
               {isPasswordVisible ? <EyeOffIcon /> : <EyeIcon />}
             </button>
@@ -115,11 +116,11 @@ export function AuthField({
           data-form-type={disablePasswordManagerHints ? "other" : undefined}
           data-lpignore={disablePasswordManagerHints ? "true" : undefined}
           style={maskedTextStyle}
-          className="type-input w-full rounded-2xl px-4 py-3"
+          className={`${fieldControlInputClassName} w-full`}
         />
       )}
       {error ? (
-        <ErrorMessage className="type-caption-tight text-[var(--danger)]">
+        <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--danger)]">
           {error}
         </ErrorMessage>
       ) : null}

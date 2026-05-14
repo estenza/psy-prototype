@@ -21,7 +21,7 @@ export function LegalInfo({ className = "" }: LegalInfoProps) {
           <Link
             key={item.href}
             href={item.href}
-            className="font-normal no-underline hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4"
+            className="font-normal no-underline hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[2px] underline-offset-4"
           >
             {item.label}
           </Link>

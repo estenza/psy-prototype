@@ -23,7 +23,7 @@ export async function copyTextToClipboard(text: string) {
   textArea.readOnly = true;
   textArea.setAttribute("aria-hidden", "true");
   textArea.style.position = "fixed";
-  textArea.style.left = "-9999px";
+  textArea.style.left = "-91000px";
   textArea.style.top = "0";
   textArea.style.width = "1px";
   textArea.style.height = "1px";

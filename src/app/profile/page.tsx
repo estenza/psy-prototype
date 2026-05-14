@@ -7,7 +7,11 @@ import {
   listAuthorProfilePosts,
 } from "@/features/feed/lib/post-query-service";
 import { buildOwnProfilePath } from "@/features/auth/lib/profile";
-import { getAuthorFollowSummary } from "@/features/social/lib/follows-repository";
+import {
+  getAuthorFollowSummary,
+  listAuthorFollowers,
+  listAuthorFollowing,
+} from "@/features/social/lib/follows-repository";
 
 export default async function ProfilePage() {
   const currentUser = await getCurrentUser();
@@ -22,7 +26,14 @@ export default async function ProfilePage() {
     redirect(ownProfilePath);
   }
 
-  const [posts, favoritePosts, replies, followSummary] = await Promise.all([
+  const [
+    posts,
+    favoritePosts,
+    replies,
+    followSummary,
+    followers,
+    following,
+  ] = await Promise.all([
     listAuthorProfilePosts(currentUser.id, currentUser),
     listAuthorProfileFavoritePosts(currentUser.id, currentUser),
     listAuthorPublishedComments({
@@ -30,13 +41,17 @@ export default async function ProfilePage() {
       viewerUserId: currentUser.id,
     }),
     getAuthorFollowSummary(currentUser.id, currentUser.id),
+    listAuthorFollowers(currentUser.id),
+    listAuthorFollowing(currentUser.id),
   ]);
 
   return (
     <ProfilePageContent
       posts={posts}
       favoritePosts={favoritePosts}
+      followers={followers}
       followSummary={followSummary}
+      following={following}
       replies={replies}
       user={currentUser}
       viewerIsOwner

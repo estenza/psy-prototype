@@ -1,5 +1,6 @@
 import "server-only";
 
+import { canUsePublicActivity } from "@/features/auth/lib/permissions";
 import { getUserHandle } from "@/features/auth/lib/profile";
 import type { SessionUser } from "@/features/auth/types";
 import { getInitials } from "@/features/comments/lib/comment-format";
@@ -62,7 +63,12 @@ export function buildCommentsViewer(currentUser: SessionUser | null): CommentsVi
 }
 
 export function buildCommentsCapabilities(currentUser: SessionUser | null): CommentsCapabilities {
-  const canInteract = Boolean(currentUser && !currentUser.isBanned);
+  const specialistNeedsVerification = Boolean(
+    currentUser && !canUsePublicActivity(currentUser),
+  );
+  const canInteract = Boolean(
+    currentUser && !currentUser.isBanned && !specialistNeedsVerification,
+  );
   const limitations = [
     "Редактирование и удаление комментариев в пользовательском UI пока не подключены, хотя backend уже подготовлен.",
   ];
@@ -81,7 +87,9 @@ export function buildCommentsCapabilities(currentUser: SessionUser | null): Comm
       currentUser?.isBanned
         ? "Комментирование для этого аккаунта временно недоступно."
         : currentUser
-          ? null
+          ? specialistNeedsVerification
+            ? "Комментирование для специалистов доступно только после верификации."
+            : null
           : "Нужно войти в аккаунт, чтобы комментировать посты.",
     limitations,
   };

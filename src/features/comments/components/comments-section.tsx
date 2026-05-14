@@ -12,9 +12,12 @@ type CommentsSectionProps = {
   highlightedCommentId?: string | null;
   highlightedCommentIds?: string[];
   onTotalCountChange?: (totalCount: number) => void;
+  readOnly?: boolean;
+  showReadOnlyActions?: boolean;
+  showReadOnlyMenu?: boolean;
 };
 
-const COMMENTS_AUTH_MODAL_TITLE = "Войдите, чтобы оставлять ответы";
+const COMMENTS_AUTH_MODAL_TITLE = "Войдите, чтобы оставлять комментарии";
 const EMPTY_HIGHLIGHTED_COMMENT_IDS: string[] = [];
 
 function CommentsComposerSkeleton() {
@@ -69,6 +72,9 @@ export function CommentsSection({
   highlightedCommentId = null,
   highlightedCommentIds = EMPTY_HIGHLIGHTED_COMMENT_IDS,
   onTotalCountChange,
+  readOnly = false,
+  showReadOnlyActions = false,
+  showReadOnlyMenu = false,
 }: CommentsSectionProps) {
   const { isAuthenticated, openAuthModal, runIfAuthorized } = useAuthRequiredAction();
   const highlightedCommentIdsFromProps = useMemo(
@@ -183,7 +189,7 @@ export function CommentsSection({
 
         {isInitialLoading ? <CommentsComposerSkeleton /> : null}
 
-        {data ? (
+        {data && !readOnly ? (
           <CommentsComposer
             viewer={data.viewer}
             placeholder="Введите комментарий..."
@@ -224,7 +230,7 @@ export function CommentsSection({
           <CommentList
             comments={data.comments}
             viewer={data.viewer}
-            canPostReply={data.capabilities.canReply}
+            canPostReply={readOnly ? false : data.capabilities.canReply}
             postDisabledReason={postDisabledReason}
             isViewerAuthenticated={viewerIsAuthenticated}
             onRequireAuth={openCommentsAuthModal}
@@ -253,8 +259,14 @@ export function CommentsSection({
               void runIfAuthorized(() => voteComment(commentId, type));
             }}
             onBlock={blockCommentAuthor}
-            onReport={reportComment}
+            onReport={(commentId, reason) =>
+              runIfAuthorized(() => reportComment(commentId, reason)).then(() => undefined)
+            }
             highlightedCommentIds={activeHighlightedCommentIds}
+            readOnlyLike={readOnly}
+            showActions={readOnly ? showReadOnlyActions : true}
+            showMenu={readOnly ? showReadOnlyMenu : true}
+            showReplyAction={!readOnly}
           />
         ) : null}
 

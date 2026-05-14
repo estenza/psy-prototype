@@ -1,25 +1,16 @@
 "use client";
-
-import {
-  ErrorMessage,
-  Input,
-  Label,
-  Spinner,
-  TextArea,
-  TextField,
-} from "@heroui/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   startTransition,
   useEffect,
-  useRef,
   useState,
 } from "react";
-import { toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { AppHeader } from "@/components/layout/app-header";
 import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { TextareaField, TextInputField } from "@/components/ui/field-control";
 import { DEFAULT_POST_SUBTOPIC } from "@/constants/post-taxonomy";
 import {
   SUBTOPIC_FIELD_HINTS,
@@ -64,27 +55,36 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;");
 }
 
+function getSimplePostFieldConfig(isSpecialistAuthor: boolean): TopicFormatFieldConfig[] {
+  return [
+    {
+      key: "primary",
+      label: "Заголовок",
+      placeholder: isSpecialistAuthor
+        ? "Введите заголовок"
+        : "Коротко обозначьте, что хотите обсудить",
+      rows: 2,
+    },
+    {
+      key: "secondary",
+      label: "Текст",
+      optional: true,
+      placeholder: isSpecialistAuthor
+        ? "Напишите текст поста"
+        : "Расскажите, что происходит и какой отклик вам сейчас нужен",
+      rows: 6,
+    },
+  ];
+}
+
 function getActiveFieldConfig(
   _topic: PostTopic | null,
   format: TopicFormat,
   subtopic: string,
+  isSpecialistAuthor: boolean,
 ): TopicFormatFieldConfig[] {
-  if (subtopic === DEFAULT_POST_SUBTOPIC) {
-    return [
-      {
-        key: "primary",
-        label: "Заголовок",
-        placeholder: "Коротко обозначьте, что хотите обсудить",
-        rows: 2,
-      },
-      {
-        key: "secondary",
-        label: "Текст",
-        optional: true,
-        placeholder: "Расскажите, что происходит и какой отклик вам сейчас нужен",
-        rows: 6,
-      },
-    ];
+  if (isSpecialistAuthor || subtopic === DEFAULT_POST_SUBTOPIC) {
+    return getSimplePostFieldConfig(isSpecialistAuthor);
   }
 
   const hints = subtopic ? SUBTOPIC_FIELD_HINTS[subtopic] : undefined;
@@ -102,10 +102,16 @@ function buildPostBodyHtml(
   format: TopicFormat,
   fields: TopicDraftFields,
   subtopic: string,
+  isSpecialistAuthor: boolean,
 ) {
-  const activeFields = getActiveFieldConfig(topic, format, subtopic);
+  const activeFields = getActiveFieldConfig(
+    topic,
+    format,
+    subtopic,
+    isSpecialistAuthor,
+  );
 
-  if (subtopic === DEFAULT_POST_SUBTOPIC) {
+  if (isSpecialistAuthor || subtopic === DEFAULT_POST_SUBTOPIC) {
     const value = fields.secondary.trim();
 
     if (!value) {
@@ -138,21 +144,35 @@ function buildPostBodyHtml(
   return sections.join("");
 }
 
+function buildPostBodyHtmlFromSimpleFields(fields: TopicDraftFields) {
+  const value = fields.secondary.trim();
+
+  if (!value) {
+    return "";
+  }
+
+  return `<p>${escapeHtml(value).replace(/\n/g, "<br />")}</p>`;
+}
+
 function buildDraftPayload(params: {
   editingPostId: string | null;
   fields: TopicDraftFields;
   format: TopicFormat;
   guestEmail: string;
+  isSpecialistAuthor: boolean;
   subtopic: string;
   topic: PostTopic | null;
 }) {
   const title = params.fields.primary.trim();
-  const content = buildPostBodyHtml(
-    params.topic,
-    params.format,
-    params.fields,
-    params.subtopic,
-  );
+  const content = params.isSpecialistAuthor
+    ? buildPostBodyHtmlFromSimpleFields(params.fields)
+    : buildPostBodyHtml(
+        params.topic,
+        params.format,
+        params.fields,
+        params.subtopic,
+        params.isSpecialistAuthor,
+      );
 
   return {
     content,
@@ -166,96 +186,6 @@ function buildDraftPayload(params: {
     topic: params.topic,
     updatedAt: new Date().toISOString(),
   };
-}
-
-function GuidedTextField({
-  error,
-  label,
-  onChange,
-  placeholder,
-  value,
-}: {
-  error?: string;
-  label: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  value: string;
-}) {
-  return (
-    <TextField isInvalid={Boolean(error)} className="grid gap-2 text-sm">
-      <Label className="pl-1 text-[14px] leading-5 font-medium text-[var(--label-primary)]">
-        {label}
-      </Label>
-      <Input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="min-h-[48px] w-full rounded-[16px] px-4 py-[11px] text-[16px] leading-6 shadow-none"
-      />
-      {error ? (
-        <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--danger)]">
-          {error}
-        </ErrorMessage>
-      ) : null}
-    </TextField>
-  );
-}
-
-function GuidedTextareaField({
-  error,
-  label,
-  onChange,
-  placeholder,
-  rows = 3,
-  value,
-}: {
-  error?: string;
-  label: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  rows?: number;
-  value: string;
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const MIN_TEXTAREA_HEIGHT = 156;
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-
-    if (!textarea) {
-      return;
-    }
-
-    textarea.style.minHeight = `${MIN_TEXTAREA_HEIGHT}px`;
-    textarea.style.height = "0px";
-    textarea.style.height = `${Math.max(textarea.scrollHeight, MIN_TEXTAREA_HEIGHT)}px`;
-  }, [value]);
-
-  return (
-    <TextField isInvalid={Boolean(error)} className="grid gap-2 text-sm">
-      <Label className="pl-1 text-[14px] leading-5 font-medium text-[var(--label-primary)]">
-        {label}
-      </Label>
-      <TextArea
-        ref={textareaRef}
-        rows={rows}
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-          event.currentTarget.style.minHeight = `${MIN_TEXTAREA_HEIGHT}px`;
-          event.currentTarget.style.height = "0px";
-          event.currentTarget.style.height = `${Math.max(event.currentTarget.scrollHeight, MIN_TEXTAREA_HEIGHT)}px`;
-        }}
-        placeholder={placeholder}
-        className="w-full resize-none overflow-hidden rounded-[16px] px-4 py-4 text-[16px] leading-6 shadow-none"
-      />
-      {error ? (
-        <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--danger)]">
-          {error}
-        </ErrorMessage>
-      ) : null}
-    </TextField>
-  );
 }
 
 function wasLoadedByPageReload() {
@@ -311,8 +241,17 @@ export function CreateTopicScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInitializedDraft, setHasInitializedDraft] = useState(false);
   const returnTo = normalizeCreateTopicReturnTo(searchParams.get("returnTo"));
-  const activeFields = getActiveFieldConfig(topic, format, subtopic);
+  const isSpecialistAuthor = user?.role === "specialist";
+  const activeFields = getActiveFieldConfig(
+    topic,
+    format,
+    subtopic,
+    isSpecialistAuthor,
+  );
   const isEditing = Boolean(editingPostId);
+  const createTitle = isSpecialistAuthor
+    ? "О чем хотите рассказать?"
+    : "Что хотите обсудить?";
   const submitLabel = user
     ? (isEditing ? "Сохранить" : "Опубликовать")
     : "Войти и опубликовать";
@@ -346,6 +285,7 @@ export function CreateTopicScreen() {
       fields,
       format,
       guestEmail,
+      isSpecialistAuthor,
       subtopic,
       topic,
     });
@@ -362,7 +302,16 @@ export function CreateTopicScreen() {
     }
 
     clearTopicDraft();
-  }, [editingPostId, fields, format, guestEmail, hasInitializedDraft, subtopic, topic]);
+  }, [
+    editingPostId,
+    fields,
+    format,
+    guestEmail,
+    hasInitializedDraft,
+    isSpecialistAuthor,
+    subtopic,
+    topic,
+  ]);
 
   function updateField(key: TopicFieldKey, value: string) {
     setFields((currentFields) => ({
@@ -443,6 +392,7 @@ export function CreateTopicScreen() {
       fields,
       format,
       guestEmail,
+      isSpecialistAuthor,
       subtopic,
       topic,
     });
@@ -473,6 +423,7 @@ export function CreateTopicScreen() {
           body: JSON.stringify({
             content: nextDraft.content,
             intent: nextDraft.intent,
+            subtopic: nextDraft.subtopics[0] ?? null,
             title: nextDraft.title,
             topic: nextDraft.topic,
           }),
@@ -519,10 +470,10 @@ export function CreateTopicScreen() {
   }
 
   return (
-    <div className="surface-primary text-label-primary min-h-[100svh] min-[481px]:min-h-dvh">
+    <div className="surface-primary text-label-primary min-h-[100svh] min-[480px]:min-h-dvh">
       <AppHeader />
 
-      <div className="min-[481px]:pt-[var(--app-header-height)]">
+      <div className="min-[480px]:pt-[var(--app-header-height)]">
         <DesktopAppShell
           activeSection={null}
           centerClassName="w-full max-w-[672px]"
@@ -531,14 +482,14 @@ export function CreateTopicScreen() {
           <section className="min-w-0">
             <PageHeader
               onBack={handleBack}
-              title={isEditing ? "Редактировать пост" : "Что хотите обсудить?"}
-              titleAs="h2"
+              title={isEditing ? "Редактировать пост" : createTitle}
+              titleAs="h4"
             />
 
-            <div className="px-0 pb-8 min-[481px]:pb-24">
+            <div className="px-0 pb-8 min-[480px]:pb-24">
               <form
                 onSubmit={handleSubmit}
-                className="surface-card flex flex-col gap-6 rounded-[28px] p-3 min-[481px]:p-6"
+                className="surface-card flex flex-col gap-6 rounded-[28px] p-3 min-[480px]:p-6"
               >
                 <div className="grid gap-3">
                   <TopicPicker value={topic ?? "emotions"} onChange={updateTopic} />
@@ -563,21 +514,22 @@ export function CreateTopicScreen() {
                     const isSingleLineField = index === 0;
 
                     return isSingleLineField ? (
-                      <GuidedTextField
+                      <TextInputField
                         key={field.key}
                         {...commonProps}
                       />
                     ) : (
-                      <GuidedTextareaField
+                      <TextareaField
                         key={field.key}
                         {...commonProps}
+                        minHeightClassName="min-h-[156px]"
                         rows={field.rows ?? 3}
                       />
                     );
                   })}
 
                   {!user ? (
-                    <GuidedTextField
+                    <TextInputField
                       error={fieldErrors.guestEmail}
                       label="Оставьте ваш Email"
                       onChange={(value) => {
@@ -597,16 +549,12 @@ export function CreateTopicScreen() {
                   <Button
                     type="submit"
                     variant="primary"
-                    size="lg"
+                    size="md"
                     disabled={isSubmitting}
-                    className="relative !h-11 w-full min-w-[220px] !rounded-full min-[481px]:w-auto"
+                    isLoading={isSubmitting}
+                    className="relative w-full min-w-[220px] min-[480px]:w-auto"
                   >
-                    <span className={isSubmitting ? "opacity-0" : ""}>{submitLabel}</span>
-                    {isSubmitting ? (
-                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-white">
-                        <Spinner size="sm" color="current" />
-                      </span>
-                    ) : null}
+                    {submitLabel}
                   </Button>
                 </div>
               </form>

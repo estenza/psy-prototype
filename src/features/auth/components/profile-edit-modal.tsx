@@ -1,9 +1,12 @@
 "use client";
 
-import { ErrorMessage, Input, Label, Modal, TextArea, TextField, toast } from "@heroui/react";
+import { Modal } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
+import { TextareaField, TextInputField } from "@/components/ui/field-control";
 import { buildGeneratedAvatarUrl } from "@/lib/dicebear-avatar";
 import {
   buildCroppedImageDataUrl,
@@ -28,17 +31,18 @@ type ProfileEditModalProps = {
   onClose: () => void;
   profileCoverUrl: string | null;
   profileDescription: string | null;
+  showProfileCover: boolean;
 };
 
 type ProfileUpdateResponse = (CurrentUserResponse & { error?: string }) | AuthErrorResponse;
 
 function CloseIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" aria-hidden="true">
       <path
-        d="M18 6L6 18M6 6l12 12"
+        d="M16 4L4 16M4 4l12 12"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.5"
         strokeLinecap="round"
       />
     </svg>
@@ -54,9 +58,9 @@ export function ProfileEditModal({
   onClose,
   profileCoverUrl,
   profileDescription,
+  showProfileCover,
 }: ProfileEditModalProps) {
   const router = useRouter();
-  const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
   const generatedAvatarUrl = buildGeneratedAvatarUrl(avatarSeed);
   const [avatarCrop, setAvatarCrop] = useState<ImageCropValue>(DEFAULT_IMAGE_CROP_VALUE);
   const [avatarSourceImage, setAvatarSourceImage] = useState<string | null>(
@@ -94,17 +98,6 @@ export function ProfileEditModal({
     profileCoverUrl,
     profileDescription,
   ]);
-
-  useEffect(() => {
-    const textarea = descriptionRef.current;
-
-    if (!textarea) {
-      return;
-    }
-
-    textarea.style.height = "0px";
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, [description, isOpen]);
 
   if (!isOpen) {
     return null;
@@ -168,7 +161,7 @@ export function ProfileEditModal({
               }
             : {}),
           displayName: trimmedName,
-          profileCoverUrl: nextCoverUrl,
+          ...(showProfileCover ? { profileCoverUrl: nextCoverUrl } : {}),
           profileDescription: description.trim() || null,
         }),
       });
@@ -208,48 +201,55 @@ export function ProfileEditModal({
         if (!isSaving) onClose();
       }}
     >
-      <Modal.Container scroll="outside" className="!p-3 min-[481px]:!p-4">
+      <Modal.Container scroll="outside" className="!p-3 min-[480px]:!p-4">
         <Modal.Dialog
           aria-label="Изменить профиль"
           className="modal-surface w-full max-w-[720px] overflow-hidden p-0"
         >
           <Modal.Body className="p-0">
-            <header className="relative px-5 pb-2 pt-5 min-[481px]:px-6">
-              <h2 className="min-w-0 pr-12 text-[24px] font-semibold leading-8 text-[var(--label-primary)]">
+            <header className="relative px-5 pb-2 pt-5 min-[480px]:px-6">
+              <h2 className="type-h2 min-w-0 pr-12 font-semibold text-[var(--label-primary)]">
                 Изменить профиль
               </h2>
               <button
                 type="button"
                 aria-label="Закрыть"
                 disabled={isSaving}
-                className="interactive-tertiary absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--label-primary)]"
+                className={buttonClassName({
+                  className: "absolute right-3 top-3 text-[var(--label-primary)]",
+                  isIconOnly: true,
+                  size: "sm",
+                  variant: "quaternary",
+                })}
                 onClick={onClose}
               >
                 <CloseIcon />
               </button>
             </header>
 
-            <div className="grid gap-6 px-5 py-5 min-[481px]:px-6">
-              <ImageUploadCropField
-                aspectRatio="16:5"
-                helperText="Обложка будет выглядывать из-за карточки профиля."
-                isHeaderHidden
-                label="Cover-photo"
-                outputHeight={PROFILE_COVER_OUTPUT_HEIGHT}
-                outputWidth={PROFILE_COVER_OUTPUT_WIDTH}
-                previewVariant="cover-overlay"
-                sourceImage={coverSourceImage}
-                uploadLabel="Загрузить cover-photo"
-                value={coverCrop}
-                onClear={() => {
-                  setCoverSourceImage(null);
-                  setCoverCrop(DEFAULT_IMAGE_CROP_VALUE);
-                }}
-                onSourceImageChange={(nextImage) => {
-                  setCoverSourceImage(nextImage);
-                }}
-                onValueChange={setCoverCrop}
-              />
+            <div className="grid gap-6 px-5 py-5 min-[480px]:px-6">
+              {showProfileCover ? (
+                <ImageUploadCropField
+                  aspectRatio="16:5"
+                  helperText="Обложка будет выглядывать из-за карточки профиля."
+                  isHeaderHidden
+                  label="Cover-photo"
+                  outputHeight={PROFILE_COVER_OUTPUT_HEIGHT}
+                  outputWidth={PROFILE_COVER_OUTPUT_WIDTH}
+                  previewVariant="cover-overlay"
+                  sourceImage={coverSourceImage}
+                  uploadLabel="Загрузить cover-photo"
+                  value={coverCrop}
+                  onClear={() => {
+                    setCoverSourceImage(null);
+                    setCoverCrop(DEFAULT_IMAGE_CROP_VALUE);
+                  }}
+                  onSourceImageChange={(nextImage) => {
+                    setCoverSourceImage(nextImage);
+                  }}
+                  onValueChange={setCoverCrop}
+                />
+              ) : null}
 
               <ImageUploadCropField
                 aspectRatio="1:1"
@@ -277,73 +277,45 @@ export function ProfileEditModal({
                 }}
               />
 
-              <TextField
-                isInvalid={Boolean(fieldErrors.displayName)}
-                className="grid gap-2"
-              >
-                <Label className="text-[14px] font-medium text-[var(--label-primary)]">
-                  Имя
-                </Label>
-                <Input
-                  value={name}
-                  maxLength={PROFILE_NAME_MAX_LENGTH}
-                  placeholder="Имя"
-                  className="type-input w-full rounded-2xl px-4 py-3"
-                  onChange={(event) => setName(event.target.value)}
-                />
-                {fieldErrors.displayName ? (
-                  <ErrorMessage className="text-[14px] leading-5 text-[var(--danger)]">
-                    {fieldErrors.displayName}
-                  </ErrorMessage>
-                ) : null}
-              </TextField>
+              <TextInputField
+                error={fieldErrors.displayName}
+                label="Имя"
+                maxLength={PROFILE_NAME_MAX_LENGTH}
+                onChange={setName}
+                placeholder="Имя"
+                value={name}
+              />
 
-              <TextField
-                isInvalid={Boolean(fieldErrors.profileDescription)}
-                className="grid gap-2"
-              >
-                <span className="flex items-center justify-between gap-3">
-                  <Label className="text-[14px] font-medium text-[var(--label-primary)]">
-                    О себе
-                  </Label>
-                  <span className="text-[13px] text-[var(--label-tertiary)]">
+              <TextareaField
+                error={fieldErrors.profileDescription}
+                helper={(
+                  <span className="text-[14px] text-[var(--label-tertiary)]">
                     {description.length}/{PROFILE_DESCRIPTION_MAX_LENGTH}
                   </span>
-                </span>
-                <TextArea
-                  ref={descriptionRef}
-                  rows={4}
-                  maxLength={PROFILE_DESCRIPTION_MAX_LENGTH}
-                  value={description}
-                  placeholder="Расскажите немного о себе. Можно добавить ссылки на соцсети."
-                  className="min-h-[132px] w-full resize-none overflow-hidden rounded-2xl px-4 py-3 text-[16px] leading-6"
-                  onChange={(event) => {
-                    setDescription(event.target.value);
-                    event.currentTarget.style.height = "0px";
-                    event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
-                  }}
-                />
-                {fieldErrors.profileDescription ? (
-                  <ErrorMessage className="text-[14px] leading-5 text-[var(--danger)]">
-                    {fieldErrors.profileDescription}
-                  </ErrorMessage>
-                ) : null}
-              </TextField>
+                )}
+                label="О себе"
+                maxLength={PROFILE_DESCRIPTION_MAX_LENGTH}
+                minHeightClassName="min-h-[132px]"
+                onChange={setDescription}
+                placeholder="Расскажите немного о себе. Можно добавить ссылки на соцсети."
+                rows={4}
+                value={description}
+              />
 
               {formError ? (
                 <p className="text-[14px] leading-5 text-[var(--danger)]">{formError}</p>
               ) : null}
             </div>
 
-            <footer className="flex justify-end px-5 pb-5 pt-1 min-[481px]:px-6">
+            <footer className="flex justify-end px-5 pb-5 pt-1 min-[480px]:px-6">
               <Button
                 type="button"
                 variant="primary"
                 disabled={isSaving}
-                className="!h-10 !px-5 text-[15px] font-medium"
+                isLoading={isSaving}
                 onClick={handleSave}
               >
-                {isSaving ? "Сохраняем..." : "Сохранить"}
+                Сохранить
               </Button>
             </footer>
           </Modal.Body>

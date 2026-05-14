@@ -1,13 +1,16 @@
 "use client";
 
-import { Dropdown, toast } from "@heroui/react";
+import { Dropdown } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { buttonClassName } from "@/components/ui/button-styles";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import { MoreHorizontalIcon } from "@/components/ui/icons";
 import { AdminUserEditorModal } from "@/features/admin/components/admin-user-editor-modal";
 import type { AdminListedUser } from "@/features/admin/types";
+import type { SpecialistStatus } from "@/features/auth/types";
 
 type AdminUserRowActionsProps = {
   user: AdminListedUser;
@@ -68,6 +71,48 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
     }
   }
 
+  async function updateSpecialistStatus(specialistStatus: SpecialistStatus) {
+    const response = await fetch(`/api/admin/users/${user.id}/specialist-status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        specialistStatus,
+      }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Не удалось обновить статус специалиста.");
+    }
+  }
+
+  async function handleSpecialistStatusChange(specialistStatus: SpecialistStatus) {
+    setIsSubmitting(true);
+    setFeedbackMessage(null);
+
+    try {
+      await updateSpecialistStatus(specialistStatus);
+      router.refresh();
+      toast.success(
+        specialistStatus === "verified"
+          ? "Заявка подтверждена."
+          : "Заявка отклонена.",
+      );
+    } catch (error) {
+      const resolvedErrorMessage =
+        error instanceof Error ? error.message : "Не удалось обновить статус специалиста.";
+
+      setFeedbackMessage(resolvedErrorMessage);
+      toast.danger(resolvedErrorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   function scheduleUndoableAction({
     actionKey,
     commit,
@@ -97,7 +142,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
     const toastId = toast(pendingMessage, {
       variant: toastVariant,
       description,
-      timeout: 5000,
+      timeout: 2000,
       actionProps: {
         children: "Отменить",
         onPress: () => {
@@ -133,7 +178,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
       } finally {
         setIsSubmitting(false);
       }
-    }, 5000);
+    }, 2000);
 
     pendingActionTimeoutsRef.current.set(actionKey, timeoutId);
   }
@@ -145,7 +190,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
     scheduleUndoableAction({
       actionKey: `ban:${user.id}`,
       commit: banUser,
-      description: `Действие будет выполнено через 5 секунд для ${accountName}.`,
+      description: `Действие будет выполнено через 2 секунды для ${accountName}.`,
       errorMessage: "Не удалось заблокировать аккаунт.",
       pendingMessage: "Пользователь будет забанен",
       successMessage: "Пользователь забанен.",
@@ -161,7 +206,7 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
     scheduleUndoableAction({
       actionKey: `delete:${user.id}`,
       commit: deleteUser,
-      description: `Действие будет выполнено через 5 секунд для ${accountName}.`,
+      description: `Действие будет выполнено через 2 секунды для ${accountName}.`,
       errorMessage: "Не удалось удалить аккаунт.",
       pendingMessage: "Аккаунт будет удален",
       successMessage: "Аккаунт удален.",
@@ -181,7 +226,12 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
         <Dropdown.Root>
           <Dropdown.Trigger
             aria-label="Открыть меню действий"
-            className="interactive-tertiary inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-[var(--label-primary)]"
+            className={buttonClassName({
+              className: "cursor-pointer text-[var(--label-primary)]",
+              isIconOnly: true,
+              size: "sm",
+              variant: "quaternary",
+            })}
           >
             <MoreHorizontalIcon />
           </Dropdown.Trigger>
@@ -196,6 +246,16 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
 
                 if (action === "edit") {
                   setIsEditorOpen(true);
+                  return;
+                }
+
+                if (action === "approve-specialist") {
+                  void handleSpecialistStatusChange("verified");
+                  return;
+                }
+
+                if (action === "reject-specialist") {
+                  void handleSpecialistStatusChange("rejected");
                   return;
                 }
 
@@ -214,6 +274,26 @@ export function AdminUserRowActions({ user }: AdminUserRowActionsProps) {
               <Dropdown.Item key="edit" id="edit" textValue="Редактировать">
                 Редактировать
               </Dropdown.Item>
+              {user.role === "specialist" && user.specialistStatus !== "verified" ? (
+                <Dropdown.Item
+                  key="approve-specialist"
+                  id="approve-specialist"
+                  textValue="Подтвердить заявку"
+                  isDisabled={isSubmitting}
+                >
+                  Подтвердить заявку
+                </Dropdown.Item>
+              ) : null}
+              {user.role === "specialist" && user.specialistStatus !== "rejected" ? (
+                <Dropdown.Item
+                  key="reject-specialist"
+                  id="reject-specialist"
+                  textValue="Отклонить заявку"
+                  isDisabled={isSubmitting}
+                >
+                  Отклонить заявку
+                </Dropdown.Item>
+              ) : null}
               <Dropdown.Item key="ban" id="ban" textValue="Забанить">
                 Забанить
               </Dropdown.Item>

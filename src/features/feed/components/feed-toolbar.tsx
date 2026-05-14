@@ -1,6 +1,5 @@
 "use client";
 
-import { Dropdown, Label } from "@heroui/react";
 import { POST_TOPIC_FILTER_OPTIONS } from "@/constants/post-taxonomy";
 import {
   FEED_SORT_OPTIONS,
@@ -8,12 +7,11 @@ import {
 } from "@/features/feed/constants/feed";
 import {
   CardModeIcon,
-  CheckIndicatorIcon,
   ChevronDownIcon,
   CompactModeIcon,
 } from "@/components/ui/icons";
 import { buttonClassName } from "@/components/ui/button-styles";
-import { DropdownPopover } from "@/components/ui/dropdown-popover";
+import { ResponsiveSelectionMenu } from "@/components/ui/responsive-selection-menu";
 import type {
   FeedSortMode,
   FeedTopicFilter,
@@ -41,89 +39,76 @@ export function FeedToolbar({
     POST_TOPIC_FILTER_OPTIONS.find((option) => option.value === activeTopic)
       ?.label ?? "Все темы";
   const chevronClassName = "flex h-3 w-3 flex-none items-center justify-center";
+  const selectorButtonClassName = buttonClassName({
+    className:
+      "inline-flex h-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
+    size: "sm",
+    variant: "quaternary",
+  });
 
   return (
-    <div className="app-feed-toolbar surface-primary border-separator relative z-30 px-0 pb-3 pt-4 min-[481px]:pb-6 min-[481px]:pt-8">
+    <div className="app-feed-toolbar surface-primary border-separator relative z-30 px-0 pb-3 pt-4 min-[480px]:pb-6 min-[480px]:pt-8">
       <div className="relative z-40 flex items-center justify-start gap-0 text-sm">
-        <Dropdown.Root>
-          <Dropdown.Trigger
-            className={buttonClassName({
-              className:
-                "inline-flex h-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
-              size: "sm",
-              variant: "tertiary",
-            })}
-          >
+        <ResponsiveSelectionMenu
+          ariaLabel="Фильтр по теме"
+          value={activeTopic}
+          onChange={(nextTopic) => onTopicChange(nextTopic)}
+          options={POST_TOPIC_FILTER_OPTIONS}
+          popoverPlacement="bottom start"
+          popoverClassName="min-w-56"
+          triggerClassName={selectorButtonClassName}
+          trigger={(
             <span className="inline-flex items-center leading-none">
               <span>{activeTopicLabel}</span>
               <span className={`ml-1.5 ${chevronClassName}`}>
                 <ChevronDownIcon />
               </span>
             </span>
-          </Dropdown.Trigger>
-          <DropdownPopover placement="bottom start" className="min-w-56">
-            <Dropdown.Menu
-              className="dropdown-menu-default"
-              selectionMode="single"
-              selectedKeys={new Set([activeTopic])}
-              onAction={(key) => onTopicChange(String(key) as FeedTopicFilter)}
-            >
-              {POST_TOPIC_FILTER_OPTIONS.map((option) => (
-                <Dropdown.Item key={option.value} id={option.value} textValue={option.label}>
-                  <Label>{option.label}</Label>
-                  <Dropdown.ItemIndicator className="text-[var(--accent-primary)]">
-                    {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
-                  </Dropdown.ItemIndicator>
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </DropdownPopover>
-        </Dropdown.Root>
+          )}
+        />
 
-        <Dropdown.Root>
-          <Dropdown.Trigger
-            className={buttonClassName({
-              className:
-                "inline-flex h-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
-              size: "sm",
-              variant: "tertiary",
-            })}
-          >
+        <ResponsiveSelectionMenu
+          ariaLabel="Сортировка ленты"
+          value={sortMode}
+          onChange={(nextSortMode) => onSortModeChange(nextSortMode)}
+          options={FEED_SORT_OPTIONS.map((option) => ({ label: option, value: option }))}
+          popoverPlacement="bottom start"
+          popoverClassName="min-w-44"
+          triggerClassName={selectorButtonClassName}
+          trigger={(
             <span className="inline-flex items-center leading-none">
               <span>{sortMode}</span>
               <span className={`ml-1.5 ${chevronClassName}`}>
                 <ChevronDownIcon />
               </span>
             </span>
-          </Dropdown.Trigger>
-          <DropdownPopover placement="bottom start" className="min-w-44">
-            <Dropdown.Menu
-              className="dropdown-menu-default"
-              selectionMode="single"
-              selectedKeys={new Set([sortMode])}
-              onAction={(key) => onSortModeChange(String(key) as FeedSortMode)}
-            >
-              {FEED_SORT_OPTIONS.map((option) => (
-                <Dropdown.Item key={option} id={option} textValue={option}>
-                  <Label>{option}</Label>
-                  <Dropdown.ItemIndicator className="text-[var(--accent-primary)]">
-                    {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
-                  </Dropdown.ItemIndicator>
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </DropdownPopover>
-        </Dropdown.Root>
+          )}
+        />
 
-        <Dropdown.Root>
-          <Dropdown.Trigger
-            className={buttonClassName({
-              className:
-                "inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
-              size: "sm",
-              variant: "tertiary",
-            })}
-          >
+        <ResponsiveSelectionMenu
+          ariaLabel="Вид ленты"
+          value={viewMode}
+          onChange={(nextViewMode) => onViewModeChange(nextViewMode)}
+          options={FEED_VIEW_OPTIONS}
+          popoverPlacement="bottom start"
+          popoverClassName="min-w-44"
+          triggerClassName={buttonClassName({
+            className:
+              "inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-[var(--label-secondary)]",
+            size: "sm",
+            variant: "quaternary",
+          })}
+          renderOption={(option) => (
+            <span className="flex items-center gap-2">
+              {option.value === "card" ? (
+                <CardModeIcon filled={option.value === viewMode} />
+              ) : (
+                <CompactModeIcon filled={option.value === viewMode} />
+              )}
+              <span>{option.label}</span>
+            </span>
+          )}
+          trigger={(
             <span className="inline-flex items-center leading-none">
               <span className="flex h-5 w-5 flex-none items-center justify-center">
                 {viewMode === "card" ? <CardModeIcon /> : <CompactModeIcon />}
@@ -132,32 +117,8 @@ export function FeedToolbar({
                 <ChevronDownIcon />
               </span>
             </span>
-          </Dropdown.Trigger>
-          <DropdownPopover placement="bottom start" className="min-w-44">
-            <Dropdown.Menu
-              className="dropdown-menu-default"
-              selectionMode="single"
-              selectedKeys={new Set([viewMode])}
-              onAction={(key) => onViewModeChange(String(key) as ViewMode)}
-            >
-              {FEED_VIEW_OPTIONS.map((option) => (
-                <Dropdown.Item key={option.value} id={option.value} textValue={option.label}>
-                  <Label className="flex items-center gap-2">
-                    {option.value === "card" ? (
-                      <CardModeIcon filled={option.value === viewMode} />
-                    ) : (
-                      <CompactModeIcon filled={option.value === viewMode} />
-                    )}
-                    <span>{option.label}</span>
-                  </Label>
-                  <Dropdown.ItemIndicator className="text-[var(--accent-primary)]">
-                    {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
-                  </Dropdown.ItemIndicator>
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </DropdownPopover>
-        </Dropdown.Root>
+          )}
+        />
       </div>
     </div>
   );

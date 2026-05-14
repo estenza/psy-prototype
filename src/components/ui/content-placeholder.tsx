@@ -6,6 +6,7 @@ type ContentPlaceholderProps = {
   description: ReactNode;
   title: ReactNode;
   titleAs?: ElementType;
+  titleClassName?: string;
 };
 
 export function ContentPlaceholder({
@@ -14,12 +15,13 @@ export function ContentPlaceholder({
   description,
   title,
   titleAs: TitleTag = "h2",
+  titleClassName = "type-h2 font-medium text-[var(--label-primary)]",
 }: ContentPlaceholderProps) {
   return (
     <div
       className={`surface-elevated rounded-[28px] px-6 py-12 text-center ${className}`.trim()}
     >
-      <TitleTag className="text-[16px] font-medium leading-6 text-[var(--label-primary)]">
+      <TitleTag className={titleClassName}>
         {title}
       </TitleTag>
       <p className="mt-1 text-[16px] leading-6 text-[var(--label-tertiary)]">

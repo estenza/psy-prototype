@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import {
   startTransition,
   useCallback,
@@ -15,6 +15,7 @@ import type {
   CreateCommentPayload,
   CreateCommentResult,
 } from "@/features/comments/types";
+import type { ContentReportReason } from "@/features/reports/types";
 
 type FeedbackState = {
   kind: "error" | "info" | "success";
@@ -165,7 +166,7 @@ export function useComments(pageId: string) {
     }
   }
 
-  async function reportComment(commentId: string) {
+  async function reportComment(commentId: string, reason: ContentReportReason) {
     try {
       const response = await fetch(`/api/comments/${commentId}/report`, {
         method: "POST",
@@ -173,7 +174,7 @@ export function useComments(pageId: string) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reason: null,
+          reason,
         }),
       });
 
@@ -183,19 +184,14 @@ export function useComments(pageId: string) {
         throw new Error(payload.error ?? "Не удалось пожаловаться на комментарий.");
       }
 
-      setFeedback({
-        kind: "success",
-        message: "Жалоба отправлена.",
-      });
       await loadComments(sort);
+      toast.success("Жалоба отправлена");
     } catch (actionError) {
-      setFeedback({
-        kind: "error",
-        message:
-          actionError instanceof Error
-            ? actionError.message
-            : "Не удалось пожаловаться на комментарий.",
-      });
+      throw new Error(
+        actionError instanceof Error
+          ? actionError.message
+          : "Не удалось пожаловаться на комментарий.",
+      );
     }
   }
 
@@ -252,7 +248,7 @@ export function useComments(pageId: string) {
       }
 
       await loadComments(sort);
-      toast.success("Ответ удален");
+      toast.success("Комментарий удален");
     } catch (actionError) {
       setFeedback({
         kind: "error",

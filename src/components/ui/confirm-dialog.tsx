@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal, Spinner } from "@heroui/react";
+import { Modal } from "@heroui/react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -41,7 +41,7 @@ export function ConfirmDialog({
           className="modal-surface w-full max-w-[420px] p-5"
         >
           <Modal.Body className="p-0">
-            <h3 className="font-helvetica text-[24px] font-bold leading-8 text-[var(--label-primary)]">
+            <h3 className="type-h3 font-bold text-[var(--label-primary)]">
               {title}
             </h3>
             {description ? (
@@ -57,7 +57,7 @@ export function ConfirmDialog({
               <Button
                 type="button"
                 variant="secondary"
-                className="interactive-secondary !w-full !justify-center !rounded-full !px-5 !text-[var(--label-primary)]"
+                className="!w-full !justify-center !text-[var(--label-primary)]"
                 disabled={isLoading}
                 onClick={onClose}
               >
@@ -66,16 +66,12 @@ export function ConfirmDialog({
               <Button
                 type="button"
                 variant="primary"
-                className="relative !w-full !justify-center !rounded-full !px-5"
+                className="!w-full !justify-center"
                 disabled={isLoading}
+                isLoading={isLoading}
                 onClick={onConfirm}
               >
-                <span className={isLoading ? "opacity-0" : ""}>{actionLabel}</span>
-                {isLoading ? (
-                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-white">
-                    <Spinner size="sm" color="current" />
-                  </span>
-                ) : null}
+                {actionLabel}
               </Button>
             </div>
           </Modal.Body>

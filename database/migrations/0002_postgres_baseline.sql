@@ -49,7 +49,16 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_card_url TEXT,
   profile_cover_url TEXT,
   profile_description TEXT,
+  education_json TEXT NOT NULL DEFAULT '[]',
   specialties_json TEXT NOT NULL DEFAULT '[]',
+  work_topics_json TEXT NOT NULL DEFAULT '[]',
+  specialist_gender TEXT CHECK (specialist_gender IS NULL OR specialist_gender IN ('female', 'male')),
+  specialist_birth_date TEXT,
+  specialist_phone_country TEXT,
+  specialist_phone_number TEXT,
+  specialist_telegram_url TEXT,
+  specialist_max_url TEXT,
+  specialist_whatsapp_url TEXT,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'specialist')),
   specialist_status TEXT NOT NULL DEFAULT 'none' CHECK (
     specialist_status IN ('none', 'pending', 'verified', 'rejected', 'suspended')
@@ -107,6 +116,7 @@ CREATE TABLE IF NOT EXISTS posts (
       'hard-states'
     )
   ),
+  subtopic TEXT,
   title TEXT NOT NULL,
   body_html TEXT NOT NULL,
   excerpt TEXT NOT NULL,
@@ -359,6 +369,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_source_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_card_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_cover_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_description TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS education_json TEXT NOT NULL DEFAULT '[]';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS specialties_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS work_topics_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialist_gender TEXT CHECK (specialist_gender IS NULL OR specialist_gender IN ('female', 'male'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialist_birth_date TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialist_phone_country TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialist_phone_number TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialist_telegram_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialist_max_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialist_whatsapp_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT;

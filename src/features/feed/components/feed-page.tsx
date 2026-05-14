@@ -34,10 +34,10 @@ export function FeedPage({ initialPosts, leftNav, rightSidebar }: FeedPageProps)
   } = useFeed({ initialPosts });
 
   return (
-    <div className="min-[481px]:pt-[var(--app-header-height)]">
+    <div className="min-[480px]:pt-[var(--app-header-height)]">
       {/* Toolbar — full width, border-b */}
       <div className="surface-primary relative z-30">
-        <div className="mx-auto grid w-full grid-cols-1 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] min-[1441px]:max-w-[var(--app-shell-max-width)] min-[1441px]:px-5">
+        <div className="mx-auto grid w-full grid-cols-1 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] min-[1440px]:max-w-[var(--app-shell-max-width)] min-[1440px]:px-5">
           <div className="hidden lg:block" />
           <div>
             <FeedToolbar
@@ -54,11 +54,11 @@ export function FeedPage({ initialPosts, leftNav, rightSidebar }: FeedPageProps)
       </div>
 
       {/* 3-column layout */}
-      <main className="mx-auto grid w-full grid-cols-1 gap-0 px-0 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-0 min-[1441px]:max-w-[var(--app-shell-max-width)] min-[1441px]:px-5">
+      <main className="mx-auto grid w-full grid-cols-1 gap-0 px-0 lg:grid-cols-[minmax(var(--app-shell-side-column-min-width),1fr)_minmax(0,var(--app-shell-content-max-width))_minmax(var(--app-shell-side-column-min-width),1fr)] lg:px-0 min-[1440px]:max-w-[var(--app-shell-max-width)] min-[1440px]:px-5">
         {leftNav}
 
         <section className="min-w-0">
-          <div className="space-y-4 px-4 pb-24 min-[481px]:px-6 lg:px-0">
+          <div className="space-y-4 px-4 pb-24 min-[480px]:px-6 lg:px-0">
             {feed.length > 0 ? (
               feed.map((post) => {
                 const isHighlighted = post.id === highlightedPostId;
@@ -90,7 +90,7 @@ export function FeedPage({ initialPosts, leftNav, rightSidebar }: FeedPageProps)
                     }}
                   >
                     <div
-                      className={`surface-card feed-card-surface relative px-5 py-4 min-[481px]:px-6 ${
+                      className={`surface-card feed-card-surface relative px-5 py-4 min-[480px]:px-6 ${
                         isHighlighted ? "feed-post-flash" : ""
                       }`}
                     >

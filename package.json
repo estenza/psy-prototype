@@ -8,13 +8,14 @@
     "dev:turbo": "next dev --turbopack",
     "dev:admin-local": "yarn dev",
     "build": "next build",
+    "check:even-pixels": "node scripts/check-even-pixels.mjs",
     "check:icons": "node scripts/check-icon-exports.mjs",
     "check:layout": "node tests/visual/shell-layout-smoke.mjs",
     "test:integration": "node --test tests/integration/*.mjs",
     "migrate:auth:postgres:schema": "node scripts/migrate-auth-postgres.mjs",
     "migrate:auth:postgres": "node scripts/migrate-auth-sqlite-to-postgres.mjs",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
-    "lint": "eslint && yarn check:icons"
+    "lint": "eslint && yarn check:icons && yarn check:even-pixels"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
@@ -37,6 +38,7 @@
     "react-dom": "19.2.3",
     "react-dropzone": "^15.0.0",
     "react-easy-crop": "^5.5.7",
+    "react-phone-number-input": "^3.4.16",
     "react-simple-pull-to-refresh": "^1.3.4"
   },
   "resolutions": {

@@ -5,10 +5,14 @@ import { execAuthPostgres, isPostgresAuthEnabled, queryAuthPostgres } from "@/li
 import { getDatabase } from "@/lib/db";
 import { normalizeAdminSpecialties } from "@/features/admin/lib/admin-specialties";
 import { isBootstrapAdminEmail } from "@/features/auth/lib/bootstrap-admin";
+import { parseSpecialistEducationJson } from "@/features/auth/lib/education";
+import { parseSpecialistWorkTopicsJson } from "@/features/specialists/lib/specialist-work-topics";
 import type {
   AuthSession,
   AuthUser,
   OnboardingStep,
+  SpecialistEducationItem,
+  SpecialistGender,
   SpecialistStatus,
   UserRole,
 } from "@/features/auth/types";
@@ -27,7 +31,16 @@ type UserRow = {
   avatar_card_url: string | null;
   profile_cover_url: string | null;
   profile_description: string | null;
+  education_json: string | null;
   specialties_json: string | null;
+  work_topics_json: string | null;
+  specialist_gender: SpecialistGender | null;
+  specialist_birth_date: string | null;
+  specialist_phone_country: string | null;
+  specialist_phone_number: string | null;
+  specialist_telegram_url: string | null;
+  specialist_max_url: string | null;
+  specialist_whatsapp_url: string | null;
   role: UserRole;
   specialist_status: SpecialistStatus;
   is_moderator: number | boolean;
@@ -69,7 +82,16 @@ const PG_USER_COLUMNS = `
   users.avatar_card_url,
   users.profile_cover_url,
   users.profile_description,
+  users.education_json,
   users.specialties_json,
+  users.work_topics_json,
+  users.specialist_gender,
+  users.specialist_birth_date,
+  users.specialist_phone_country,
+  users.specialist_phone_number,
+  users.specialist_telegram_url,
+  users.specialist_max_url,
+  users.specialist_whatsapp_url,
   users.role,
   users.specialist_status,
   users.is_moderator,
@@ -131,7 +153,16 @@ function mapUser(row: UserRow): AuthUser {
     avatarCardUrl: row.avatar_card_url,
     profileCoverUrl: row.profile_cover_url,
     profileDescription: row.profile_description,
+    education: parseSpecialistEducationJson(row.education_json),
     specialties: parseSpecialties(row.specialties_json),
+    workTopics: parseSpecialistWorkTopicsJson(row.work_topics_json),
+    specialistGender: row.specialist_gender,
+    specialistBirthDate: row.specialist_birth_date,
+    specialistPhoneCountry: row.specialist_phone_country,
+    specialistPhoneNumber: row.specialist_phone_number,
+    specialistTelegramUrl: row.specialist_telegram_url,
+    specialistMaxUrl: row.specialist_max_url,
+    specialistWhatsappUrl: row.specialist_whatsapp_url,
     role: row.role,
     specialistStatus: row.specialist_status,
     isAdmin: isBootstrapAdminEmail(row.email),
@@ -384,9 +415,18 @@ export async function createUser({
   onboardingStep = "role",
   passwordHash,
   profileDescription = null,
+  education = [],
   patronymic = null,
   role = "user",
   specialties = [],
+  specialistGender = null,
+  specialistBirthDate = null,
+  specialistPhoneCountry = null,
+  specialistPhoneNumber = null,
+  specialistTelegramUrl = null,
+  specialistMaxUrl = null,
+  specialistWhatsappUrl = null,
+  workTopics = [],
   specialistStatus = "none",
 }: {
   avatarUrl?: string | null;
@@ -402,9 +442,18 @@ export async function createUser({
   onboardingStep?: OnboardingStep;
   passwordHash: string;
   profileDescription?: string | null;
+  education?: SpecialistEducationItem[];
   patronymic?: string | null;
   role?: UserRole;
   specialties?: string[];
+  specialistGender?: SpecialistGender | null;
+  specialistBirthDate?: string | null;
+  specialistPhoneCountry?: string | null;
+  specialistPhoneNumber?: string | null;
+  specialistTelegramUrl?: string | null;
+  specialistMaxUrl?: string | null;
+  specialistWhatsappUrl?: string | null;
+  workTopics?: string[];
   specialistStatus?: SpecialistStatus;
 }) {
   const now = new Date().toISOString();
@@ -426,7 +475,16 @@ export async function createUser({
           avatar_source_url,
           avatar_card_url,
           profile_description,
+          education_json,
           specialties_json,
+          work_topics_json,
+          specialist_gender,
+          specialist_birth_date,
+          specialist_phone_country,
+          specialist_phone_number,
+          specialist_telegram_url,
+          specialist_max_url,
+          specialist_whatsapp_url,
           role,
           specialist_status,
           is_moderator,
@@ -437,7 +495,7 @@ export async function createUser({
           updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-          $12, $13, $14, $15, $16, $17, NULL, $18, $19, $20
+          $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NULL, $27, $28, $29
         )
       `,
       [
@@ -453,7 +511,16 @@ export async function createUser({
         avatarSourceUrl,
         avatarCardUrl,
         profileDescription,
+        JSON.stringify(education),
         JSON.stringify(specialties),
+        JSON.stringify(workTopics),
+        specialistGender,
+        specialistBirthDate,
+        specialistPhoneCountry,
+        specialistPhoneNumber,
+        specialistTelegramUrl,
+        specialistMaxUrl,
+        specialistWhatsappUrl,
         role,
         specialistStatus,
         isModerator,
@@ -482,7 +549,16 @@ export async function createUser({
         avatar_source_url,
         avatar_card_url,
         profile_description,
+        education_json,
         specialties_json,
+        work_topics_json,
+        specialist_gender,
+        specialist_birth_date,
+        specialist_phone_country,
+        specialist_phone_number,
+        specialist_telegram_url,
+        specialist_max_url,
+        specialist_whatsapp_url,
         role,
         specialist_status,
         is_moderator,
@@ -493,7 +569,7 @@ export async function createUser({
         updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?
       )
     `)
     .run(
@@ -509,7 +585,16 @@ export async function createUser({
       avatarSourceUrl,
       avatarCardUrl,
       profileDescription,
+      JSON.stringify(education),
       JSON.stringify(specialties),
+      JSON.stringify(workTopics),
+      specialistGender,
+      specialistBirthDate,
+      specialistPhoneCountry,
+      specialistPhoneNumber,
+      specialistTelegramUrl,
+      specialistMaxUrl,
+      specialistWhatsappUrl,
       role,
       specialistStatus,
       isModerator ? 1 : 0,
@@ -700,8 +785,18 @@ export async function findSessionWithUserByTokenHash(tokenHash: string) {
         users.avatar_url,
         users.avatar_source_url,
         users.avatar_card_url,
+        users.profile_cover_url,
         users.profile_description,
+        users.education_json,
         users.specialties_json,
+        users.work_topics_json,
+        users.specialist_gender,
+        users.specialist_birth_date,
+        users.specialist_phone_country,
+        users.specialist_phone_number,
+        users.specialist_telegram_url,
+        users.specialist_max_url,
+        users.specialist_whatsapp_url,
         users.role,
         users.specialist_status,
         users.is_moderator,
@@ -812,8 +907,18 @@ export async function findPasswordResetTokenWithUserByTokenHash(tokenHash: strin
         users.avatar_url,
         users.avatar_source_url,
         users.avatar_card_url,
+        users.profile_cover_url,
         users.profile_description,
+        users.education_json,
         users.specialties_json,
+        users.work_topics_json,
+        users.specialist_gender,
+        users.specialist_birth_date,
+        users.specialist_phone_country,
+        users.specialist_phone_number,
+        users.specialist_telegram_url,
+        users.specialist_max_url,
+        users.specialist_whatsapp_url,
         users.role,
         users.specialist_status,
         users.is_moderator,
@@ -870,6 +975,8 @@ export async function updateUserProfileFields({
   profileCoverUrl,
   profileDescription,
   role,
+  specialistPhoneCountry,
+  specialistPhoneNumber,
   userId,
 }: {
   avatarSourceUrl?: string | null;
@@ -883,6 +990,8 @@ export async function updateUserProfileFields({
   profileCoverUrl?: string | null;
   profileDescription?: string | null;
   role?: UserRole;
+  specialistPhoneCountry?: string | null;
+  specialistPhoneNumber?: string | null;
   userId: string;
 }) {
   const currentUser = await findUserById(userId);
@@ -907,10 +1016,12 @@ export async function updateUserProfileFields({
           avatar_source_url = $7,
           profile_cover_url = $8,
           profile_description = $9,
-          role = $10,
-          onboarding_step = $11,
-          updated_at = $12
-        WHERE id = $13
+          specialist_phone_country = $10,
+          specialist_phone_number = $11,
+          role = $12,
+          onboarding_step = $13,
+          updated_at = $14
+        WHERE id = $15
       `,
       [
         displayName ?? currentUser.displayName,
@@ -922,6 +1033,8 @@ export async function updateUserProfileFields({
         avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
         profileCoverUrl === undefined ? currentUser.profileCoverUrl : profileCoverUrl,
         profileDescription === undefined ? currentUser.profileDescription : profileDescription,
+        specialistPhoneCountry === undefined ? currentUser.specialistPhoneCountry : specialistPhoneCountry,
+        specialistPhoneNumber === undefined ? currentUser.specialistPhoneNumber : specialistPhoneNumber,
         role ?? currentUser.role,
         onboardingStep ?? currentUser.onboardingStep,
         nextUpdatedAt,
@@ -945,6 +1058,8 @@ export async function updateUserProfileFields({
         avatar_source_url = ?,
         profile_cover_url = ?,
         profile_description = ?,
+        specialist_phone_country = ?,
+        specialist_phone_number = ?,
         role = ?,
         onboarding_step = ?,
         updated_at = ?
@@ -960,6 +1075,8 @@ export async function updateUserProfileFields({
       avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
       profileCoverUrl === undefined ? currentUser.profileCoverUrl : profileCoverUrl,
       profileDescription === undefined ? currentUser.profileDescription : profileDescription,
+      specialistPhoneCountry === undefined ? currentUser.specialistPhoneCountry : specialistPhoneCountry,
+      specialistPhoneNumber === undefined ? currentUser.specialistPhoneNumber : specialistPhoneNumber,
       role ?? currentUser.role,
       onboardingStep ?? currentUser.onboardingStep,
       nextUpdatedAt,
@@ -1043,9 +1160,19 @@ export async function updateUserAdminManagedFields({
   lastName,
   nickname,
   onboardingStep,
+  patronymic,
   profileDescription,
+  education,
   role,
   specialties,
+  specialistGender,
+  specialistBirthDate,
+  specialistPhoneCountry,
+  specialistPhoneNumber,
+  specialistTelegramUrl,
+  specialistMaxUrl,
+  specialistWhatsappUrl,
+  workTopics,
   specialistStatus,
   userId,
 }: {
@@ -1059,9 +1186,19 @@ export async function updateUserAdminManagedFields({
   lastName?: string | null;
   nickname?: string | null;
   onboardingStep?: OnboardingStep;
+  patronymic?: string | null;
   profileDescription?: string | null;
+  education?: SpecialistEducationItem[];
   role?: UserRole;
   specialties?: string[];
+  specialistGender?: SpecialistGender | null;
+  specialistBirthDate?: string | null;
+  specialistPhoneCountry?: string | null;
+  specialistPhoneNumber?: string | null;
+  specialistTelegramUrl?: string | null;
+  specialistMaxUrl?: string | null;
+  specialistWhatsappUrl?: string | null;
+  workTopics?: string[];
   specialistStatus?: SpecialistStatus;
   userId: string;
 }) {
@@ -1072,7 +1209,9 @@ export async function updateUserAdminManagedFields({
   }
 
   const nextUpdatedAt = new Date().toISOString();
+  const nextEducation = education ?? currentUser.education;
   const nextSpecialties = specialties ?? currentUser.specialties;
+  const nextWorkTopics = workTopics ?? currentUser.workTopics;
 
   if (isPostgresAuthEnabled()) {
     await execPg(
@@ -1083,29 +1222,49 @@ export async function updateUserAdminManagedFields({
           nickname = $2,
           first_name = $3,
           last_name = $4,
-          avatar_url = $5,
-          avatar_source_url = $6,
-          avatar_card_url = $7,
-          profile_description = $8,
-          specialties_json = $9,
-          role = $10,
-          specialist_status = $11,
-          is_banned = $12,
-          ban_reason = $13,
-          onboarding_step = $14,
-          updated_at = $15
-        WHERE id = $16
+          patronymic = $5,
+          avatar_url = $6,
+          avatar_source_url = $7,
+          avatar_card_url = $8,
+          profile_description = $9,
+          education_json = $10,
+          specialties_json = $11,
+          work_topics_json = $12,
+          specialist_gender = $13,
+          specialist_birth_date = $14,
+          specialist_phone_country = $15,
+          specialist_phone_number = $16,
+          specialist_telegram_url = $17,
+          specialist_max_url = $18,
+          specialist_whatsapp_url = $19,
+          role = $20,
+          specialist_status = $21,
+          is_banned = $22,
+          ban_reason = $23,
+          onboarding_step = $24,
+          updated_at = $25
+        WHERE id = $26
       `,
       [
         displayName ?? currentUser.displayName,
         nickname === undefined ? currentUser.nickname : nickname,
         firstName === undefined ? currentUser.firstName : firstName,
         lastName === undefined ? currentUser.lastName : lastName,
+        patronymic === undefined ? currentUser.patronymic : patronymic,
         avatarUrl === undefined ? currentUser.avatarUrl : avatarUrl,
         avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
         avatarCardUrl === undefined ? currentUser.avatarCardUrl : avatarCardUrl,
         profileDescription === undefined ? currentUser.profileDescription : profileDescription,
+        JSON.stringify(nextEducation),
         JSON.stringify(nextSpecialties),
+        JSON.stringify(nextWorkTopics),
+        specialistGender === undefined ? currentUser.specialistGender : specialistGender,
+        specialistBirthDate === undefined ? currentUser.specialistBirthDate : specialistBirthDate,
+        specialistPhoneCountry === undefined ? currentUser.specialistPhoneCountry : specialistPhoneCountry,
+        specialistPhoneNumber === undefined ? currentUser.specialistPhoneNumber : specialistPhoneNumber,
+        specialistTelegramUrl === undefined ? currentUser.specialistTelegramUrl : specialistTelegramUrl,
+        specialistMaxUrl === undefined ? currentUser.specialistMaxUrl : specialistMaxUrl,
+        specialistWhatsappUrl === undefined ? currentUser.specialistWhatsappUrl : specialistWhatsappUrl,
         role ?? currentUser.role,
         specialistStatus ?? currentUser.specialistStatus,
         isBanned === undefined ? currentUser.isBanned : isBanned,
@@ -1127,11 +1286,21 @@ export async function updateUserAdminManagedFields({
         nickname = ?,
         first_name = ?,
         last_name = ?,
+        patronymic = ?,
         avatar_url = ?,
         avatar_source_url = ?,
         avatar_card_url = ?,
         profile_description = ?,
+        education_json = ?,
         specialties_json = ?,
+        work_topics_json = ?,
+        specialist_gender = ?,
+        specialist_birth_date = ?,
+        specialist_phone_country = ?,
+        specialist_phone_number = ?,
+        specialist_telegram_url = ?,
+        specialist_max_url = ?,
+        specialist_whatsapp_url = ?,
         role = ?,
         specialist_status = ?,
         is_banned = ?,
@@ -1145,11 +1314,21 @@ export async function updateUserAdminManagedFields({
       nickname === undefined ? currentUser.nickname : nickname,
       firstName === undefined ? currentUser.firstName : firstName,
       lastName === undefined ? currentUser.lastName : lastName,
+      patronymic === undefined ? currentUser.patronymic : patronymic,
       avatarUrl === undefined ? currentUser.avatarUrl : avatarUrl,
       avatarSourceUrl === undefined ? currentUser.avatarSourceUrl : avatarSourceUrl,
       avatarCardUrl === undefined ? currentUser.avatarCardUrl : avatarCardUrl,
       profileDescription === undefined ? currentUser.profileDescription : profileDescription,
+      JSON.stringify(nextEducation),
       JSON.stringify(nextSpecialties),
+      JSON.stringify(nextWorkTopics),
+      specialistGender === undefined ? currentUser.specialistGender : specialistGender,
+      specialistBirthDate === undefined ? currentUser.specialistBirthDate : specialistBirthDate,
+      specialistPhoneCountry === undefined ? currentUser.specialistPhoneCountry : specialistPhoneCountry,
+      specialistPhoneNumber === undefined ? currentUser.specialistPhoneNumber : specialistPhoneNumber,
+      specialistTelegramUrl === undefined ? currentUser.specialistTelegramUrl : specialistTelegramUrl,
+      specialistMaxUrl === undefined ? currentUser.specialistMaxUrl : specialistMaxUrl,
+      specialistWhatsappUrl === undefined ? currentUser.specialistWhatsappUrl : specialistWhatsappUrl,
       role ?? currentUser.role,
       specialistStatus ?? currentUser.specialistStatus,
       isBanned === undefined ? (currentUser.isBanned ? 1 : 0) : isBanned ? 1 : 0,

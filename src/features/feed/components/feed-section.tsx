@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { buttonClassName } from "@/components/ui/button-styles";
 import { ContentPlaceholder } from "@/components/ui/content-placeholder";
 import { FeedToolbar } from "@/features/feed/components/feed-toolbar";
@@ -45,8 +46,8 @@ export function FeedSection({ initialPageInfo, initialPosts }: FeedSectionProps)
         onViewModeChange={setViewMode}
       />
 
-      <div className="px-0 min-[481px]:pb-12 min-[481px]:pb-24">
-        <div className="space-y-2 min-[481px]:space-y-3 min-[481px]:space-y-4">
+      <div className="px-0 min-[480px]:pb-12 min-[480px]:pb-24">
+        <div className="space-y-2 min-[480px]:space-y-3 min-[480px]:space-y-4">
           {feed.length > 0 ? (
             feed.map((post) => {
               const isHighlighted = post.id === highlightedPostId;
@@ -79,7 +80,7 @@ export function FeedSection({ initialPageInfo, initialPosts }: FeedSectionProps)
                   }}
                 >
                   <div
-                    className={`surface-card feed-card-surface relative px-3 py-4 min-[481px]:px-5 min-[481px]:px-6 ${
+                    className={`surface-card feed-card-surface relative px-3 py-4 min-[480px]:px-5 min-[480px]:px-6 ${
                       isHighlighted ? "feed-post-flash" : ""
                     }`}
                   >
@@ -118,17 +119,17 @@ export function FeedSection({ initialPageInfo, initialPosts }: FeedSectionProps)
 
           {pageInfo?.hasNextPage ? (
             <div className="flex justify-center pt-2">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 disabled={isLoadingMore}
+                isLoading={isLoadingMore}
                 onClick={loadMorePosts}
-                className={buttonClassName({
-                  className: "type-body-md-medium h-11 px-6 disabled:cursor-wait disabled:opacity-70",
-                  variant: "secondary",
-                })}
+                className="type-body-md-medium px-6 disabled:cursor-wait disabled:opacity-70"
               >
-                {isLoadingMore ? "Загружаем..." : "Показать еще"}
-              </button>
+                Показать еще
+              </Button>
             </div>
           ) : null}
         </div>

@@ -1,4 +1,10 @@
-import type { AuthUser, SpecialistStatus, UserRole } from "@/features/auth/types";
+import type {
+  AuthUser,
+  SpecialistEducationItem,
+  SpecialistGender,
+  SpecialistStatus,
+  UserRole,
+} from "@/features/auth/types";
 
 export type AdminUserRoleFilter = "all" | "moderator" | "specialist" | "user";
 export type AdminSpecialistStatusFilter = "all" | SpecialistStatus;
@@ -23,18 +29,27 @@ export type AdminManagedUserPayload = {
   email?: string;
   firstName?: string | null;
   lastName?: string | null;
+  patronymic?: string | null;
   nickname?: string | null;
-  password?: string;
   profileDescription?: string | null;
   role?: UserRole;
+  education?: SpecialistEducationItem[];
   specialties?: string[];
+  specialistGender?: SpecialistGender | null;
+  specialistBirthDate?: string | null;
+  specialistPhoneCountry?: string | null;
+  specialistPhoneNumber?: string | null;
+  specialistTelegramUrl?: string | null;
+  specialistMaxUrl?: string | null;
+  specialistWhatsappUrl?: string | null;
+  workTopics?: string[];
 };
 
 export type AdminCreateManagedUserPayload = Required<
-  Pick<AdminManagedUserPayload, "email" | "password" | "role">
+  Pick<AdminManagedUserPayload, "email" | "role">
 > & AdminManagedUserPayload;
 
-export type AdminUpdateManagedUserPayload = Omit<AdminManagedUserPayload, "email" | "password">;
+export type AdminUpdateManagedUserPayload = Omit<AdminManagedUserPayload, "email">;
 
 export type AdminBanUserPayload = {
   reason?: string | null;
@@ -50,9 +65,20 @@ export type AdminManagedUserFieldErrorName =
   | "email"
   | "firstName"
   | "lastName"
+  | "patronymic"
   | "nickname"
-  | "password"
-  | "specialties";
+  | "avatarUrl"
+  | "profileDescription"
+  | "education"
+  | "specialties"
+  | "specialistGender"
+  | "specialistBirthDate"
+  | "specialistPhoneCountry"
+  | "specialistPhoneNumber"
+  | "specialistTelegramUrl"
+  | "specialistMaxUrl"
+  | "specialistWhatsappUrl"
+  | "workTopics";
 
 export type AdminManagedUserErrorResponse = {
   error: string;

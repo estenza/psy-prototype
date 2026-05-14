@@ -46,7 +46,7 @@ export function SettingsDeleteAccountButton() {
   return (
     <>
       <Button
-        className="w-full justify-center min-[481px]:w-auto"
+        className="w-full justify-center min-[480px]:w-auto"
         isDisabled={isDeleting}
         onPress={() => {
           setErrorMessage(null);
@@ -60,7 +60,7 @@ export function SettingsDeleteAccountButton() {
       {isDialogOpen ? (
         <ConfirmDialog
           title="Отключить аккаунт?"
-          description="Отключение аккаунта скрывает ваш аккаунт, ваши посты и ответы от других пользователей. Аккаунт и его данные можно будет восстановить в течение 30 дней после отключения."
+          description="Отключение аккаунта скрывает ваш аккаунт, ваши посты и комментарии от других пользователей. Аккаунт и его данные можно будет восстановить в течение 30 дней после отключения."
           actionLabel="Отключить"
           errorMessage={errorMessage}
           isLoading={isDeleting}

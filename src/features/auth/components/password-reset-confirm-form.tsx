@@ -88,9 +88,9 @@ export function PasswordResetConfirmForm({
   }
 
   return (
-    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 min-[481px]:px-7">
+    <div className="surface-primary border-separator w-full max-w-[460px] rounded-[28px] border px-5 py-6 min-[480px]:px-7">
       <div className="flex flex-col gap-3">
-        <h1 className="type-page-title text-label-primary">
+        <h1 className="type-h1 font-bold text-label-primary">
           Новый пароль
         </h1>
         <p className="type-body-relaxed text-[var(--label-secondary)]">
@@ -173,11 +173,12 @@ export function PasswordResetConfirmForm({
           <Button
             type="submit"
             variant="primary"
-            size="lg"
-            className="mt-2 w-full !rounded-full"
+            size="md"
+          className="mt-2 w-full"
             disabled={isSubmitting}
+            isLoading={isSubmitting}
           >
-            {isSubmitting ? "Сохраняем..." : "Сохранить новый пароль"}
+            Сохранить новый пароль
           </Button>
         </form>
       ) : null}

@@ -8,7 +8,11 @@ import {
   listAuthorProfileFavoritePosts,
   listAuthorProfilePosts,
 } from "@/features/feed/lib/post-query-service";
-import { getAuthorFollowSummary } from "@/features/social/lib/follows-repository";
+import {
+  getAuthorFollowSummary,
+  listAuthorFollowers,
+  listAuthorFollowing,
+} from "@/features/social/lib/follows-repository";
 import {
   buildProfilePathFromNickname,
   getUserHandle,
@@ -62,10 +66,15 @@ export async function generateMetadata({
 
   const appUrl = buildPublicAppUrl();
   const handle = getUserHandle(profileUser);
-  const title = `${profileUser.displayName} (${handle}) · внутри`;
+  const isSpecialist = profileUser.role === "specialist";
+  const title = isSpecialist
+    ? `${profileUser.displayName} · внутри`
+    : `${profileUser.displayName} (${handle}) · внутри`;
   const description =
     profileUser.profileDescription?.trim()
-    || `Профиль ${handle} на психологической платформе внутри.`;
+    || (isSpecialist
+      ? `Профиль ${profileUser.displayName} на психологической платформе внутри.`
+      : `Профиль ${handle} на психологической платформе внутри.`);
   const canonicalUrl = buildAbsoluteAppUrl(canonicalProfilePath);
   const imageUrl = resolveMetadataImageUrl(
     profileUser.profileCoverUrl || profileUser.avatarCardUrl || profileUser.avatarUrl,
@@ -128,7 +137,14 @@ export default async function PublicProfilePage({
     notFound();
   }
 
-  const [posts, favoritePosts, replies, followSummary] = await Promise.all([
+  const [
+    posts,
+    favoritePosts,
+    replies,
+    followSummary,
+    followers,
+    following,
+  ] = await Promise.all([
     listAuthorProfilePosts(profileUser.id, currentUser),
     listAuthorProfileFavoritePosts(profileUser.id, currentUser),
     listAuthorPublishedComments({
@@ -136,13 +152,17 @@ export default async function PublicProfilePage({
       viewerUserId: currentUser?.id ?? null,
     }),
     getAuthorFollowSummary(profileUser.id, currentUser?.id ?? null),
+    listAuthorFollowers(profileUser.id),
+    listAuthorFollowing(profileUser.id),
   ]);
 
   return (
     <ProfilePageContent
       posts={posts}
       favoritePosts={favoritePosts}
+      followers={followers}
       followSummary={followSummary}
+      following={following}
       user={profileUser}
       replies={replies}
       viewerIsOwner={currentUser?.id === profileUser.id}

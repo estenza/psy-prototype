@@ -142,7 +142,7 @@ export function AdminOtpSignIn({ redirectPath }: { redirectPath: string }) {
 
       {step === "email" && (
         <div>
-          <h1 className="type-modal-title text-[var(--label-primary)]">Вход в Admin</h1>
+          <h1 className="type-h1 font-bold text-[var(--label-primary)]">Вход в Admin</h1>
           <p className="type-body-relaxed mt-1 text-[var(--label-tertiary)]">
             Отправим код подтверждения на ваш email
           </p>
@@ -163,11 +163,12 @@ export function AdminOtpSignIn({ redirectPath }: { redirectPath: string }) {
             <Button
               type="submit"
               variant="primary"
-              size="lg"
-              className="mt-1 w-full !rounded-full"
+              size="md"
+              className="mt-1 w-full"
               disabled={isSubmitting}
+              isLoading={isSubmitting}
             >
-              {isSubmitting ? "Отправляем..." : "Получить код"}
+              Получить код
             </Button>
           </form>
         </div>
@@ -190,7 +191,7 @@ export function AdminOtpSignIn({ redirectPath }: { redirectPath: string }) {
             Назад
           </button>
 
-          <h1 className="type-modal-title text-[var(--label-primary)]">Введите код</h1>
+          <h1 className="type-h1 font-bold text-[var(--label-primary)]">Введите код</h1>
           <p className="type-body-relaxed mt-1 text-[var(--label-tertiary)]">
             Отправили на{" "}
             <span className="font-medium text-[var(--label-secondary)]">{email}</span>

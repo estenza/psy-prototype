@@ -5,8 +5,7 @@ export const DEFAULT_FEED_SORT_MODE: FeedSortMode = "Новые";
 
 export const FEED_SORT_OPTIONS: readonly FeedSortMode[] = [
   "Новые",
-  "Горячее",
-  "Без ответа",
+  "Обсуждают",
 ];
 
 export const FEED_VIEW_OPTIONS = [

@@ -43,7 +43,7 @@ export function SettingsDesktopRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 721px)");
+    const mediaQuery = window.matchMedia("(min-width: 720px)");
 
     function syncSettingsIndexRoute() {
       if (mediaQuery.matches) {
@@ -133,7 +133,7 @@ function PrivacyAndSafetySubsectionIcon({
 function SettingsPlaceholderCard({ title }: { title: string }) {
   return (
     <section className="surface-elevated rounded-[28px] p-6">
-      <h3 className="text-[18px] font-semibold text-[var(--label-primary)]">
+      <h3 className="type-h3 font-semibold text-[var(--label-primary)]">
         {title}
       </h3>
       <div className="mt-5 rounded-[20px] bg-[var(--fill-control-subtle)] px-4 py-4 text-[14px] text-[var(--label-secondary)]">
@@ -152,7 +152,7 @@ function EmptySettingsSection({
 }) {
   return (
     <section className="surface-elevated rounded-[28px] p-6">
-      <h2 className="text-[18px] font-semibold text-[var(--label-primary)]">
+      <h2 className="type-h2 font-semibold text-[var(--label-primary)]">
         {title}
       </h2>
       <p className="mt-2 max-w-[620px] text-[14px] leading-6 text-[var(--label-secondary)]">
@@ -218,10 +218,10 @@ export function SettingsMenuContent({
       <header className="pb-5 pl-1">
         <div className="flex items-center gap-3">
           <BackNavigationButton
-            className="min-[721px]:hidden"
+            className="min-[720px]:hidden"
             onClick={handleSettingsMenuBack}
           />
-          <h1 className="min-w-0 text-[22px] font-semibold leading-7 text-[var(--label-primary)]">
+          <h1 className="type-h1 min-w-0 font-semibold text-[var(--label-primary)]">
             Настройки
           </h1>
         </div>
@@ -290,9 +290,9 @@ export function SettingsPageContent({
   }
 
   return (
-    <section className="w-full min-w-0 py-6 min-[481px]:py-8">
-      <div className="min-w-0 min-[721px]:grid min-[721px]:grid-cols-[minmax(220px,328fr)_minmax(0,640fr)] min-[721px]:gap-4 min-[1140px]:grid-cols-[328px_640px]">
-        <div className="hidden min-[721px]:mb-0 min-[721px]:block">
+    <section className="w-full min-w-0 py-6 min-[480px]:py-8">
+      <div className="min-w-0 min-[720px]:grid min-[720px]:grid-cols-[minmax(220px,328fr)_minmax(0,640fr)] min-[720px]:gap-4 min-[1140px]:grid-cols-[328px_640px]">
+        <div className="hidden min-[720px]:mb-0 min-[720px]:block">
           <SettingsMenuContent
             activePrivacyAndSafetySubsectionId={activePrivacyAndSafetySubsectionId}
             activeSectionId={activeSectionId}
@@ -304,17 +304,17 @@ export function SettingsPageContent({
           {activePrivacyAndSafetySubsection ? (
             <div className="flex items-center gap-3">
               <BackNavigationButton onClick={handlePrivacyAndSafetyBack} />
-              <h2 className="min-w-0 text-[22px] font-semibold leading-7 text-[var(--label-primary)]">
+              <h2 className="type-h2 min-w-0 font-semibold text-[var(--label-primary)]">
                 {activePrivacyAndSafetySubsection.title}
               </h2>
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <BackNavigationButton
-                className="min-[721px]:hidden"
+                className="min-[720px]:hidden"
                 onClick={handleSettingsBack}
               />
-              <h2 className="min-w-0 text-[22px] font-semibold leading-7 text-[var(--label-primary)]">
+              <h2 className="type-h2 min-w-0 font-semibold text-[var(--label-primary)]">
                 {activeSection.title}
               </h2>
             </div>
@@ -325,7 +325,7 @@ export function SettingsPageContent({
           {activeSectionId === "account" ? (
             <section className="surface-elevated rounded-[28px] p-6">
               <div>
-                <h3 className="text-[18px] font-semibold text-[var(--label-primary)]">
+                <h3 className="type-h3 font-semibold text-[var(--label-primary)]">
                   Учетная запись
                 </h3>
                 <div className="mt-5 max-w-[420px]">
@@ -345,11 +345,11 @@ export function SettingsPageContent({
               </div>
 
               <div className="mt-8">
-                <h3 className="text-[18px] font-semibold text-[var(--label-primary)]">
+                <h3 className="type-h3 font-semibold text-[var(--label-primary)]">
                   Отключение аккаунта
                 </h3>
                 <p className="type-body-relaxed mt-2 max-w-[620px] text-[var(--label-tertiary)]">
-                  Отключение аккаунта скрывает ваш аккаунт, ваши посты и ответы от других пользователей.
+                  Отключение аккаунта скрывает ваш аккаунт, ваши посты и комментарии от других пользователей.
                   Аккаунт и его данные можно будет восстановить в течение 30 дней после отключения.
                 </p>
                 <div className="mt-5">

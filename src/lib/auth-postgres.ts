@@ -81,7 +81,7 @@ function buildPoolConfig(): PoolConfig {
   };
 }
 
-const LATEST_AUTH_POSTGRES_MIGRATION = "0006_post_views_count";
+export const LATEST_AUTH_POSTGRES_MIGRATION = "0015_specialist_contact_links";
 const AUTH_POSTGRES_MIGRATION_LOCK_ID = 825441337;
 const AUTH_POSTGRES_MIGRATIONS_DIR = join(process.cwd(), "database", "migrations");
 

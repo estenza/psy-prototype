@@ -2,8 +2,9 @@
 
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
-import { Button as HeroButton, FieldError, ScrollShadow } from "@heroui/react";
+import { FieldError, ScrollShadow } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "@tiptap/extension-image";
@@ -62,21 +63,22 @@ function ToolbarButton({
 }: ToolbarButtonProps) {
   return (
     <HoverTooltip label={label}>
-      <HeroButton
+      <Button
         type="button"
         isIconOnly
-        variant="ghost"
+        variant="quaternary"
+        size="sm"
         isDisabled={disabled}
         onClick={onClick}
         aria-label={label}
-        className={`h-9 w-9 min-w-9 rounded-[10px] bg-transparent p-0 text-[var(--label-secondary)] transition-colors hover:bg-transparent hover:text-[var(--accent-primary)] data-[hovered=true]:bg-transparent data-[hovered=true]:text-[var(--accent-primary)] ${
+        className={`rounded-[10px] bg-transparent text-[var(--label-tertiary)] transition-colors hover:bg-transparent hover:text-[var(--accent-primary)] data-[hovered=true]:bg-transparent data-[hovered=true]:text-[var(--accent-primary)] ${
           active
             ? "text-[var(--accent-primary)]"
             : ""
         }`}
       >
         <span className="inline-flex items-center justify-center">{icon}</span>
-      </HeroButton>
+      </Button>
     </HoverTooltip>
   );
 }
@@ -570,7 +572,7 @@ export function TopicEditor({
           size={48}
           className="px-2 py-2"
         >
-          <div className="flex w-max min-w-full flex-nowrap items-center gap-0 min-[481px]:w-auto min-[481px]:min-w-0 min-[481px]:flex-wrap">
+          <div className="flex w-max min-w-full flex-nowrap items-center gap-0 min-[480px]:w-auto min-[480px]:min-w-0 min-[480px]:flex-wrap">
             <ToolbarButton
               label="Жирный"
               icon={<TopicEditorBoldIcon />}

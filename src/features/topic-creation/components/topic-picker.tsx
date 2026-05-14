@@ -1,6 +1,17 @@
+"use client";
+
 import { ListBox, Select } from "@heroui/react";
-import { CheckIndicatorIcon } from "@/components/ui/icons";
+import { useState } from "react";
+import { CheckIndicatorIcon, ChevronDownIcon } from "@/components/ui/icons";
+import {
+  fieldControlSelectItemClassName,
+  fieldControlSelectItemIndicatorClassName,
+  fieldControlSelectButtonClassName,
+  fieldControlSelectTriggerClassName,
+} from "@/components/ui/field-control";
+import { MobileSelectionDrawer } from "@/components/ui/mobile-selection-drawer";
 import { POST_TOPIC_OPTIONS } from "@/constants/post-taxonomy";
+import { useMobileViewport } from "@/hooks/use-mobile-viewport";
 import type { PostTopic } from "@/types/post-taxonomy";
 
 type TopicPickerProps = {
@@ -101,11 +112,48 @@ function TopicIcon({
 }
 
 export function TopicPicker({ onChange, value }: TopicPickerProps) {
-  const selectedItemClassName =
-    "gap-0 !pl-4 !pr-4 py-2 font-normal transition-colors data-[selected=true]:text-[var(--accent-primary)]";
-  const selectedItemIndicatorClassName =
-    "!static !top-auto !right-auto !translate-y-0 ml-3 flex h-5 w-5 flex-none items-center justify-center text-[var(--accent-primary)]";
+  const isMobileViewport = useMobileViewport();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const selectedTopicLabel = getTopicLabel(value);
+
+  if (isMobileViewport) {
+    return (
+      <div className="w-full max-w-[288px]">
+        <button
+          type="button"
+          aria-label="Выберите тему"
+          aria-haspopup="dialog"
+          aria-expanded={isDrawerOpen}
+          className={fieldControlSelectButtonClassName}
+          onClick={() => setIsDrawerOpen(true)}
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
+            <TopicIcon topic={value} className="h-5 w-5" />
+            <span className="min-w-0 truncate">{selectedTopicLabel}</span>
+          </span>
+          <span className="flex h-3 w-3 flex-none items-center justify-center text-[var(--field-placeholder)]">
+            <ChevronDownIcon />
+          </span>
+        </button>
+        <MobileSelectionDrawer
+          ariaLabel="Выберите тему"
+          isOpen={isDrawerOpen}
+          onOpenChange={setIsDrawerOpen}
+          options={POST_TOPIC_OPTIONS}
+          value={value}
+          onChange={(nextTopic) => onChange(nextTopic)}
+          renderOption={(topic) => (
+            <span className="flex min-w-0 items-center gap-3">
+              <TopicIcon topic={topic.value} />
+              <span className="min-w-0 flex-1 truncate font-normal">
+                {topic.label}
+              </span>
+            </span>
+          )}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[288px]">
@@ -120,7 +168,7 @@ export function TopicPicker({ onChange, value }: TopicPickerProps) {
         className="w-full"
       >
         <Select.Trigger
-          className="min-h-[48px] rounded-[16px] px-4 py-[11px] text-[16px] leading-6 font-normal shadow-none"
+          className={fieldControlSelectTriggerClassName}
         >
           <Select.Value className="min-w-0 text-[16px] leading-6 font-normal">
             <span className="flex min-w-0 items-center gap-2.5">
@@ -139,14 +187,14 @@ export function TopicPicker({ onChange, value }: TopicPickerProps) {
                   key={topic.value}
                   id={topic.value}
                   textValue={topic.label}
-                  className={selectedItemClassName}
+                  className={fieldControlSelectItemClassName}
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <TopicIcon topic={topic.value} />
                     <span className="min-w-0 flex-1 truncate font-normal">
                       {topic.label}
                     </span>
-                    <ListBox.ItemIndicator className={selectedItemIndicatorClassName}>
+                    <ListBox.ItemIndicator className={fieldControlSelectItemIndicatorClassName}>
                       {({ isSelected }) => (isSelected ? <CheckIndicatorIcon /> : null)}
                     </ListBox.ItemIndicator>
                   </span>

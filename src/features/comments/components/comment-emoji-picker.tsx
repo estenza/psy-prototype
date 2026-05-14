@@ -344,7 +344,7 @@ export function CommentEmojiPicker({ onSelect }: CommentEmojiPickerProps) {
               className="min-h-0"
             >
               <div
-                className="sticky -top-px z-[1] -mx-1 px-1 py-2 text-[13px] font-medium text-[var(--label-secondary)]"
+                className="sticky -top-px z-[1] -mx-1 px-1 py-2 text-[14px] font-medium text-[var(--label-secondary)]"
                 style={{
                   backgroundColor: "rgba(255, 255, 255, 0.9)",
                   WebkitBackdropFilter: "blur(4px)",

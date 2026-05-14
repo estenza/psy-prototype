@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS work_topics_json TEXT NOT NULL DEFAULT '[]';

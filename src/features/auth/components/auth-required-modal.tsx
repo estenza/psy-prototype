@@ -3,6 +3,8 @@
 import { Modal } from "@heroui/react";
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { buttonClassName } from "@/components/ui/button-styles";
+import { CloseIcon } from "@/components/ui/icons";
 import { AuthOnboarding } from "@/features/auth/components/auth-onboarding";
 import { AuthOtpFlow } from "@/features/auth/components/auth-otp-flow";
 import { resolveOnboardingStep } from "@/features/auth/lib/profile";
@@ -101,17 +103,20 @@ export function AuthRequiredModal({
       ) : (
       <Modal.Dialog
         aria-labelledby="auth-modal-title"
-        className="modal-surface surface-elevated relative w-full max-w-[420px] px-5 py-6 min-[481px]:px-6"
+        className="modal-surface surface-elevated relative w-full max-w-[420px] px-5 py-6 min-[480px]:px-6"
       >
         <button
           type="button"
           aria-label="Закрыть"
           onClick={closeAndReset}
-          className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)]"
+          className={buttonClassName({
+            className: "absolute right-5 top-5 text-[var(--label-secondary)] hover:text-[var(--label-primary)]",
+            isIconOnly: true,
+            size: "sm",
+            variant: "quaternary",
+          })}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-            <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-          </svg>
+          <CloseIcon />
         </button>
         <AuthOtpFlow
           initialEmail={initialEmail}

@@ -207,7 +207,7 @@ export function AuthOtpFlow({
       {step === "method" && (
         <div>
           <div className="pr-10">
-            <TitleTag className="type-modal-title text-[var(--label-primary)]">
+            <TitleTag className="type-h1 font-bold text-[var(--label-primary)]">
               {methodTitle}
             </TitleTag>
           </div>
@@ -215,8 +215,8 @@ export function AuthOtpFlow({
           <div className="mt-6 flex flex-col gap-3">
             <Button
               variant="primary"
-              size="lg"
-              className="w-full !rounded-full"
+              size="md"
+              className="w-full"
               onClick={() => {
                 setStep("email");
               }}
@@ -246,7 +246,7 @@ export function AuthOtpFlow({
             </button>
           ) : null}
 
-          <TitleTag className="type-modal-title text-[var(--label-primary)]">
+          <TitleTag className="type-h1 font-bold text-[var(--label-primary)]">
             {isPublishingFlow
               ? "Посту нужен автор"
               : "Войти по почте"}
@@ -275,11 +275,12 @@ export function AuthOtpFlow({
             <Button
               type="submit"
               variant="primary"
-              size="lg"
-              className="mt-1 w-full !rounded-full"
+              size="md"
+              className="mt-1 w-full"
               disabled={isSubmitting}
+              isLoading={isSubmitting}
             >
-              {isSubmitting ? "Отправляем..." : "Получить код"}
+              Получить код
             </Button>
           </form>
         </div>
@@ -302,7 +303,7 @@ export function AuthOtpFlow({
             Назад
           </button>
 
-          <TitleTag className="type-modal-title text-[var(--label-primary)]">
+          <TitleTag className="type-h1 font-bold text-[var(--label-primary)]">
             Введите код
           </TitleTag>
           <p className="type-body-relaxed mt-1 text-[var(--label-tertiary)]">

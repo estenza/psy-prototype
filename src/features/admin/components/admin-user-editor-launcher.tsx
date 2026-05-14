@@ -17,7 +17,7 @@ export function AdminUserEditorLauncher({
     <>
       <Button
         variant="primary"
-        className="!min-w-[132px] !cursor-pointer !justify-center !rounded-full !px-5"
+        className="!min-w-[132px] !cursor-pointer !justify-center"
         onClick={() => setIsOpen(true)}
       >
         {label ?? "Создать"}

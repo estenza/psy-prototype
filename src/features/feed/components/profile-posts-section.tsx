@@ -48,11 +48,11 @@ export function ProfilePostsSection({
   return (
     <section className="mx-auto w-full min-w-0 max-w-[672px]">
       <div
-        className={`pb-8 min-[481px]:pb-24 ${
+        className={`pb-8 min-[480px]:pb-24 ${
           flushTop ? "" : "pt-8"
         }`.trim()}
       >
-        <div className="space-y-2 min-[481px]:space-y-3 min-[481px]:space-y-4">
+        <div className="space-y-2 min-[480px]:space-y-3 min-[480px]:space-y-4">
           {feed.length > 0 ? (
             feed.map((post) => {
               const isHighlighted = post.id === highlightedPostId;
@@ -86,7 +86,7 @@ export function ProfilePostsSection({
                   }}
                 >
                   <div
-                    className={`surface-card feed-card-surface relative px-3 py-4 min-[481px]:px-5 min-[481px]:px-6 ${
+                    className={`surface-card feed-card-surface relative px-3 py-4 min-[480px]:px-5 min-[480px]:px-6 ${
                       isHighlighted ? "feed-post-flash" : ""
                     }`}
                   >
@@ -105,6 +105,8 @@ export function ProfilePostsSection({
           ) : (
             <ContentPlaceholder
               title={emptyTitle}
+              titleAs="h4"
+              titleClassName="type-h4 font-semibold text-[var(--label-primary)]"
               description={emptyDescription}
               action={emptyAction}
             />

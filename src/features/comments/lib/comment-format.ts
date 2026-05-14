@@ -25,12 +25,12 @@ const commentsCountLabels: Record<Intl.LDMLPluralRule, string> = {
 };
 
 const repliesCountLabels: Record<Intl.LDMLPluralRule, string> = {
-  zero: "ответов",
-  one: "ответ",
-  two: "ответа",
-  few: "ответа",
-  many: "ответов",
-  other: "ответов",
+  zero: "комментариев",
+  one: "комментарий",
+  two: "комментария",
+  few: "комментария",
+  many: "комментариев",
+  other: "комментариев",
 };
 
 export { escapeHtml };

@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { AppToastProvider } from "@/components/feedback/app-toast-provider";
+import { AppI18nProvider } from "@/components/i18n/app-i18n-provider";
 import { EnvironmentAttributes } from "@/components/layout/environment-attributes";
 import { AppThemeProvider } from "@/components/theme/app-theme-provider";
+import { RussianTypographyProvider } from "@/components/typography/russian-typography-provider";
 import { AuthRequiredProvider } from "@/features/auth/components/auth-required-provider";
 import { getCurrentUser } from "@/features/auth/lib/current-user";
 import { getAppEnvironment } from "@/lib/app-env";
@@ -11,6 +13,8 @@ import { APP_THEME_COOKIE_NAME } from "@/components/theme/theme-constants";
 import "./globals.css";
 
 const SITE_DESCRIPTION = "Психологическая платформа";
+const APP_LANGUAGE = "ru";
+const APP_LOCALE = "ru-RU";
 const publicAppUrl = buildPublicAppUrl();
 
 export const metadata: Metadata = {
@@ -89,7 +93,7 @@ export default async function RootLayout({
 
   return (
     <html
-      lang="ru"
+      lang={APP_LANGUAGE}
       data-app-env={appEnvironment}
       data-theme={initialTheme}
       data-theme-preference={initialThemePreference}
@@ -108,15 +112,18 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <AppThemeProvider initialThemePreference={initialThemePreference}>
-          <EnvironmentAttributes />
-          <AuthRequiredProvider initialUser={currentUser}>
-            {children}
-          </AuthRequiredProvider>
-          <div className="app-shell-layer">
-            <AppToastProvider />
-          </div>
-        </AppThemeProvider>
+        <AppI18nProvider locale={APP_LOCALE}>
+          <AppThemeProvider initialThemePreference={initialThemePreference}>
+            <EnvironmentAttributes />
+            <RussianTypographyProvider />
+            <AuthRequiredProvider initialUser={currentUser}>
+              {children}
+            </AuthRequiredProvider>
+            <div className="app-shell-layer">
+              <AppToastProvider />
+            </div>
+          </AppThemeProvider>
+        </AppI18nProvider>
       </body>
     </html>
   );

@@ -1,0 +1,11 @@
+[Unit]
+Description=vnutri PostgreSQL restore check
+Wants=network-online.target postgresql.service
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/vnutri/app
+ExecStart=/opt/vnutri/app/scripts/server/test-restore-postgres.sh

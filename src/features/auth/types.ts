@@ -7,6 +7,46 @@ export type SpecialistStatus =
   | "rejected"
   | "suspended";
 
+export type SpecialistGender = "female" | "male";
+
+export type SpecialistApplicationStatus =
+  | "draft"
+  | "pending_review"
+  | "changes_requested"
+  | "published"
+  | "pending_changes";
+
+export type SpecialistDocumentStatus =
+  | "pending_review"
+  | "verified"
+  | "rejected";
+
+export type SpecialistAttachedDocument = {
+  id: string;
+  name: string;
+  mimeType: string;
+  previewUrl?: string;
+  size: number;
+  status: SpecialistDocumentStatus;
+  url: string;
+  moderationComment?: string | null;
+  verifiedAt?: string | null;
+};
+
+export type SpecialistEducationItem = {
+  id?: string;
+  kind?: "education" | "training" | "supervision";
+  type?: string;
+  year: string;
+  institution: string;
+  program?: string;
+  qualification?: string;
+  approach?: string;
+  status?: "completed" | "in_progress";
+  academicHours?: string;
+  documents?: SpecialistAttachedDocument[];
+};
+
 export type OnboardingStep =
   | "role"
   | "user-profile"
@@ -26,7 +66,16 @@ export type AuthUser = {
   avatarCardUrl: string | null;
   profileCoverUrl: string | null;
   profileDescription: string | null;
+  education: SpecialistEducationItem[];
   specialties: string[];
+  workTopics: string[];
+  specialistGender: SpecialistGender | null;
+  specialistBirthDate: string | null;
+  specialistPhoneCountry: string | null;
+  specialistPhoneNumber: string | null;
+  specialistTelegramUrl: string | null;
+  specialistMaxUrl: string | null;
+  specialistWhatsappUrl: string | null;
   role: UserRole;
   specialistStatus: SpecialistStatus;
   isAdmin: boolean;
@@ -81,6 +130,8 @@ export type CompleteSpecialistProfileInput = {
   firstName: string;
   lastName: string;
   patronymic?: string | null;
+  specialistPhoneCountry?: string | null;
+  specialistPhoneNumber?: string | null;
 };
 
 export type AuthSuccessResponse = {
@@ -106,7 +157,9 @@ export type AuthFieldErrorName =
   | "nickname"
   | "firstName"
   | "lastName"
-  | "patronymic";
+  | "patronymic"
+  | "specialistPhoneCountry"
+  | "specialistPhoneNumber";
 
 export type AuthErrorResponse = {
   error: string;
@@ -130,6 +183,15 @@ export type AuthorFollowSummary = {
   followersCount: number;
   followingCount: number;
   viewerFollowing: boolean;
+};
+
+export type AuthorFollowListUser = {
+  avatarUrl: string | null;
+  displayName: string;
+  id: string;
+  nickname: string | null;
+  role: UserRole;
+  specialistStatus: SpecialistStatus;
 };
 
 export type NotificationPreferenceKey =

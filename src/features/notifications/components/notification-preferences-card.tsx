@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { useState } from "react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import type {
@@ -19,18 +19,18 @@ const NOTIFICATION_PREFERENCE_ITEMS: Array<{
 }> = [
   {
     key: "postReplies",
-    title: "Ответы в моих постах",
-    description: "Новые ответы от пользователей и специалистов в созданных вами постах.",
+    title: "Комментарии в моих постах",
+    description: "Новые комментарии от пользователей и специалистов в созданных вами постах.",
   },
   {
     key: "directReplies",
-    title: "Прямые ответы на мои ответы",
-    description: "Ответы в ветках, где другой человек ответил именно на ваш комментарий.",
+    title: "Комментарии к моим комментариям",
+    description: "Комментарии в ветках, где другой человек продолжил именно ваш комментарий.",
   },
   {
     key: "followedPostReplies",
-    title: "Ответы в отслеживаемых постах",
-    description: "Новые ответы в чужих постах, для которых вы включили действие «Следить за постом».",
+    title: "Комментарии в отслеживаемых постах",
+    description: "Новые комментарии в чужих постах, для которых вы включили действие «Следить за постом».",
   },
   {
     key: "followedAuthorPosts",

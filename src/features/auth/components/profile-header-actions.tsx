@@ -13,6 +13,7 @@ type ProfileHeaderActionsProps = {
   profileCoverUrl: string | null;
   profileDescription: string | null;
   profilePath: string;
+  showProfileCover: boolean;
   userHandle: string;
   userId: string;
   viewerIsOwner: boolean;
@@ -26,6 +27,7 @@ export function ProfileHeaderActions({
   profileCoverUrl,
   profileDescription,
   profilePath,
+  showProfileCover,
   userHandle,
   userId,
   viewerIsOwner,
@@ -40,7 +42,7 @@ export function ProfileHeaderActions({
             type="button"
             className={buttonClassName({
               variant: "secondary",
-              className: "h-9 px-4 text-[15px] font-medium",
+              className: "h-9 px-4 text-[14px] font-medium",
             })}
             onClick={() => setIsEditModalOpen(true)}
           >
@@ -66,6 +68,7 @@ export function ProfileHeaderActions({
           isOpen={isEditModalOpen}
           profileCoverUrl={profileCoverUrl}
           profileDescription={profileDescription}
+          showProfileCover={showProfileCover}
           onClose={() => setIsEditModalOpen(false)}
         />
       ) : null}

@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Dropdown, Label, ToggleButton, cn, toast } from "@heroui/react";
+import { ToggleButton, cn } from "@heroui/react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
 import {
   BookmarkIcon,
   ChatIcon,
@@ -12,8 +14,9 @@ import {
   ShareIcon,
   TelegramIcon,
 } from "@/components/ui/icons";
-import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
+import { ResponsiveActionMenu } from "@/components/ui/responsive-action-menu";
+import { toast } from "@/components/feedback/toast";
 import type { Post } from "@/features/feed/types";
 import { copyTextToClipboard } from "@/lib/copy-to-clipboard";
 
@@ -37,14 +40,17 @@ export function PostActions({
   const resolvedPostHref = postHref ?? `/posts/${post.id}`;
   const likedActionClassName =
     "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)] active:text-[var(--danger)] data-[pressed=true]:text-[var(--danger)]";
-  const tertiaryActionClassName =
-    "post-action-button interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full px-3 font-normal transition-colors active:text-[var(--label-secondary)] data-[pressed=true]:text-[var(--label-secondary)]";
-  const tertiaryIconOnlyActionClassName = cn(
-    tertiaryActionClassName,
-    "button--icon-only w-9 px-0",
-  );
-  const bookmarkIconOnlyActionClassName =
-    "post-action-button interactive-action-soft type-body-md inline-flex h-9 items-center justify-center rounded-full font-normal transition-colors button--icon-only w-9 px-0 text-[var(--label-secondary)]";
+  const tertiaryAccentActionClassName = buttonClassName({
+    className: "post-action-button type-body-md inline-flex font-medium",
+    size: "s",
+    variant: "tertiary-accent",
+  });
+  const tertiaryAccentIconOnlyActionClassName = buttonClassName({
+    className: "post-action-button type-body-md inline-flex font-medium",
+    isIconOnly: true,
+    size: "s",
+    variant: "tertiary-accent",
+  });
 
   function getPostUrl() {
     return new URL(`/posts/${post.id}`, window.location.origin).toString();
@@ -93,9 +99,11 @@ export function PostActions({
             event.stopPropagation();
           }}
           className={cn(
-            tertiaryActionClassName,
+            post.stats.likes > 0
+              ? tertiaryAccentActionClassName
+              : tertiaryAccentIconOnlyActionClassName,
             "pointer-events-auto",
-            post.stats.likes > 0 ? "gap-2 align-middle" : "button--icon-only w-9 px-0",
+            post.stats.likes > 0 ? "gap-2 align-middle" : "",
             post.viewer.liked
               ? `post-action-liked ${likedActionClassName}`
               : "post-action-like-idle",
@@ -110,19 +118,21 @@ export function PostActions({
         </ToggleButton>
       </HoverTooltip>
 
-      <HoverTooltip label="Ответить">
+      <HoverTooltip label="Комментировать">
         <button
           type="button"
-          aria-label="Ответить"
+          aria-label="Комментировать"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
             router.push(resolvedPostHref);
           }}
           className={cn(
-            tertiaryActionClassName,
+            post.stats.comments > 0
+              ? tertiaryAccentActionClassName
+              : tertiaryAccentIconOnlyActionClassName,
             "pointer-events-auto",
-            post.stats.comments > 0 ? "gap-2 align-middle" : "button--icon-only w-9 px-0",
+            post.stats.comments > 0 ? "gap-2 align-middle" : "",
           )}
         >
           <span className="flex h-5 w-5 flex-none items-center justify-center">
@@ -134,67 +144,55 @@ export function PostActions({
         </button>
       </HoverTooltip>
 
-      <Dropdown.Root isOpen={isShareMenuOpen} onOpenChange={setIsShareMenuOpen}>
-        <HoverTooltip
-          label="Поделиться"
-          isDisabled={isShareMenuOpen}
-          triggerClassName="inline-flex"
-        >
-          <Dropdown.Trigger
-            aria-label="Поделиться"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-            }}
-            className={cn(tertiaryIconOnlyActionClassName, "pointer-events-auto")}
+      <ResponsiveActionMenu
+        ariaLabel="Поделиться постом"
+        isOpen={isShareMenuOpen}
+        onOpenChange={setIsShareMenuOpen}
+        popoverPlacement="bottom start"
+        popoverClassName="min-w-[230px]"
+        items={[
+          {
+            id: "copy-link",
+            label: "Копировать ссылку",
+            icon: <LinkActionIcon />,
+            onSelect: handleCopyLink,
+          },
+          {
+            id: "telegram",
+            label: "Поделиться в Telegram",
+            icon: <TelegramIcon />,
+            onSelect: handleTelegramShare,
+          },
+        ]}
+        renderTrigger={({ isOpen, isMobile, open }) => (
+          <HoverTooltip
+            label="Поделиться"
+            isDisabled={isOpen}
+            triggerClassName="inline-flex"
           >
-            <span className="flex h-5 w-5 flex-none items-center justify-center">
-              <ShareIcon />
-            </span>
-          </Dropdown.Trigger>
-        </HoverTooltip>
-
-        <DropdownPopover placement="bottom start" className="min-w-[230px]">
-          <Dropdown.Menu
-            aria-label="Поделиться постом"
-            selectionMode="none"
-            className="dropdown-menu-default"
-            onAction={(key) => {
-              setIsShareMenuOpen(false);
-
-              if (key === "copy-link") {
-                void handleCopyLink();
-                return;
-              }
-
-              if (key === "telegram") {
-                handleTelegramShare();
-              }
-            }}
-          >
-            <Dropdown.Item id="copy-link" textValue="Копировать ссылку">
-              <div className="flex w-full items-center gap-3">
-                <span className="inline-flex h-5 w-5 flex-none items-center justify-center text-[var(--label-secondary)]">
-                  <LinkActionIcon />
-                </span>
-                <Label className="min-w-0 flex-1 truncate">
-                  Копировать ссылку
-                </Label>
-              </div>
-            </Dropdown.Item>
-            <Dropdown.Item id="telegram" textValue="Поделиться в Telegram">
-              <div className="flex w-full items-center gap-3">
-                <span className="inline-flex h-5 w-5 flex-none items-center justify-center text-[var(--label-secondary)]">
-                  <TelegramIcon />
-                </span>
-                <Label className="min-w-0 flex-1 truncate">
-                  Поделиться в Telegram
-                </Label>
-              </div>
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </DropdownPopover>
-      </Dropdown.Root>
+            <Button
+              isIconOnly
+              variant="tertiary-accent"
+              size="s"
+              aria-label="Поделиться"
+              aria-expanded={isOpen}
+              aria-haspopup={isMobile ? "dialog" : "menu"}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (isMobile) {
+                  open();
+                }
+              }}
+              className={cn(tertiaryAccentIconOnlyActionClassName, "pointer-events-auto")}
+            >
+              <span className="flex h-5 w-5 flex-none items-center justify-center">
+                <ShareIcon />
+              </span>
+            </Button>
+          </HoverTooltip>
+        )}
+      />
 
       <div
         aria-label={`Просмотров: ${post.stats.views}`}
@@ -220,7 +218,7 @@ export function PostActions({
             event.stopPropagation();
           }}
           className={cn(
-            bookmarkIconOnlyActionClassName,
+            tertiaryAccentIconOnlyActionClassName,
             "pointer-events-auto",
             post.viewer.bookmarked ? "interactive-accent-bookmark" : "",
           )}

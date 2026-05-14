@@ -19,7 +19,7 @@ export function AdminSectionTabs({
 
   return (
     <Tabs
-      className="w-[296px]"
+      className="w-[420px]"
       selectedKey={selectedKey}
       onSelectionChange={(key) => router.push(String(key))}
     >

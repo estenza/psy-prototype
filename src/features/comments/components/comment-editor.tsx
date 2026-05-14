@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -21,7 +22,6 @@ import {
   IMAGE_UPLOAD_MAX_SIZE_LABEL,
   readImageFileAsDataUrl,
 } from "@/features/media/lib/image-upload";
-import { hasCommentBodyContent } from "@/features/comments/lib/comment-format";
 
 type CommentEditorProps = {
   value: string;
@@ -59,7 +59,7 @@ function getCommentEditorToolbarItemClassName({
   active?: boolean;
   disabled?: boolean;
 }) {
-  return `flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-transparent text-[var(--label-secondary)] transition-colors ${
+  return `flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-transparent text-[var(--label-tertiary)] transition-colors ${
     active
       ? "text-[var(--accent-primary)]"
       : "hover:bg-transparent hover:text-[var(--accent-primary)] data-[hovered=true]:bg-transparent data-[hovered=true]:text-[var(--accent-primary)]"
@@ -105,7 +105,6 @@ export function CommentEditor({
   const emojiTriggerRef = useRef<HTMLDivElement | null>(null);
   const emojiPickerOpenFrameRef = useRef<number | null>(null);
   const emojiPickerUnmountTimeoutRef = useRef<number | null>(null);
-  const isEditorEmpty = !hasCommentBodyContent(value);
 
   const editor = useEditor(
     {
@@ -131,6 +130,11 @@ export function CommentEditor({
           listItem: false,
           orderedList: false,
         }),
+        Placeholder.configure({
+          placeholder,
+          showOnlyCurrent: true,
+          showOnlyWhenEditable: true,
+        }),
         Image,
         EmbeddedMedia,
       ],
@@ -138,7 +142,7 @@ export function CommentEditor({
         onChange(currentEditor.getHTML());
       },
     },
-    [compact, disabled, autoFocus],
+    [compact, disabled, autoFocus, placeholder],
   );
 
   useEffect(() => {
@@ -408,15 +412,6 @@ export function CommentEditor({
         tabIndex={-1}
         onChange={handleImageInputChange}
       />
-
-      {isEditorEmpty ? (
-        <p
-          aria-hidden="true"
-          className="pointer-events-none absolute left-4 top-3 select-none text-[16px] leading-6 text-[var(--field-placeholder)]"
-        >
-          {placeholder}
-        </p>
-      ) : null}
 
       {editor ? (
         <EditorContent editor={editor} />

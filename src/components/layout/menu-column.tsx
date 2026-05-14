@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Fragment } from "react";
 import type { MouseEvent } from "react";
@@ -33,7 +33,6 @@ export function MenuColumn({
 }: MenuColumnProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { openAuthModal, user } = useAuthClient();
   const currentSearch = searchParams.toString();
   const currentPathWithSearch = pathname
@@ -45,13 +44,20 @@ export function MenuColumn({
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const visibleUnreadNotificationCount =
     user && !isNotificationsActive ? unreadNotificationCount : 0;
-  const menuItemBaseClassName =
-    "app-menu-item h-14 min-h-14 w-14 min-w-14 justify-center gap-0 rounded-[999px] px-0 py-0 text-[20px] min-[1296px]:h-auto min-[1296px]:min-h-0 min-[1296px]:w-full min-[1296px]:min-w-0 min-[1296px]:justify-start min-[1296px]:gap-4 min-[1296px]:py-3 min-[1296px]:pl-4 min-[1296px]:pr-8";
-  const leadingItems = items.filter((item) => (
-    item.key !== "profile" && item.key !== "settings" && item.key !== "drafts"
+  const visibleItems = items.filter((item) => (
+    (!item.guestOnly || !user) && (item.key !== "settings" || user)
   ));
-  const profileItem = items.find((item) => item.key === "profile") ?? null;
-  const settingsItem = items.find((item) => item.key === "settings") ?? null;
+  const menuItemBaseClassName =
+    "app-menu-item w-14 min-w-14 justify-center gap-0 rounded-[1000px] min-[1296px]:w-full min-[1296px]:min-w-0 min-[1296px]:justify-start min-[1296px]:gap-4";
+  const leadingItems = visibleItems.filter((item) => (
+    item.key !== "profile"
+    && item.key !== "settings"
+    && item.key !== "drafts"
+    && item.key !== "for-psychologists"
+  ));
+  const profileItem = visibleItems.find((item) => item.key === "profile") ?? null;
+  const settingsItem = visibleItems.find((item) => item.key === "settings") ?? null;
+  const psychologistsEntryItem = visibleItems.find((item) => item.key === "for-psychologists") ?? null;
   const customInnerWidthClassName = customContent
     ? "w-[248px]"
     : "w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-[calc(var(--app-shell-nav-width)+24px)]";
@@ -59,10 +65,10 @@ export function MenuColumn({
     ? "w-[224px] min-w-[224px]"
     : "w-[calc(var(--app-shell-nav-compact-width)+16px)] min-w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-[var(--app-shell-nav-width)] min-[1296px]:min-w-[var(--app-shell-nav-width)]";
   const compactColumnWidthClassName = compactWidth === "narrow"
-    ? "min-[481px]:w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-auto min-[1296px]:grow min-[1296px]:basis-auto"
-    : "min-[481px]:w-[max(calc(var(--app-shell-nav-compact-width)+16px),calc((100vw-var(--app-shell-primary-column-width))/2))] min-[1140px]:w-auto min-[1140px]:grow min-[1140px]:basis-auto";
+    ? "min-[480px]:w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-auto min-[1296px]:grow min-[1296px]:basis-auto"
+    : "min-[480px]:w-[max(calc(var(--app-shell-nav-compact-width)+16px),calc((100vw-var(--app-shell-primary-column-width))/2))] min-[1140px]:w-auto min-[1140px]:grow min-[1140px]:basis-auto";
   const columnWidthClassName = customContent
-    ? "min-[481px]:w-[248px]"
+    ? "min-[480px]:w-[248px]"
     : compactColumnWidthClassName;
 
   function handleItemClick(
@@ -80,7 +86,6 @@ export function MenuColumn({
     }
 
     event.preventDefault();
-    router.refresh();
   }
 
   const loadUnreadNotificationCount = useCallback(async () => {
@@ -146,7 +151,7 @@ export function MenuColumn({
                 : "app-menu-item--inactive font-normal text-[var(--label-tertiary)]"
             }`,
             size: "lg",
-            variant: "tertiary",
+            variant: "quaternary",
           })}
         >
           <span className="relative flex h-8 w-8 items-center justify-center rounded-full">
@@ -166,7 +171,7 @@ export function MenuColumn({
               <NavIcon name={item.key} filled={item.key === activeSection} />
             )}
           </span>
-          <span className="hidden min-[1296px]:inline">{item.name}</span>
+          <span className="hidden min-w-0 truncate min-[1296px]:inline">{item.name}</span>
         </Link>
       </HoverTooltip>
     );
@@ -191,7 +196,6 @@ export function MenuColumn({
           onClick={(event) => {
             if (isNotificationsActive) {
               event.preventDefault();
-              router.refresh();
               return;
             }
 
@@ -204,7 +208,7 @@ export function MenuColumn({
                 : "app-menu-item--inactive font-normal text-[var(--label-tertiary)]"
             }`,
             size: "lg",
-            variant: "tertiary",
+            variant: "quaternary",
           })}
         >
           <span className="relative flex h-8 w-8 items-center justify-center">
@@ -240,7 +244,7 @@ export function MenuColumn({
                 : "app-menu-item--inactive font-normal text-[var(--label-tertiary)]"
             }`,
             size: "lg",
-            variant: "tertiary",
+            variant: "quaternary",
           })}
         >
           <span className="flex h-8 w-8 items-center justify-center">
@@ -255,14 +259,14 @@ export function MenuColumn({
   return (
     <div
       data-testid="menuColumn"
-      className={`hidden min-[481px]:relative min-[481px]:z-[3] min-[481px]:flex min-[481px]:h-full min-[481px]:min-w-0 min-[481px]:shrink-0 min-[481px]:flex-col min-[481px]:items-start min-[1296px]:items-end ${columnWidthClassName}`.trim()}
+      className={`hidden min-[480px]:relative min-[480px]:z-[3] min-[480px]:flex min-[480px]:h-full min-[480px]:min-w-0 min-[480px]:shrink-0 min-[480px]:flex-col min-[480px]:items-start min-[1296px]:items-end ${columnWidthClassName}`.trim()}
     >
       <div
         data-testid="menuColumnInner"
-        className={`flex min-w-0 min-[481px]:h-full ${customInnerWidthClassName} items-stretch justify-start pl-0 pr-0 transition-[width] duration-200 ease-out min-[1296px]:justify-end min-[1296px]:pl-2 min-[1296px]:pr-4`.trim()}
+        className={`flex min-w-0 min-[480px]:h-full ${customInnerWidthClassName} items-stretch justify-start pl-0 pr-0 transition-[width] duration-200 ease-out min-[1296px]:justify-end min-[1296px]:pl-2 min-[1296px]:pr-4`.trim()}
       >
         <aside
-          className={`relative z-10 min-[481px]:sticky min-[481px]:top-0 min-[481px]:h-dvh min-[481px]:self-start ${customRailWidthClassName} ${
+          className={`relative z-10 min-[480px]:sticky min-[480px]:top-0 min-[480px]:h-dvh min-[480px]:self-start ${customRailWidthClassName} ${
             hideContent ? "pointer-events-none invisible" : ""
           }`.trim()}
           aria-hidden={hideContent}
@@ -270,7 +274,7 @@ export function MenuColumn({
           {customContent ? (
             <div
               data-testid="menuRailCustom"
-              className={`flex min-[481px]:h-full ${customRailWidthClassName} flex-col items-stretch overflow-hidden px-0 pb-4 pt-[92px]`.trim()}
+              className={`flex min-[480px]:h-full ${customRailWidthClassName} flex-col items-stretch overflow-hidden px-0 pb-4 pt-[92px]`.trim()}
             >
               {customContent}
             </div>
@@ -278,7 +282,7 @@ export function MenuColumn({
             <nav
               aria-label="Основная навигация"
               data-testid="menuRail"
-              className="surface-primary border-separator flex min-[481px]:h-full w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-[var(--app-shell-nav-width)] flex-col items-stretch gap-0 overflow-visible px-0 pb-4 pt-6"
+              className="surface-primary border-separator flex min-[480px]:h-full w-[calc(var(--app-shell-nav-compact-width)+16px)] min-[1296px]:w-[var(--app-shell-nav-width)] flex-col items-stretch gap-0 overflow-visible px-0 pb-4 pt-6"
             >
               <Link
                 href="/"
@@ -296,15 +300,20 @@ export function MenuColumn({
                 />
               </Link>
 
-              {leadingItems.map((item) => (
-                <Fragment key={item.key}>
-                  {renderNavigationItem(item)}
-                  {item.key === "bookmarks" ? renderNotificationsItem() : null}
-                </Fragment>
-              ))}
-              {profileItem ? renderNavigationItem(profileItem) : null}
-              {renderCreateTopicItem()}
-              {settingsItem ? renderNavigationItem(settingsItem) : null}
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-0">
+                  {leadingItems.map((item) => (
+                    <Fragment key={item.key}>
+                      {renderNavigationItem(item)}
+                      {item.key === "bookmarks" ? renderNotificationsItem() : null}
+                    </Fragment>
+                  ))}
+                  {profileItem ? renderNavigationItem(profileItem) : null}
+                  {settingsItem ? renderNavigationItem(settingsItem) : null}
+                  {psychologistsEntryItem ? renderNavigationItem(psychologistsEntryItem) : null}
+                </div>
+                {renderCreateTopicItem()}
+              </div>
             </nav>
           )}
         </aside>

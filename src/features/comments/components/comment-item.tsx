@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
+import { VerifiedSpecialistIcon } from "@/components/ui/icons";
 import { UserAvatarAction } from "@/components/ui/user-avatar-action";
 import { CommentActions } from "@/features/comments/components/comment-actions";
 import { CommentsComposer } from "@/features/comments/components/comments-composer";
@@ -20,6 +21,7 @@ import {
 import { buildPublicProfilePathFromHandle } from "@/features/auth/lib/profile";
 import { formatReplyCount } from "@/features/comments/lib/comment-format";
 import type { CommentNode, CommentsViewer } from "@/features/comments/types";
+import type { ContentReportReason } from "@/features/reports/types";
 
 type CommentItemProps = {
   comment: CommentNode;
@@ -35,7 +37,7 @@ type CommentItemProps = {
   onSubmitReply: (body: string, parentId: string) => Promise<boolean>;
   onVote: (commentId: string, type: "up" | "down" | null) => void;
   onBlock: (commentId: string) => void;
-  onReport: (commentId: string) => void;
+  onReport: (commentId: string, reason: ContentReportReason) => Promise<void> | void;
   contextLink?: {
     href: string;
     label: string;
@@ -84,7 +86,7 @@ function CommentBranchLayer({
         onMouseLeave={() => onBranchHoverChange?.(false)}
         onFocus={() => onBranchHoverChange?.(true)}
         onBlur={() => onBranchHoverChange?.(false)}
-        aria-label={expanded ? "Свернуть ответы" : "Развернуть ответы"}
+        aria-label={expanded ? "Свернуть комментарии" : "Развернуть комментарии"}
       >
         <span
           className="absolute w-px transition-colors"
@@ -120,12 +122,34 @@ function commentTreeContainsId(comment: CommentNode, targetCommentId: string): b
   return comment.replies.some((reply) => commentTreeContainsId(reply, targetCommentId));
 }
 
+function CommentModerationPlaceholderAvatar() {
+  return (
+    <div
+      className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--label-tertiary)] text-white"
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none">
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M10 1.25C14.8325 1.25 18.75 5.16751 18.75 10C18.75 14.8325 14.8325 18.75 10 18.75C5.16751 18.75 1.25 14.8325 1.25 10C1.25 5.16751 5.16751 1.25 10 1.25ZM5.43164 15.6279C6.67862 16.6414 8.26789 17.25 10 17.25C14.0041 17.25 17.25 14.0041 17.25 10C17.25 8.26789 16.6414 6.67862 15.6279 5.43164L5.43164 15.6279ZM10 2.75C5.99594 2.75 2.75 5.99594 2.75 10C2.75 11.7316 3.35816 13.3206 4.37109 14.5674L14.5674 4.37109C13.3206 3.35816 11.7316 2.75 10 2.75Z"
+          fill="currentColor"
+        />
+      </svg>
+    </div>
+  );
+}
+
 export function shouldRenderCommentNode(comment: CommentNode): boolean {
   if (comment.status !== "deleted") {
     return true;
   }
 
-  return comment.hasReplyContext || comment.replies.some(shouldRenderCommentNode);
+  return (
+    comment.deletedByModerator
+    || comment.hasReplyContext
+    || comment.replies.some(shouldRenderCommentNode)
+  );
 }
 
 export function CommentItem({
@@ -177,6 +201,9 @@ export function CommentItem({
     ? comment.capabilities.canVote
     : true;
   const isDeleted = comment.status === "deleted";
+  const isVerifiedSpecialist = comment.author.role === "specialist"
+    && comment.author.specialistStatus === "verified";
+  const shouldShowAuthorHandle = comment.author.role !== "specialist";
   const canReplyToComment = canPostReply && comment.capabilities.canReply;
   const canStartReply = isViewerAuthenticated ? canReplyToComment : true;
   const profileHref = buildPublicProfilePathFromHandle(comment.author.handle);
@@ -187,7 +214,7 @@ export function CommentItem({
   const isHighlighted = highlightedCommentIds.includes(comment.id);
   const bodySurfaceClassName = showAvatar
     ? "surface-card feed-card-surface relative w-fit max-w-[calc(100%-3rem)] flex-none rounded-[28px] pl-4 pr-6 py-4 group-hover:bg-[color-mix(in_oklab,var(--background-elevated)_96%,var(--default))]"
-    : "surface-card feed-card-surface relative w-full rounded-[28px] px-4 py-4 group-hover:bg-[color-mix(in_oklab,var(--background-elevated)_96%,var(--default))] min-[481px]:px-5 min-[481px]:px-6";
+    : "surface-card feed-card-surface relative w-full rounded-[28px] px-4 py-4 group-hover:bg-[color-mix(in_oklab,var(--background-elevated)_96%,var(--default))] min-[480px]:px-5 min-[480px]:px-6";
 
   function shouldIgnoreOpenEvent(target: EventTarget | null) {
     return target instanceof Element
@@ -338,15 +365,30 @@ export function CommentItem({
           }`.trim()}
           style={bodySurface ? { justifyContent: "flex-end" } : undefined}
         >
-          <UserAvatarAction
-            avatarUrl={comment.author.avatarUrl}
-            fallbackText={comment.author.initials}
-            name={comment.author.name}
-            showStatusDot={comment.author.role === "specialist"}
-            size="comment-md"
-            href={profileHref ?? null}
-            ariaLabel={`Открыть профиль ${comment.author.name}`}
-          />
+          {isDeleted && comment.deletedByModerator ? (
+            <CommentModerationPlaceholderAvatar />
+          ) : (
+            <UserAvatarAction
+              avatarUrl={comment.author.avatarUrl}
+              avatarSeed={comment.author.handle}
+              fallbackText={comment.author.initials}
+              name={comment.author.name}
+              size="comment-md"
+              href={profileHref ?? null}
+              profileCard={{
+                avatarSeed: comment.author.handle,
+                avatarUrl: comment.author.avatarUrl,
+                fallbackText: comment.author.initials,
+                handle: comment.author.handle,
+                id: comment.author.id,
+                name: comment.author.name,
+                profileHref,
+                role: comment.author.role,
+                specialistStatus: comment.author.specialistStatus,
+              }}
+              ariaLabel={`Открыть профиль ${comment.author.name}`}
+            />
+          )}
         </div>
       ) : null}
 
@@ -367,7 +409,7 @@ export function CommentItem({
           : undefined}
         role={onOpen ? "link" : undefined}
         tabIndex={onOpen ? 0 : undefined}
-        aria-label={onOpen ? "Открыть пост с этим ответом" : undefined}
+        aria-label={onOpen ? "Открыть пост с этим комментарием" : undefined}
         style={isHighlighted
           ? {
               backgroundColor: "rgba(59, 130, 246, 0.14)",
@@ -379,7 +421,7 @@ export function CommentItem({
           <div className="min-w-0 pb-1 pl-1">
             <Link
               href={contextLink.href}
-              className="block max-w-full truncate rounded-none p-0 text-[14px] leading-5 font-normal text-[var(--accent-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--accent-primary)] decoration-[1.5px] underline-offset-4"
+              className="block max-w-full truncate rounded-none p-0 text-[14px] leading-5 font-normal text-[var(--accent-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--accent-primary)] decoration-[2px] underline-offset-4"
             >
               {contextLink.label}
             </Link>
@@ -391,7 +433,7 @@ export function CommentItem({
             {isDeleted ? (
               <div className="flex min-h-10 min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="text-[14px] leading-5 font-normal text-[var(--label-tertiary)]">
-                  Ответ удален автором
+                  {comment.deletedByModerator ? "Комментарий удален модератором" : "Комментарий удален автором"}
                 </span>
                 <span aria-hidden="true" className="text-[14px] leading-5 text-[var(--label-tertiary)]">•</span>
                 <span className="flex items-center text-[14px] leading-5 text-[var(--label-tertiary)]">
@@ -408,18 +450,22 @@ export function CommentItem({
                 {profileHref ? (
                   <Link
                     href={profileHref}
-                    className="rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[1.5px] underline-offset-4"
+                    className="inline-flex min-w-0 items-center gap-1 rounded-none p-0 text-[14px] leading-5 font-medium text-[var(--label-primary)] no-underline transition-[text-decoration-color] duration-100 ease-out hover:underline focus-visible:underline decoration-[color:var(--underline-primary)] decoration-[2px] underline-offset-4"
                   >
-                    {comment.author.name}
+                    <span className="min-w-0 truncate">{comment.author.name}</span>
+                    {isVerifiedSpecialist ? <VerifiedSpecialistIcon size={16} /> : null}
                   </Link>
                 ) : (
-                  <span className="text-[14px] leading-5 font-medium text-[var(--label-primary)]">
-                    {comment.author.name}
+                  <span className="inline-flex min-w-0 items-center gap-1 text-[14px] leading-5 font-medium text-[var(--label-primary)]">
+                    <span className="min-w-0 truncate">{comment.author.name}</span>
+                    {isVerifiedSpecialist ? <VerifiedSpecialistIcon size={16} /> : null}
                   </span>
                 )}
-                <span className="min-w-0 truncate text-[14px] leading-5 text-[var(--label-tertiary)]">
-                  {comment.author.handle}
-                </span>
+                {shouldShowAuthorHandle ? (
+                  <span className="min-w-0 truncate text-[14px] leading-5 text-[var(--label-tertiary)]">
+                    {comment.author.handle}
+                  </span>
+                ) : null}
                 <span aria-hidden="true" className="text-[14px] leading-5 text-[var(--label-tertiary)]">•</span>
                 <span className="flex items-center text-[14px] leading-5 text-[var(--label-tertiary)]">
                   <span className="min-[480px]:hidden">{comment.compactRelativeDate}</span>
@@ -446,7 +492,7 @@ export function CommentItem({
                   setIsEditing(true);
                 }}
                 onBlock={() => onBlock(comment.id)}
-                onReport={() => onReport(comment.id)}
+                onReport={(reason) => onReport(comment.id, reason)}
               />
             </div>
           ) : null}
@@ -520,7 +566,7 @@ export function CommentItem({
           <div className="min-w-0 pt-5">
             <CommentsComposer
               viewer={viewer}
-              placeholder="Ответить..."
+              placeholder="Написать комментарий..."
               submitLabel="Отправить"
               showInlineCancel
               submitDisabled={!canReplyToComment}
@@ -583,6 +629,10 @@ export function CommentItem({
                     onBlock={onBlock}
                     onReport={onReport}
                     highlightedCommentIds={highlightedCommentIds}
+                    readOnlyLike={readOnlyLike}
+                    showActions={showActions}
+                    showMenu={showMenu}
+                    showReplyAction={showReplyAction}
                   />
                 </div>
               ))}

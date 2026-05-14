@@ -1,9 +1,21 @@
 "use client";
 
-import { Description, ErrorMessage, Input, Label, TextField } from "@heroui/react";
+import {
+  Description,
+  ErrorMessage,
+  Input,
+  Label,
+  TextField,
+} from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
+import { CloseIcon } from "@/components/ui/icons";
+import {
+  fieldControlInputClassName,
+  fieldControlLabelClassName,
+} from "@/components/ui/field-control";
 import {
   buildPostAuthRedirectPath,
   resolveOnboardingStep,
@@ -27,7 +39,14 @@ type AuthOnboardingProps = {
 };
 
 type FieldErrors = Partial<
-  Record<"firstName" | "lastName" | "nickname" | "patronymic" | "role", string>
+  Record<
+    | "firstName"
+    | "lastName"
+    | "nickname"
+    | "patronymic"
+    | "role",
+    string
+  >
 >;
 
 type SuggestedDisplayNameResponse = {
@@ -57,7 +76,7 @@ function OnboardingField({
 
   return (
     <TextField isInvalid={Boolean(error)} className="flex flex-col gap-2">
-      <Label htmlFor={id} className="type-body-md-medium text-[var(--label-primary)]">
+      <Label htmlFor={id} className={fieldControlLabelClassName}>
         {label}
       </Label>
       <Description className="type-caption text-[var(--label-secondary)]">
@@ -68,10 +87,10 @@ function OnboardingField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="rounded-2xl px-4 py-3 text-sm"
+        className={`${fieldControlInputClassName} w-full`}
       />
       {error ? (
-        <ErrorMessage className="type-caption-tight text-[var(--danger)]">
+        <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--danger)]">
           {error}
         </ErrorMessage>
       ) : null}
@@ -253,24 +272,27 @@ export function AuthOnboarding({
   }, [currentStep, isSubmitting, shouldSkipRoleSelection, submitTo]);
 
   return (
-    <div className="modal-surface surface-elevated pointer-events-auto relative w-full max-w-[420px] px-5 py-6 min-[481px]:px-6">
+    <div className="modal-surface surface-elevated pointer-events-auto relative w-full max-w-[420px] px-5 py-6 min-[480px]:px-6">
       <button
         type="button"
         aria-label="Закрыть"
         onClick={() => {
           void handleClose();
         }}
-        className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)]"
+        className={buttonClassName({
+          className: "absolute right-5 top-5 text-[var(--label-secondary)] hover:text-[var(--label-primary)]",
+          isIconOnly: true,
+          size: "sm",
+          variant: "quaternary",
+        })}
         disabled={isSubmitting}
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-        </svg>
+        <CloseIcon />
       </button>
 
       {currentStep === "role" && shouldSkipRoleSelection ? (
         <div className="flex flex-col gap-3">
-          <h1 className="type-page-title text-[var(--label-primary)]">
+          <h1 className="type-h1 font-bold text-[var(--label-primary)]">
             Готовим профиль
           </h1>
           <p className="type-body-relaxed text-[var(--label-secondary)]">
@@ -287,7 +309,7 @@ export function AuthOnboarding({
       {currentStep === "role" && !shouldSkipRoleSelection ? (
         <div className="flex flex-col gap-5">
           <div>
-            <h1 className="type-page-title text-[var(--label-primary)]">
+            <h1 className="type-h1 font-bold text-[var(--label-primary)]">
               Выберите роль
             </h1>
           </div>
@@ -298,11 +320,6 @@ export function AuthOnboarding({
                 description: "Читать, публиковать, участвовать в комментариях",
                 role: "user" as const,
                 title: "Я ищу поддержку",
-              },
-              {
-                description: "Отвечать как эксперт, оформить профессиональный профиль",
-                role: "specialist" as const,
-                title: "Я специалист",
               },
             ].map((option) => (
               <button
@@ -338,8 +355,8 @@ export function AuthOnboarding({
           <Button
             type="button"
             variant="primary"
-            size="lg"
-            className="w-full !rounded-full"
+            size="md"
+              className="w-full"
             disabled={isSubmitting || !selectedRole}
             onClick={() => {
               if (!selectedRole) {
@@ -353,8 +370,9 @@ export function AuthOnboarding({
                 role: selectedRole,
               });
             }}
+            isLoading={isSubmitting}
           >
-            {isSubmitting ? "Секунду..." : "Продолжить"}
+            Продолжить
           </Button>
         </div>
       ) : null}
@@ -370,7 +388,7 @@ export function AuthOnboarding({
           }}
         >
           <div>
-            <h1 className="type-page-title text-[var(--label-primary)]">
+            <h1 className="type-h1 font-bold text-[var(--label-primary)]">
               Как вас будут видеть другие?
             </h1>
           </div>
@@ -396,10 +414,10 @@ export function AuthOnboarding({
               autoCorrect="off"
               spellCheck={false}
               placeholder="Имя или псевдоним"
-              className="rounded-2xl px-4 py-3 text-sm"
+              className={`${fieldControlInputClassName} w-full`}
             />
             {fieldErrors.nickname ? (
-              <ErrorMessage className="type-caption-tight text-[var(--danger)]">
+              <ErrorMessage className="mt-0.5 text-[14px] leading-5 text-[var(--danger)]">
                 {fieldErrors.nickname}
               </ErrorMessage>
             ) : null}
@@ -414,8 +432,8 @@ export function AuthOnboarding({
           <Button
             type="button"
             variant="secondary"
-            size="lg"
-            className="w-full !rounded-full"
+            size="md"
+              className="w-full"
             disabled={isSubmitting || isGeneratingName}
             onClick={() => {
               void generateAnotherDisplayName();
@@ -427,11 +445,12 @@ export function AuthOnboarding({
           <Button
             type="submit"
             variant="primary"
-            size="lg"
-            className="w-full !rounded-full"
+            size="md"
+              className="w-full"
             disabled={isSubmitting || isGeneratingName}
+            isLoading={isSubmitting}
           >
-            {isSubmitting ? "Секунду..." : "Войти"}
+            Войти
           </Button>
         </form>
       ) : null}
@@ -445,11 +464,13 @@ export function AuthOnboarding({
               firstName,
               lastName,
               patronymic,
+              specialistPhoneCountry: null,
+              specialistPhoneNumber: null,
             });
           }}
         >
           <div>
-            <h1 className="type-page-title text-[var(--label-primary)]">
+            <h1 className="type-h1 font-bold text-[var(--label-primary)]">
               Публичные данные профиля
             </h1>
           </div>
@@ -488,7 +509,7 @@ export function AuthOnboarding({
 
           <OnboardingField
             label="Отчество"
-            description="Необязательное поле. Добавьте его, если хотите показывать полное имя."
+            description="Необязательное поле. Оно нужно только для анкеты и не показывается в профиле."
             value={patronymic}
             onChange={(value) => {
               setPatronymic(value);
@@ -511,11 +532,12 @@ export function AuthOnboarding({
           <Button
             type="submit"
             variant="primary"
-            size="lg"
-            className="w-full !rounded-full"
+            size="md"
+              className="w-full"
             disabled={isSubmitting}
+            isLoading={isSubmitting}
           >
-            {isSubmitting ? "Секунду..." : "Войти"}
+            Войти
           </Button>
         </form>
       ) : null}

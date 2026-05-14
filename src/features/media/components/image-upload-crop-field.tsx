@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
 import { Button } from "@/components/ui/button";
+import { FileUploadDropzone } from "@/components/ui/file-upload-dropzone";
 import { ImageCropModal } from "@/features/media/components/image-crop-modal";
 import {
   buildCroppedImageDataUrl,
@@ -23,6 +24,8 @@ type ImageUploadCropFieldProps = {
   helperText: string;
   isHeaderHidden?: boolean;
   label: string;
+  labelClassName?: string;
+  isActionListHidden?: boolean;
   onClear: () => void;
   onSourceImageChange: (nextImage: string | null) => void;
   onValueChange: (nextValue: ImageCropValue) => void;
@@ -65,8 +68,10 @@ const coverOverlayUploadButtonClassName =
 export function ImageUploadCropField({
   aspectRatio,
   helperText,
+  isActionListHidden = false,
   isHeaderHidden = false,
   label,
+  labelClassName = "text-sm font-semibold text-[var(--label-primary)]",
   onClear,
   onSourceImageChange,
   onValueChange,
@@ -156,9 +161,9 @@ export function ImageUploadCropField({
         {isHeaderHidden ? null : (
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-[var(--label-primary)]">{label}</p>
+              <p className={labelClassName}>{label}</p>
               {helperText ? (
-                <p className="mt-1 text-[13px] leading-5 text-[var(--label-secondary)]">
+                <p className="mt-1 text-[14px] leading-5 text-[var(--label-secondary)]">
                   {helperText}
                 </p>
               ) : null}
@@ -303,7 +308,7 @@ export function ImageUploadCropField({
             </div>
           ) : null}
 
-          {previewVariant === "avatar-overlay" || previewVariant === "cover-overlay" ? null : (
+          {isActionListHidden || previewVariant === "avatar-overlay" || previewVariant === "cover-overlay" ? null : (
             <div className="grid gap-4">
             {sourceImage ? (
               <div className="flex flex-wrap gap-2">
@@ -312,8 +317,7 @@ export function ImageUploadCropField({
                     <input {...getInputProps()} />
                     <Button
                       type="button"
-                      variant="tertiary"
-                      className="!rounded-full !px-4"
+                      variant="quaternary"
                       onClick={() => open()}
                     >
                       Заменить
@@ -322,16 +326,14 @@ export function ImageUploadCropField({
                 ) : null}
                 <Button
                   type="button"
-                  variant="tertiary"
-                  className="!rounded-full !px-4"
+                  variant="quaternary"
                   onClick={() => setIsCropOpen(true)}
                 >
                   Изменить
                 </Button>
                 <Button
                   type="button"
-                  variant="tertiary"
-                  className="!rounded-full !px-4"
+                  variant="quaternary"
                   onClick={() => {
                     setErrorMessage("");
                     onClear();
@@ -341,34 +343,23 @@ export function ImageUploadCropField({
                 </Button>
               </div>
             ) : (
-              <div
-                {...getRootProps()}
-                className={`border-separator flex min-h-[170px] cursor-pointer flex-col items-center justify-center rounded-[16px] border border-dashed px-5 py-6 text-center transition-colors ${
-                  isDragActive ? "surface-elevated" : "bg-background-primary"
-                }`}
-              >
-                <input {...getInputProps()} />
-                <p className="text-sm font-semibold text-[var(--label-primary)]">
-                  {isDragActive
-                    ? "Отпустите файл, чтобы загрузить"
-                    : "Перетащите изображение сюда"}
-                </p>
-                <p className="mt-2 max-w-[320px] text-[13px] leading-5 text-[var(--label-secondary)]">
-                  Или выберите файл вручную. Поддерживаются JPG, JPEG и PNG до{" "}
-                  {IMAGE_UPLOAD_MAX_SIZE_LABEL}.
-                </p>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="mt-4 !rounded-full !px-4"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    open();
-                  }}
-                >
-                  {uploadLabel}
-                </Button>
-              </div>
+              <FileUploadDropzone
+                activeTitle="Отпустите файл, чтобы загрузить"
+                buttonLabel={uploadLabel}
+                helperText={(
+                  <>
+                    Или выберите файл вручную. Поддерживаются JPG, JPEG и PNG до{" "}
+                    {IMAGE_UPLOAD_MAX_SIZE_LABEL}.
+                  </>
+                )}
+                idleTitle="Перетащите изображение сюда"
+                inputProps={getInputProps()}
+                isDragActive={isDragActive}
+                rootProps={getRootProps()}
+                onButtonClick={() => {
+                  open();
+                }}
+              />
             )}
 
             {errorMessage ? (
@@ -377,7 +368,27 @@ export function ImageUploadCropField({
             </div>
           )}
 
-          {(previewVariant === "avatar-overlay" || previewVariant === "cover-overlay") && errorMessage ? (
+          {isActionListHidden && !sourceImage ? (
+            <FileUploadDropzone
+              activeTitle="Отпустите файл, чтобы загрузить"
+              buttonLabel={uploadLabel}
+              helperText={(
+                <>
+                  Или выберите файл вручную. Поддерживаются JPG, JPEG и PNG до{" "}
+                  {IMAGE_UPLOAD_MAX_SIZE_LABEL}.
+                </>
+              )}
+              idleTitle="Перетащите изображение сюда"
+              inputProps={getInputProps()}
+              isDragActive={isDragActive}
+              rootProps={getRootProps()}
+              onButtonClick={() => {
+                open();
+              }}
+            />
+          ) : null}
+
+          {(isActionListHidden || previewVariant === "avatar-overlay" || previewVariant === "cover-overlay") && errorMessage ? (
             <p className="text-sm text-[var(--danger)]">{errorMessage}</p>
           ) : null}
         </div>

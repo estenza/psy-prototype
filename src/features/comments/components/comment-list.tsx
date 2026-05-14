@@ -2,6 +2,7 @@
 
 import { CommentItem, shouldRenderCommentNode } from "@/features/comments/components/comment-item";
 import type { CommentNode, CommentsViewer } from "@/features/comments/types";
+import type { ContentReportReason } from "@/features/reports/types";
 
 type CommentListProps = {
   comments: CommentNode[];
@@ -16,8 +17,12 @@ type CommentListProps = {
   onSubmitReply: (body: string, parentId: string) => Promise<boolean>;
   onVote: (commentId: string, type: "up" | "down" | null) => void;
   onBlock: (commentId: string) => void;
-  onReport: (commentId: string) => void;
+  onReport: (commentId: string, reason: ContentReportReason) => Promise<void> | void;
   highlightedCommentIds?: string[];
+  readOnlyLike?: boolean;
+  showActions?: boolean;
+  showMenu?: boolean;
+  showReplyAction?: boolean;
 };
 
 export function CommentList({
@@ -35,6 +40,10 @@ export function CommentList({
   onBlock,
   onReport,
   highlightedCommentIds = [],
+  readOnlyLike = false,
+  showActions = true,
+  showMenu = true,
+  showReplyAction = true,
 }: CommentListProps) {
   const renderableComments = comments.filter(shouldRenderCommentNode);
 
@@ -57,6 +66,10 @@ export function CommentList({
           onBlock={onBlock}
           onReport={onReport}
           highlightedCommentIds={highlightedCommentIds}
+          readOnlyLike={readOnlyLike}
+          showActions={showActions}
+          showMenu={showMenu}
+          showReplyAction={showReplyAction}
         />
       ))}
     </div>

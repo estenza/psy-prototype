@@ -1,6 +1,7 @@
 import "server-only";
 
-import { randomBytes } from "node:crypto";
+import { randomUUID } from "node:crypto";
+
 import {
   ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE,
   ADMIN_ACCOUNT_NAME_PATTERN,
@@ -9,12 +10,27 @@ import {
   ADMIN_USER_NAME_MAX_LENGTH,
   normalizeAdminAccountName,
 } from "@/features/admin/lib/admin-user-fields";
-import { normalizeAdminSpecialties } from "@/features/admin/lib/admin-specialties";
+import {
+  ADMIN_SPECIALTY_MAX_SELECTED,
+  normalizeAdminSpecialties,
+} from "@/features/admin/lib/admin-specialties";
 import { canAccessAdminConsole } from "@/features/admin/lib/admin-console";
+import {
+  normalizeSpecialistEducation,
+  SPECIALIST_EDUCATION_INSTITUTION_MAX_LENGTH,
+  SPECIALIST_EDUCATION_MAX_ITEMS,
+  SPECIALIST_EDUCATION_YEAR_MAX_LENGTH,
+} from "@/features/auth/lib/education";
+import { normalizeSpecialistWorkTopics } from "@/features/specialists/lib/specialist-work-topics";
+import {
+  normalizeSpecialistPhoneCountry,
+  normalizeSpecialistPhoneNumber,
+} from "@/features/specialists/lib/specialist-phone";
 import { listAdminUsers } from "@/features/admin/lib/admin-repository";
 import type {
   AdminBanUserPayload,
   AdminCreateManagedUserPayload,
+  AdminManagedUserPayload,
   AdminManagedUserFieldErrorName,
   AdminSpecialistStatusFilter,
   AdminUpdateManagedUserPayload,
@@ -34,21 +50,24 @@ import {
 } from "@/features/auth/lib/auth-repository";
 import {
   EMAIL_PATTERN,
-  PASSWORD_MIN_LENGTH,
   PROFILE_NAME_MAX_LENGTH,
 } from "@/features/auth/constants";
-import { hashPassword } from "@/features/auth/lib/password";
 import {
   buildDisplayName,
   isReservedProfilePathSegment,
-  normalizeNickname,
   RESERVED_NICKNAME_MESSAGE,
   sanitizeProfileText,
 } from "@/features/auth/lib/profile";
-import type { SessionUser, UserRole } from "@/features/auth/types";
+import type {
+  SessionUser,
+  SpecialistGender,
+  SpecialistStatus,
+  UserRole,
+} from "@/features/auth/types";
 
 const USER_PROFILE_DESCRIPTION_MAX_LENGTH = 250;
-const SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH = 750;
+const SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH = 1500;
+const SPECIALIST_CONTACT_URL_MAX_LENGTH = 512;
 
 const ROLE_FILTER_VALUES = new Set<AdminUserRoleFilter>([
   "all",
@@ -65,8 +84,18 @@ const SPECIALIST_STATUS_FILTER_VALUES = new Set<AdminSpecialistStatusFilter>([
   "rejected",
   "suspended",
 ]);
+const SPECIALIST_STATUS_MUTATION_VALUES = new Set<SpecialistStatus>([
+  "none",
+  "pending",
+  "verified",
+  "rejected",
+  "suspended",
+]);
 
 const USER_ROLE_VALUES = new Set<UserRole>(["user", "specialist"]);
+const SPECIALIST_GENDER_VALUES = new Set<SpecialistGender>(["female", "male"]);
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const SPECIALIST_BIRTH_DATE_MIN_ISO = "1955-01-01";
 
 export class AdminServiceError extends Error {
   fieldErrors?: Partial<Record<AdminManagedUserFieldErrorName, string>>;
@@ -141,7 +170,7 @@ function normalizeProfileDescription(
   value: string | null | undefined,
   maxLength: number,
 ) {
-  const normalizedValue = sanitizeProfileText(value);
+  const normalizedValue = (value ?? "").replace(/\r\n?/g, "\n").trim();
 
   if (!normalizedValue) {
     return null;
@@ -155,6 +184,95 @@ function normalizeProfileDescription(
   }
 
   return normalizedValue;
+}
+
+function normalizeRequiredProfileDescription(
+  value: string | null | undefined,
+  maxLength: number,
+) {
+  const normalizedValue = normalizeProfileDescription(value, maxLength);
+
+  if (!normalizedValue) {
+    throw new AdminServiceError("Заполните описание специалиста.", 400, {
+      profileDescription: "Заполните описание.",
+    });
+  }
+
+  return normalizedValue;
+}
+
+function normalizeAdminEducation(value: unknown) {
+  const normalizedEducation = normalizeSpecialistEducation(value);
+
+  if (normalizedEducation.length === 0) {
+    throw new AdminServiceError("Добавьте образование специалиста.", 400, {
+      education: "Добавьте образование.",
+    });
+  }
+
+  if (normalizedEducation.length > SPECIALIST_EDUCATION_MAX_ITEMS) {
+    throw new AdminServiceError(
+      `Добавьте не больше ${SPECIALIST_EDUCATION_MAX_ITEMS} записей об образовании.`,
+      400,
+      {
+        education: `Добавьте не больше ${SPECIALIST_EDUCATION_MAX_ITEMS} записей.`,
+      },
+    );
+  }
+
+  for (const item of normalizedEducation) {
+    if (!item.year || !item.institution) {
+      throw new AdminServiceError("Заполните год и учебное учреждение.", 400, {
+        education: "Заполните год и учебное учреждение.",
+      });
+    }
+
+    if (item.year.length > SPECIALIST_EDUCATION_YEAR_MAX_LENGTH) {
+      throw new AdminServiceError(
+        `Год должен быть не длиннее ${SPECIALIST_EDUCATION_YEAR_MAX_LENGTH} символов.`,
+        400,
+        {
+          education: `Год должен быть не длиннее ${SPECIALIST_EDUCATION_YEAR_MAX_LENGTH} символов.`,
+        },
+      );
+    }
+
+    if (item.institution.length > SPECIALIST_EDUCATION_INSTITUTION_MAX_LENGTH) {
+      throw new AdminServiceError(
+        `Учебное учреждение должно быть не длиннее ${SPECIALIST_EDUCATION_INSTITUTION_MAX_LENGTH} символов.`,
+        400,
+        {
+          education: `Учебное учреждение должно быть не длиннее ${SPECIALIST_EDUCATION_INSTITUTION_MAX_LENGTH} символов.`,
+        },
+      );
+    }
+  }
+
+  return normalizedEducation;
+}
+
+function normalizeAdminManagedSpecialties(value: unknown) {
+  const normalizedSpecialties = normalizeAdminSpecialties(
+    Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [],
+  );
+
+  if (normalizedSpecialties.length === 0) {
+    throw new AdminServiceError("Выберите хотя бы один подход.", 400, {
+      specialties: "Выберите хотя бы один подход.",
+    });
+  }
+
+  if (normalizedSpecialties.length > ADMIN_SPECIALTY_MAX_SELECTED) {
+    throw new AdminServiceError(
+      `Выберите не больше ${ADMIN_SPECIALTY_MAX_SELECTED} подходов.`,
+      400,
+      {
+        specialties: `Выберите не больше ${ADMIN_SPECIALTY_MAX_SELECTED} подходов.`,
+      },
+    );
+  }
+
+  return normalizedSpecialties;
 }
 
 function normalizeOptionalImage(value: string | null | undefined) {
@@ -174,19 +292,6 @@ function normalizeOptionalImage(value: string | null | undefined) {
   }
 
   throw new AdminServiceError("Некорректный формат изображения.", 400);
-}
-
-function normalizePassword(value: string | null | undefined) {
-  const password = value ?? "";
-
-  if (password.length < PASSWORD_MIN_LENGTH) {
-    throw new AdminServiceError(
-      `Пароль должен быть не короче ${PASSWORD_MIN_LENGTH} символов.`,
-      400,
-    );
-  }
-
-  return password;
 }
 
 function normalizeUserProfileName(value: string | null | undefined) {
@@ -263,38 +368,146 @@ async function ensureNicknameAvailable(nickname: string, currentUserId?: string)
   }
 }
 
-async function generateManagedNickname(email: string, currentUserId?: string) {
-  const emailLocalPart = email.split("@")[0] ?? "";
-  const normalizedBase = normalizeNickname(emailLocalPart.replace(/[^A-Za-zА-Яа-яЁё0-9._]+/gu, "."))
-    .replace(/^\.+|\.+$/g, "")
-    .replace(/\.{2,}/g, ".");
-
-  const safeBase = normalizedBase.length >= 3 ? normalizedBase : "user";
-
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const suffix = attempt === 0 ? "" : `.${randomBytes(2).toString("hex")}`;
-    const candidate = `${safeBase.slice(0, Math.max(3, 20 - suffix.length))}${suffix}`;
-
-    if (isReservedProfilePathSegment(candidate)) {
-      continue;
-    }
-
-    const existingUser = await findUserByNickname(candidate);
-
-    if (!existingUser || existingUser.id === currentUserId) {
-      return candidate;
-    }
-  }
-
-  throw new AdminServiceError("Не удалось сгенерировать уникальный хэндл аккаунта.", 500);
-}
-
 function normalizeRole(value: string | null | undefined) {
   if (!USER_ROLE_VALUES.has((value ?? "") as UserRole)) {
     throw new AdminServiceError("Недопустимый тип аккаунта.", 400);
   }
 
   return value as UserRole;
+}
+
+function normalizeSpecialistGender(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    throw new AdminServiceError("Выберите пол специалиста.", 400, {
+      specialistGender: "Выберите пол.",
+    });
+  }
+
+  if (typeof value !== "string" || !SPECIALIST_GENDER_VALUES.has(value as SpecialistGender)) {
+    throw new AdminServiceError("Выберите корректный пол специалиста.", 400, {
+      specialistGender: "Выберите корректный пол.",
+    });
+  }
+
+  return value as SpecialistGender;
+}
+
+function normalizeSpecialistBirthDate(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    throw new AdminServiceError("Выберите дату рождения специалиста.", 400, {
+      specialistBirthDate: "Выберите дату рождения.",
+    });
+  }
+
+  if (typeof value !== "string" || !ISO_DATE_PATTERN.test(value)) {
+    throw new AdminServiceError("Выберите корректную дату рождения специалиста.", 400, {
+      specialistBirthDate: "Выберите корректную дату рождения.",
+    });
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const parsedDate = new Date(`${value}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(parsedDate.getTime())
+    || parsedDate.getUTCFullYear() !== year
+    || parsedDate.getUTCMonth() + 1 !== month
+    || parsedDate.getUTCDate() !== day
+  ) {
+    throw new AdminServiceError("Выберите корректную дату рождения специалиста.", 400, {
+      specialistBirthDate: "Выберите корректную дату рождения.",
+    });
+  }
+
+  const todayIsoDate = new Date().toISOString().slice(0, 10);
+
+  if (value < SPECIALIST_BIRTH_DATE_MIN_ISO) {
+    throw new AdminServiceError("Дата рождения не может быть раньше 1955 года.", 400, {
+      specialistBirthDate: "Дата рождения не может быть раньше 1955 года.",
+    });
+  }
+
+  if (value > todayIsoDate) {
+    throw new AdminServiceError("Дата рождения не может быть в будущем.", 400, {
+      specialistBirthDate: "Дата рождения не может быть в будущем.",
+    });
+  }
+
+  return value;
+}
+
+function normalizeSpecialistPhone(countryValue: unknown, numberValue: unknown) {
+  const hasPhoneNumber = typeof numberValue === "string" && numberValue.trim().length > 0;
+
+  if (!hasPhoneNumber) {
+    return {
+      specialistPhoneCountry: null,
+      specialistPhoneNumber: null,
+    };
+  }
+
+  const country = normalizeSpecialistPhoneCountry(countryValue);
+
+  if (!country) {
+    throw new AdminServiceError("Выберите страну телефона специалиста.", 400, {
+      specialistPhoneCountry: "Выберите страну.",
+    });
+  }
+
+  const phoneNumber = normalizeSpecialistPhoneNumber(country, numberValue);
+
+  if (!phoneNumber) {
+    throw new AdminServiceError("Укажите корректный телефон специалиста.", 400, {
+      specialistPhoneNumber: "Укажите корректный телефон.",
+    });
+  }
+
+  return {
+    specialistPhoneCountry: country,
+    specialistPhoneNumber: phoneNumber,
+  };
+}
+
+function normalizeSpecialistContactUrl(
+  value: unknown,
+  fieldName: Extract<
+    AdminManagedUserFieldErrorName,
+    "specialistTelegramUrl" | "specialistMaxUrl" | "specialistWhatsappUrl"
+  >,
+) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  if (trimmedValue.length > SPECIALIST_CONTACT_URL_MAX_LENGTH) {
+    throw new AdminServiceError("Ссылка слишком длинная.", 400, {
+      [fieldName]: `Ссылка должна быть не длиннее ${SPECIALIST_CONTACT_URL_MAX_LENGTH} символов.`,
+    });
+  }
+
+  const valueWithProtocol = /^[a-z][a-z\d+\-.]*:/i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`;
+
+  try {
+    const parsedUrl = new URL(valueWithProtocol);
+
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      throw new Error("Unsupported protocol");
+    }
+
+    return parsedUrl.toString();
+  } catch {
+    throw new AdminServiceError("Укажите корректную ссылку.", 400, {
+      [fieldName]: "Укажите корректную ссылку.",
+    });
+  }
 }
 
 function normalizeManagedPayload(
@@ -307,11 +520,28 @@ function normalizeManagedPayload(
     | "firstName"
     | "lastName"
     | "nickname"
+    | "patronymic"
     | "profileDescription"
+    | "education"
     | "role"
     | "specialties"
+    | "specialistGender"
+    | "specialistBirthDate"
+    | "specialistPhoneCountry"
+    | "specialistPhoneNumber"
+    | "specialistTelegramUrl"
+    | "specialistMaxUrl"
+    | "specialistWhatsappUrl"
+    | "workTopics"
   >,
+  options: {
+    requireProfessionalFields?: boolean;
+    requireNickname?: boolean;
+    specialistStatus?: SpecialistStatus;
+  } = {},
 ) {
+  const requireProfessionalFields = options.requireProfessionalFields ?? true;
+  const requireNickname = options.requireNickname ?? true;
   const role = normalizeRole(payload.role);
   const avatarSourceUrl = normalizeOptionalImage(payload.avatarSourceUrl);
   const avatarUrl = normalizeOptionalImage(payload.avatarUrl);
@@ -329,19 +559,66 @@ function normalizeManagedPayload(
       displayName,
       firstName: null,
       lastName: null,
+      patronymic: null,
       nickname,
       profileDescription: normalizeProfileDescription(
         payload.profileDescription,
         USER_PROFILE_DESCRIPTION_MAX_LENGTH,
       ),
+      education: [],
       role,
       specialties: [] as string[],
+      specialistGender: null,
+      specialistBirthDate: null,
+      specialistPhoneCountry: null,
+      specialistPhoneNumber: null,
+      specialistTelegramUrl: null,
+      specialistMaxUrl: null,
+      specialistWhatsappUrl: null,
+      workTopics: [] as string[],
       specialistStatus: "none" as const,
     };
   }
 
   const firstName = normalizeRequiredName(payload.firstName, "Имя");
   const lastName = normalizeRequiredName(payload.lastName, "Фамилия");
+  const patronymic = sanitizeProfileText(payload.patronymic);
+  const nickname = requireNickname ? normalizeUserAccountName(payload.nickname) : null;
+  const normalizedWorkTopics = normalizeSpecialistWorkTopics(payload.workTopics);
+  const normalizedPhone = normalizeSpecialistPhone(
+    payload.specialistPhoneCountry,
+    payload.specialistPhoneNumber,
+  );
+
+  if (patronymic.length > PROFILE_NAME_MAX_LENGTH) {
+    throw new AdminServiceError(
+      `Отчество должно быть не длиннее ${PROFILE_NAME_MAX_LENGTH} символов.`,
+      400,
+      {
+        patronymic: `Отчество должно быть не длиннее ${PROFILE_NAME_MAX_LENGTH} символов.`,
+      },
+    );
+  }
+
+  if (requireProfessionalFields && !avatarUrl) {
+    throw new AdminServiceError("Добавьте фото специалиста.", 400, {
+      avatarUrl: "Добавьте фото.",
+    });
+  }
+
+  if (requireProfessionalFields && normalizedWorkTopics.length === 0) {
+    throw new AdminServiceError("Выберите хотя бы одну тему.", 400, {
+      workTopics: "Выберите хотя бы одну тему.",
+    });
+  }
+
+  const normalizedSpecialties = requireProfessionalFields
+    ? normalizeAdminManagedSpecialties(payload.specialties)
+    : normalizeAdminSpecialties(
+        Array.isArray(payload.specialties)
+          ? payload.specialties.filter((item): item is string => typeof item === "string")
+          : [],
+      );
 
   return {
     avatarCardUrl,
@@ -354,14 +631,37 @@ function normalizeManagedPayload(
     }),
     firstName,
     lastName,
-    nickname: undefined,
-    profileDescription: normalizeProfileDescription(
-      payload.profileDescription,
-      SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH,
-    ),
+    patronymic: patronymic || null,
+    nickname,
+    profileDescription: requireProfessionalFields
+      ? normalizeRequiredProfileDescription(
+          payload.profileDescription,
+          SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH,
+        )
+      : normalizeProfileDescription(
+          payload.profileDescription,
+          SPECIALIST_PROFILE_DESCRIPTION_MAX_LENGTH,
+        ),
+    education: requireProfessionalFields
+      ? normalizeAdminEducation(payload.education)
+      : normalizeSpecialistEducation(payload.education),
     role,
-    specialties: normalizeAdminSpecialties(payload.specialties),
-    specialistStatus: "verified" as const,
+    specialties: normalizedSpecialties,
+    specialistGender: normalizeSpecialistGender(payload.specialistGender),
+    specialistBirthDate: normalizeSpecialistBirthDate(payload.specialistBirthDate),
+    specialistPhoneCountry: normalizedPhone.specialistPhoneCountry,
+    specialistPhoneNumber: normalizedPhone.specialistPhoneNumber,
+    specialistTelegramUrl: normalizeSpecialistContactUrl(
+      payload.specialistTelegramUrl,
+      "specialistTelegramUrl",
+    ),
+    specialistMaxUrl: normalizeSpecialistContactUrl(payload.specialistMaxUrl, "specialistMaxUrl"),
+    specialistWhatsappUrl: normalizeSpecialistContactUrl(
+      payload.specialistWhatsappUrl,
+      "specialistWhatsappUrl",
+    ),
+    workTopics: normalizedWorkTopics,
+    specialistStatus: options.specialistStatus ?? "verified" as const,
   };
 }
 
@@ -380,14 +680,16 @@ export async function createAdminManagedUser(
   await ensureEmailAvailable(email);
 
   const normalizedPayload = normalizeManagedPayload(payload);
-  const passwordHash = await hashPassword(normalizePassword(payload.password));
-  const nickname = normalizedPayload.role === "user"
-    ? normalizedPayload.nickname
-    : await generateManagedNickname(email);
+  const passwordHash = `otp-only:${randomUUID()}`;
+  const nickname = normalizedPayload.nickname;
 
-  if (normalizedPayload.role === "user") {
-    await ensureNicknameAvailable(nickname);
+  if (!nickname) {
+    throw new AdminServiceError(ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE, 400, {
+      nickname: ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE,
+    });
   }
+
+  await ensureNicknameAvailable(nickname);
 
   const user = await createUser({
     avatarCardUrl: normalizedPayload.avatarCardUrl,
@@ -397,17 +699,123 @@ export async function createAdminManagedUser(
     email,
     firstName: normalizedPayload.firstName,
     lastName: normalizedPayload.lastName,
+    patronymic: normalizedPayload.patronymic,
     nickname,
     onboardingStep: "complete",
     passwordHash,
     profileDescription: normalizedPayload.profileDescription,
+    education: normalizedPayload.education,
     role: normalizedPayload.role,
     specialties: normalizedPayload.specialties,
+    specialistGender: normalizedPayload.specialistGender,
+    specialistBirthDate: normalizedPayload.specialistBirthDate,
+    specialistPhoneCountry: normalizedPayload.specialistPhoneCountry,
+    specialistPhoneNumber: normalizedPayload.specialistPhoneNumber,
+    specialistTelegramUrl: normalizedPayload.specialistTelegramUrl,
+    specialistMaxUrl: normalizedPayload.specialistMaxUrl,
+    specialistWhatsappUrl: normalizedPayload.specialistWhatsappUrl,
+    workTopics: normalizedPayload.workTopics,
     specialistStatus: normalizedPayload.specialistStatus,
   });
 
   if (!user) {
     throw new AdminServiceError("Не удалось создать аккаунт.", 500);
+  }
+
+  return user;
+}
+
+export async function createSpecialistApplication(
+  payload: AdminManagedUserPayload & {
+    email?: string;
+  },
+) {
+  const email = normalizeEmail(payload.email);
+
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new AdminServiceError("Укажите корректный email.", 400, {
+      email: "Укажите корректный email.",
+    });
+  }
+
+  const normalizedPayload = normalizeManagedPayload(
+    {
+      ...payload,
+      nickname: null,
+      role: "specialist",
+    },
+    {
+      requireProfessionalFields: false,
+      requireNickname: false,
+      specialistStatus: "pending",
+    },
+  );
+  const existingUser = await findUserByEmail(email);
+
+  if (existingUser) {
+    const updatedUser = await updateUserAdminManagedFields({
+      avatarCardUrl: normalizedPayload.avatarCardUrl,
+      avatarSourceUrl: normalizedPayload.avatarSourceUrl,
+      avatarUrl: normalizedPayload.avatarUrl,
+      displayName: normalizedPayload.displayName,
+      firstName: normalizedPayload.firstName,
+      lastName: normalizedPayload.lastName,
+      patronymic: normalizedPayload.patronymic,
+      onboardingStep: "complete",
+      profileDescription: normalizedPayload.profileDescription,
+      education: normalizedPayload.education,
+      role: "specialist",
+      specialties: normalizedPayload.specialties,
+      specialistGender: normalizedPayload.specialistGender,
+      specialistBirthDate: normalizedPayload.specialistBirthDate,
+      specialistPhoneCountry: normalizedPayload.specialistPhoneCountry,
+      specialistPhoneNumber: normalizedPayload.specialistPhoneNumber,
+      specialistTelegramUrl: normalizedPayload.specialistTelegramUrl,
+      specialistMaxUrl: normalizedPayload.specialistMaxUrl,
+      specialistWhatsappUrl: normalizedPayload.specialistWhatsappUrl,
+      workTopics: normalizedPayload.workTopics,
+      specialistStatus: "pending",
+      userId: existingUser.id,
+    });
+
+    if (!updatedUser) {
+      throw new AdminServiceError("Не удалось отправить заявку.", 500);
+    }
+
+    return updatedUser;
+  }
+
+  const passwordHash = `otp-only:${randomUUID()}`;
+
+  const user = await createUser({
+    avatarCardUrl: normalizedPayload.avatarCardUrl,
+    avatarSourceUrl: normalizedPayload.avatarSourceUrl,
+    avatarUrl: normalizedPayload.avatarUrl,
+    displayName: normalizedPayload.displayName,
+    email,
+    firstName: normalizedPayload.firstName,
+    lastName: normalizedPayload.lastName,
+    patronymic: normalizedPayload.patronymic,
+    nickname: null,
+    onboardingStep: "complete",
+    passwordHash,
+    profileDescription: normalizedPayload.profileDescription,
+    education: normalizedPayload.education,
+    role: "specialist",
+    specialties: normalizedPayload.specialties,
+    specialistGender: normalizedPayload.specialistGender,
+    specialistBirthDate: normalizedPayload.specialistBirthDate,
+    specialistPhoneCountry: normalizedPayload.specialistPhoneCountry,
+    specialistPhoneNumber: normalizedPayload.specialistPhoneNumber,
+    specialistTelegramUrl: normalizedPayload.specialistTelegramUrl,
+    specialistMaxUrl: normalizedPayload.specialistMaxUrl,
+    specialistWhatsappUrl: normalizedPayload.specialistWhatsappUrl,
+    workTopics: normalizedPayload.workTopics,
+    specialistStatus: "pending",
+  });
+
+  if (!user) {
+    throw new AdminServiceError("Не удалось отправить заявку.", 500);
   }
 
   return user;
@@ -434,13 +842,15 @@ export async function updateAdminManagedUser(
     ...payload,
     role: targetUser.role,
   });
-  const nextNickname = normalizedPayload.role === "user"
-    ? normalizedPayload.nickname
-    : targetUser.nickname ?? (await generateManagedNickname(targetUser.email, targetUser.id));
+  const nextNickname = normalizedPayload.nickname;
 
-  if (normalizedPayload.role === "user") {
-    await ensureNicknameAvailable(nextNickname, targetUser.id);
+  if (!nextNickname) {
+    throw new AdminServiceError(ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE, 400, {
+      nickname: ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE,
+    });
   }
+
+  await ensureNicknameAvailable(nextNickname, targetUser.id);
 
   const updatedUser = await updateUserAdminManagedFields({
     avatarCardUrl: normalizedPayload.avatarCardUrl,
@@ -449,17 +859,68 @@ export async function updateAdminManagedUser(
     displayName: normalizedPayload.displayName,
     firstName: normalizedPayload.firstName,
     lastName: normalizedPayload.lastName,
+    patronymic: normalizedPayload.patronymic,
     nickname: nextNickname,
     onboardingStep: "complete",
     profileDescription: normalizedPayload.profileDescription,
+    education: normalizedPayload.education,
     role: normalizedPayload.role,
     specialties: normalizedPayload.specialties,
+    specialistGender: normalizedPayload.specialistGender,
+    specialistBirthDate: normalizedPayload.specialistBirthDate,
+    specialistPhoneCountry: normalizedPayload.specialistPhoneCountry,
+    specialistPhoneNumber: normalizedPayload.specialistPhoneNumber,
+    specialistTelegramUrl: normalizedPayload.specialistTelegramUrl,
+    specialistMaxUrl: normalizedPayload.specialistMaxUrl,
+    specialistWhatsappUrl: normalizedPayload.specialistWhatsappUrl,
+    workTopics: normalizedPayload.workTopics,
     specialistStatus: normalizedPayload.specialistStatus,
     userId,
   });
 
   if (!updatedUser) {
     throw new AdminServiceError("Пользователь не найден.", 404);
+  }
+
+  return updatedUser;
+}
+
+export async function updateAdminSpecialistStatus(
+  actor: SessionUser,
+  userId: string,
+  payload: {
+    specialistStatus?: string | null;
+  },
+) {
+  assertAdminActor(actor);
+
+  const targetUser = await findUserById(userId);
+
+  if (!targetUser) {
+    throw new AdminServiceError("Пользователь не найден.", 404);
+  }
+
+  if (targetUser.role !== "specialist") {
+    throw new AdminServiceError("Статус можно менять только у специалистов.", 400);
+  }
+
+  const specialistStatus = payload.specialistStatus as SpecialistStatus | null | undefined;
+
+  if (!specialistStatus || !SPECIALIST_STATUS_MUTATION_VALUES.has(specialistStatus)) {
+    throw new AdminServiceError("Выберите корректный статус специалиста.", 400);
+  }
+
+  const updatedUser = await updateUserAdminManagedFields({
+    specialistStatus,
+    userId,
+  });
+
+  if (!updatedUser) {
+    throw new AdminServiceError("Пользователь не найден.", 404);
+  }
+
+  if (specialistStatus !== "verified") {
+    await deleteSessionsByUserId(userId);
   }
 
   return updatedUser;

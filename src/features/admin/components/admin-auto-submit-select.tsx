@@ -1,7 +1,8 @@
 "use client";
 
-import { ListBox, Select } from "@heroui/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronDownIcon } from "@/components/ui/icons";
+import { ResponsiveSelectionMenu } from "@/components/ui/responsive-selection-menu";
 
 type AdminAutoSubmitSelectOption = {
   label: string;
@@ -26,6 +27,8 @@ export function AdminAutoSubmitSelect({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ?? value;
 
   function handleChange(nextValue: string) {
     const nextSearchParams = new URLSearchParams(searchParams.toString());
@@ -45,33 +48,24 @@ export function AdminAutoSubmitSelect({
   return (
     <div className="flex min-w-[220px] flex-col gap-2 text-sm">
       <span className="font-medium">{label}</span>
-      <Select
-        aria-label={label}
-        selectedKey={value}
-        onSelectionChange={(nextKey) => {
-          if (typeof nextKey === "string") {
-            handleChange(nextKey);
-          }
-        }}
-        className="min-w-[220px]"
-      >
-        <Select.Trigger>
-          <Select.Value />
-          <Select.Indicator />
-        </Select.Trigger>
-        <Select.Popover>
-          <ListBox items={options}>
-            {(option) => (
-              <ListBox.Item id={option.value} textValue={option.label}>
-                <span className="flex items-center justify-between gap-3">
-                  <span>{option.label}</span>
-                  <ListBox.ItemIndicator />
-                </span>
-              </ListBox.Item>
-            )}
-          </ListBox>
-        </Select.Popover>
-      </Select>
+      <ResponsiveSelectionMenu
+        ariaLabel={label}
+        drawerTitle={label}
+        value={value}
+        onChange={handleChange}
+        options={options}
+        popoverPlacement="bottom start"
+        popoverClassName="min-w-[220px]"
+        triggerClassName="border-separator flex min-h-[40px] min-w-[220px] items-center justify-between gap-3 rounded-[16px] border bg-[var(--field-background)] px-3 py-2 text-left"
+        trigger={(
+          <>
+            <span className="min-w-0 truncate">{selectedLabel}</span>
+            <span className="flex h-3 w-3 flex-none items-center justify-center text-[var(--field-placeholder)]">
+              <ChevronDownIcon />
+            </span>
+          </>
+        )}
+      />
     </div>
   );
 }

@@ -23,16 +23,14 @@ export function SidebarColumn({
       >
         <div
           data-testid="sidebarColumnStickyShell"
-          className={`min-[1140px]:sticky min-[1140px]:top-0 min-[1140px]:flex min-[1140px]:h-[calc(100dvh-var(--app-header-height))] min-[1140px]:flex-col ${
-            hasCustomContent ? "" : "min-[1140px]:justify-end"
-          }`.trim()}
+          className="min-[1140px]:sticky min-[1140px]:top-0 min-[1140px]:flex min-[1140px]:h-[calc(100dvh-var(--app-header-height))] min-[1140px]:max-h-[calc(100dvh-var(--app-header-height))] min-[1140px]:flex-col min-[1140px]:overflow-hidden"
         >
           <div
             data-testid="sidebarColumnContent"
             className={`min-[1140px]:w-full ${
               hasCustomContent
                 ? "min-[1140px]:flex-1"
-                : "min-[1140px]:mt-auto"
+                : "min-[1140px]:flex min-[1140px]:h-full min-[1140px]:flex-col min-[1140px]:justify-end min-[1140px]:pb-12"
             } ${
               hideContent ? "pointer-events-none invisible" : ""
             }`.trim()}
@@ -41,7 +39,7 @@ export function SidebarColumn({
             {hasCustomContent ? (
               children
             ) : (
-              <LegalInfo className="w-full px-6 pb-8 pt-8 xl:px-8" />
+              <LegalInfo className="w-full px-6 pt-8 xl:px-8" />
             )}
           </div>
         </div>

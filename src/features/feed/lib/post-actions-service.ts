@@ -16,6 +16,7 @@ export function publishPost(actor: SessionUser, payload: PostMutationPayload) {
     author: actor,
     content: payload.content,
     intent: payload.intent,
+    subtopic: payload.subtopic,
     title: payload.title,
     topic: payload.topic,
   });
@@ -30,6 +31,7 @@ export function revisePost(
     author: actor,
     content: payload.content,
     intent: payload.intent,
+    subtopic: payload.subtopic,
     title: payload.title,
     topic: payload.topic,
   });

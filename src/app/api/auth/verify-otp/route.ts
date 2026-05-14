@@ -86,6 +86,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (user?.role === "specialist" && user.specialistStatus !== "verified") {
+      throw new AuthServiceError({
+        message: user.specialistStatus === "pending"
+          ? "Заявка психолога пока на проверке. Мы пришлем письмо с итогом на указанный email."
+          : "Вход для этого email психолога сейчас недоступен.",
+        status: 403,
+      });
+    }
+
     if (!user) {
       user = await createUser({
         displayName: await buildDefaultUserDisplayName(),

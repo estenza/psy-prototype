@@ -11,9 +11,14 @@ import {
 import { getDatabase } from "@/lib/db";
 import { enqueueDomainEvent } from "@/lib/domain-events/outbox";
 import { runStorageUnitOfWork } from "@/lib/unit-of-work";
-import { canDeleteOwnComment, canModerateContent } from "@/features/auth/lib/permissions";
+import {
+  canDeleteOwnComment,
+  canModerateContent,
+  canUsePublicActivity,
+} from "@/features/auth/lib/permissions";
 import { getUserHandle } from "@/features/auth/lib/profile";
 import type { SessionUser } from "@/features/auth/types";
+import { isContentReportReason } from "@/features/reports/lib/report-copy";
 import {
   buildCommentHtml,
   escapeHtml,
@@ -49,9 +54,11 @@ type ProfileCommentRow = {
   post_title: string;
   author_user_id: string;
   author_display_name: string;
+  author_first_name: string | null;
   author_nickname: string | null;
   author_avatar_url: string | null;
   author_role: "user" | "specialist" | null;
+  author_specialist_status: SessionUser["specialistStatus"] | null;
   body_html: string;
   body_text: string;
   created_at: string;
@@ -78,10 +85,13 @@ type PostCommentRow = {
   edited_at: string | null;
   hidden_at: string | null;
   deleted_at: string | null;
+  deleted_by_moderator: boolean | number | null;
   author_display_name: string;
+  author_first_name: string | null;
   author_nickname: string | null;
   author_avatar_url: string | null;
   author_role: "user" | "specialist" | null;
+  author_specialist_status: SessionUser["specialistStatus"] | null;
   viewer_liked: boolean | number | null;
 };
 
@@ -98,7 +108,9 @@ type PostCommentBaseRow = {
 
 type CommentAuthorMentionRow = {
   display_name: string;
+  first_name: string | null;
   nickname: string | null;
+  role: "user" | "specialist" | null;
 };
 
 type PostCommentReportRow = {
@@ -167,10 +179,18 @@ const PG_DISCUSSION_COMMENT_COLUMNS = `
   post_comments.edited_at::text AS edited_at,
   post_comments.hidden_at::text AS hidden_at,
   post_comments.deleted_at::text AS deleted_at,
+  EXISTS (
+    SELECT 1
+    FROM content_reports
+    WHERE content_reports.comment_id = post_comments.id
+      AND content_reports.status = 'action_taken'
+  ) AS deleted_by_moderator,
   users.display_name AS author_display_name,
+  users.first_name AS author_first_name,
   users.nickname AS author_nickname,
   users.avatar_url AS author_avatar_url,
-  users.role AS author_role
+  users.role AS author_role,
+  users.specialist_status AS author_specialist_status
 `;
 
 const SQLITE_DISCUSSION_COMMENT_COLUMNS = `
@@ -192,10 +212,18 @@ const SQLITE_DISCUSSION_COMMENT_COLUMNS = `
   post_comments.edited_at,
   post_comments.hidden_at,
   post_comments.deleted_at,
+  EXISTS (
+    SELECT 1
+    FROM content_reports
+    WHERE content_reports.comment_id = post_comments.id
+      AND content_reports.status = 'action_taken'
+  ) AS deleted_by_moderator,
   users.display_name AS author_display_name,
+  users.first_name AS author_first_name,
   users.nickname AS author_nickname,
   users.avatar_url AS author_avatar_url,
-  users.role AS author_role
+  users.role AS author_role,
+  users.specialist_status AS author_specialist_status
 `;
 
 export class CommentsRepositoryError extends Error {
@@ -264,39 +292,66 @@ function normalizeReportReason(value: string | null | undefined) {
 
 function getCommentMentionLabel(params: {
   displayName: string;
+  firstName?: string | null;
   nickname: string | null;
+  role?: "user" | "specialist" | null;
 }) {
+  if (params.role === "specialist") {
+    const specialistFirstName = params.firstName?.trim()
+      || params.displayName.trim().split(/\s+/)[0]
+      || params.displayName;
+
+    return specialistFirstName;
+  }
+
   return getUserHandle({
     displayName: params.displayName,
     nickname: params.nickname,
   }).replace(/^@/, "");
 }
 
+function getCommentMentionProfileNickname(params: {
+  nickname: string | null;
+  role?: "user" | "specialist" | null;
+}) {
+  return params.role === "specialist" ? params.nickname : null;
+}
+
 function prependCommentMention(
   bodyHtml: string,
   mentionLabel: string,
   targetCommentId?: string | null,
+  targetProfileNickname?: string | null,
 ) {
   const trimmedLabel = mentionLabel.trim();
+  const trimmedTargetProfileNickname = targetProfileNickname?.trim() ?? "";
 
   if (!trimmedLabel) {
     return bodyHtml;
   }
 
-  const existingMentionMatch = bodyHtml.match(/@\[([^[\]|]+)(?:\|([^[\]|]+))?\]/);
+  const existingMentionMatch = bodyHtml.match(/@\[([^[\]|]+)(?:\|([^[\]|]+))?(?:\|([^[\]|]+))?\]/);
   const existingMentionLabel = existingMentionMatch?.[1]?.trim() ?? null;
   const existingTargetCommentId = existingMentionMatch?.[2] ?? null;
 
-  if (
-    (targetCommentId && existingTargetCommentId === targetCommentId)
-    || (!targetCommentId && existingMentionLabel === trimmedLabel)
-  ) {
+  const mentionToken = targetCommentId && trimmedTargetProfileNickname
+    ? `@[${trimmedLabel}|${targetCommentId}|${trimmedTargetProfileNickname}]`
+    : targetCommentId
+    ? `@[${trimmedLabel}|${targetCommentId}]`
+    : `@[${trimmedLabel}]`;
+
+  if (targetCommentId && existingTargetCommentId === targetCommentId) {
+    if (existingMentionMatch?.[0] === mentionToken) {
+      return bodyHtml;
+    }
+
+    return bodyHtml.replace(existingMentionMatch?.[0] ?? "", escapeHtml(mentionToken));
+  }
+
+  if (!targetCommentId && existingMentionLabel === trimmedLabel) {
     return bodyHtml;
   }
 
-  const mentionToken = targetCommentId
-    ? `@[${trimmedLabel}|${targetCommentId}]`
-    : `@[${trimmedLabel}]`;
   const escapedMention = `${escapeHtml(mentionToken)} `;
 
   if (bodyHtml.startsWith("<p>")) {
@@ -307,18 +362,20 @@ function prependCommentMention(
 }
 
 function extractCommentMentionMeta(bodyHtml: string) {
-  const mentionMatch = bodyHtml.match(/@\[([^[\]|]+)(?:\|([^[\]|]+))?\]/);
+  const mentionMatch = bodyHtml.match(/@\[([^[\]|]+)(?:\|([^[\]|]+))?(?:\|([^[\]|]+))?\]/);
 
   if (!mentionMatch) {
     return {
       label: null,
       targetCommentId: null,
+      targetProfileNickname: null,
     };
   }
 
   return {
     label: mentionMatch[1] ?? null,
     targetCommentId: mentionMatch[2] ?? null,
+    targetProfileNickname: mentionMatch[3] ?? null,
   };
 }
 
@@ -342,8 +399,10 @@ function mapProfileComment(row: ProfileCommentRow): ProfileCommentItem {
     author: mapCommentAuthor({
       avatarUrl: row.author_avatar_url,
       displayName: row.author_display_name,
+      firstName: row.author_first_name,
       nickname: row.author_nickname,
       role: row.author_role,
+      specialistStatus: row.author_specialist_status,
       userId: row.author_user_id,
     }),
     bodyHtml: row.body_html,
@@ -359,8 +418,10 @@ function mapProfileComment(row: ProfileCommentRow): ProfileCommentItem {
 function mapCommentAuthor(params: {
   avatarUrl: string | null;
   displayName: string;
+  firstName?: string | null;
   nickname: string | null;
   role?: "user" | "specialist" | null;
+  specialistStatus?: SessionUser["specialistStatus"] | null;
   userId: string;
 }): CommentAuthor {
   return {
@@ -372,6 +433,7 @@ function mapCommentAuthor(params: {
     }),
     avatarUrl: params.avatarUrl,
     role: params.role ?? null,
+    specialistStatus: params.specialistStatus ?? null,
     initials: getInitials(params.displayName),
     kind: "sso",
   };
@@ -439,7 +501,9 @@ function buildCommentNode(params: {
     hasReplyContext = false,
   } = params;
   const viewerOwnsComment = Boolean(currentUser && row.author_user_id === currentUser.id);
-  const currentUserCanInteract = Boolean(currentUser && !currentUser.isBanned);
+  const currentUserCanInteract = Boolean(
+    currentUser && !currentUser.isBanned && canUsePublicActivity(currentUser),
+  );
   const canEditComment = canActorEditComment(currentUser, {
     authorUserId: row.author_user_id,
     createdAt: row.created_at,
@@ -459,12 +523,15 @@ function buildCommentNode(params: {
     author: mapCommentAuthor({
       avatarUrl: row.author_avatar_url,
       displayName: row.author_display_name,
+      firstName: row.author_first_name,
       nickname: row.author_nickname,
       role: row.author_role,
+      specialistStatus: row.author_specialist_status,
       userId: row.author_user_id,
     }),
     createdAt: Math.floor(new Date(row.created_at).getTime() / 1000),
     deletedAt: row.deleted_at ? Math.floor(new Date(row.deleted_at).getTime() / 1000) : null,
+    deletedByModerator: row.status === "deleted" && readBoolean(row.deleted_by_moderator),
     deletedRelativeDate: row.deleted_at
       ? formatRelativeDate(Math.floor(new Date(row.deleted_at).getTime() / 1000))
       : null,
@@ -598,9 +665,15 @@ function buildCommentsSection(params: {
         replyRow.body_html,
         getCommentMentionLabel({
           displayName: mentionTargetRow.author_display_name,
+          firstName: mentionTargetRow.author_first_name,
           nickname: mentionTargetRow.author_nickname,
+          role: mentionTargetRow.author_role,
         }),
         mentionTargetRow.id,
+        getCommentMentionProfileNickname({
+          nickname: mentionTargetRow.author_nickname,
+          role: mentionTargetRow.author_role,
+        }),
       );
 
       return [
@@ -712,9 +785,11 @@ export async function listPublishedCommentsByAuthorUserId(
         posts.title AS post_title,
         post_comments.author_user_id,
         users.display_name AS author_display_name,
+        users.first_name AS author_first_name,
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
+        users.specialist_status AS author_specialist_status,
         post_comments.body_html,
         post_comments.body_text,
         post_comments.created_at::text AS created_at,
@@ -744,9 +819,11 @@ export async function listPublishedCommentsByAuthorUserId(
         posts.title AS post_title,
         post_comments.author_user_id,
         users.display_name AS author_display_name,
+        users.first_name AS author_first_name,
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
+        users.specialist_status AS author_specialist_status,
         post_comments.body_html,
         post_comments.body_text,
         post_comments.created_at,
@@ -810,7 +887,7 @@ async function findPostCommentBaseById(commentId: string) {
 async function findCommentAuthorMentionByUserId(userId: string) {
   if (isPostgresAuthEnabled()) {
     return (await queryPgOne<CommentAuthorMentionRow>(
-      `SELECT display_name, nickname
+      `SELECT display_name, first_name, nickname, role
        FROM users
        WHERE id = $1
        LIMIT 1`,
@@ -820,7 +897,7 @@ async function findCommentAuthorMentionByUserId(userId: string) {
 
   const row = getDatabase()
     .prepare(
-      `SELECT display_name, nickname
+      `SELECT display_name, first_name, nickname, role
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -842,7 +919,15 @@ async function listCommentAncestorChain(comment: PostCommentBaseRow) {
   return chain;
 }
 
-async function listPublishedCommentRows(postId: string, viewerUserId?: string | null) {
+async function listPublishedCommentRows(
+  postId: string,
+  viewerUserId?: string | null,
+  includeModerated = false,
+) {
+  const visibleStatuses = includeModerated
+    ? "('published', 'deleted', 'hidden', 'pending')"
+    : "('published', 'deleted')";
+
   if (isPostgresAuthEnabled()) {
     const rows = await queryPgRows<PostCommentRow>(
       `SELECT
@@ -855,7 +940,7 @@ async function listPublishedCommentRows(postId: string, viewerUserId?: string | 
         AND viewer_reaction.user_id = $2
         AND viewer_reaction.reaction_type = 'like'
       WHERE post_comments.post_id = $1
-        AND post_comments.status IN ('published', 'deleted')
+        AND post_comments.status IN ${visibleStatuses}
       ORDER BY post_comments.created_at ASC`,
       [postId, viewerUserId ?? null],
     );
@@ -875,7 +960,7 @@ async function listPublishedCommentRows(postId: string, viewerUserId?: string | 
         AND viewer_reaction.user_id = ?
         AND viewer_reaction.reaction_type = 'like'
       WHERE post_comments.post_id = ?
-        AND post_comments.status IN ('published', 'deleted')
+        AND post_comments.status IN ${visibleStatuses}
       ORDER BY post_comments.created_at ASC`,
     )
     .all(viewerUserId ?? null, postId) as PostCommentRow[];
@@ -1079,6 +1164,13 @@ function assertCanCreateComment(actor: SessionUser | null) {
   if (actor.isBanned) {
     throw new CommentsRepositoryError("Комментирование для этого аккаунта недоступно.", 403);
   }
+
+  if (!canUsePublicActivity(actor)) {
+    throw new CommentsRepositoryError(
+      "Активность для специалистов доступна только после верификации.",
+      403,
+    );
+  }
 }
 
 export async function getPostCommentsSection(params: {
@@ -1094,6 +1186,7 @@ export async function getPostCommentsSection(params: {
   const rows = await listPublishedCommentRows(
     params.postId,
     params.currentUser?.id ?? null,
+    canModerateContent(params.currentUser),
   );
 
   return buildCommentsSection({
@@ -1116,11 +1209,11 @@ export async function createPostComment(input: CreatePostCommentInput) {
 
   if (parentComment) {
     if (parentComment.post_id !== input.postId) {
-      throw new CommentsRepositoryError("Нельзя ответить на комментарий из другого поста.", 400);
+      throw new CommentsRepositoryError("Нельзя комментировать комментарий из другого поста.", 400);
     }
 
     if (parentComment.status !== "published") {
-      throw new CommentsRepositoryError("Нельзя ответить на скрытый комментарий.", 409);
+      throw new CommentsRepositoryError("Нельзя комментировать скрытый комментарий.", 409);
     }
   }
 
@@ -1140,9 +1233,15 @@ export async function createPostComment(input: CreatePostCommentInput) {
           bodyHtml,
           getCommentMentionLabel({
             displayName: mentionAuthor.display_name,
+            firstName: mentionAuthor.first_name,
             nickname: mentionAuthor.nickname,
+            role: mentionAuthor.role,
           }),
           parentComment.id,
+          getCommentMentionProfileNickname({
+            nickname: mentionAuthor.nickname,
+            role: mentionAuthor.role,
+          }),
         );
       }
 
@@ -1357,6 +1456,13 @@ export async function reportPostComment(params: {
 
   const timestamp = new Date().toISOString();
   const normalizedReason = normalizeReportReason(params.reason);
+  const contentReportReason = isContentReportReason(normalizedReason)
+    ? normalizedReason
+    : "other";
+  const contentReportDetails =
+    normalizedReason && !isContentReportReason(normalizedReason)
+      ? normalizedReason
+      : null;
 
   if (isPostgresAuthEnabled()) {
     await execAuthPostgres(
@@ -1379,6 +1485,43 @@ export async function reportPostComment(params: {
         resolved_by_user_id = NULL,
         resolution_note = NULL`,
       [randomUUID(), params.commentId, params.actor.id, normalizedReason, timestamp, timestamp],
+    );
+    await execAuthPostgres(
+      `INSERT INTO content_reports (
+        id,
+        object_type,
+        object_id,
+        post_id,
+        comment_id,
+        reporter_user_id,
+        content_author_user_id,
+        reason,
+        details,
+        status,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, 'comment', $2, $3, $4, $5, $6, $7, $8, 'open', $9, $10)
+      ON CONFLICT (object_type, object_id, reporter_user_id)
+      DO UPDATE SET
+        reason = EXCLUDED.reason,
+        details = EXCLUDED.details,
+        status = 'open',
+        updated_at = EXCLUDED.updated_at,
+        resolved_at = NULL,
+        resolved_by_user_id = NULL`,
+      [
+        randomUUID(),
+        params.commentId,
+        comment.post_id,
+        params.commentId,
+        params.actor.id,
+        comment.author_user_id,
+        contentReportReason,
+        contentReportDetails,
+        timestamp,
+        timestamp,
+      ],
     );
   } else {
     getDatabase()
@@ -1403,6 +1546,44 @@ export async function reportPostComment(params: {
           resolution_note = NULL`,
       )
       .run(randomUUID(), params.commentId, params.actor.id, normalizedReason, timestamp, timestamp);
+    getDatabase()
+      .prepare(
+        `INSERT INTO content_reports (
+          id,
+          object_type,
+          object_id,
+          post_id,
+          comment_id,
+          reporter_user_id,
+          content_author_user_id,
+          reason,
+          details,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES (?, 'comment', ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+        ON CONFLICT(object_type, object_id, reporter_user_id)
+        DO UPDATE SET
+          reason = excluded.reason,
+          details = excluded.details,
+          status = 'open',
+          updated_at = excluded.updated_at,
+          resolved_at = NULL,
+          resolved_by_user_id = NULL`,
+      )
+      .run(
+        randomUUID(),
+        params.commentId,
+        comment.post_id,
+        params.commentId,
+        params.actor.id,
+        comment.author_user_id,
+        contentReportReason,
+        contentReportDetails,
+        timestamp,
+        timestamp,
+      );
   }
 
   await syncCommentReportsCount(params.commentId);
@@ -1489,8 +1670,6 @@ export async function deletePostComment(params: {
       await unitOfWork.transaction.query(
         `UPDATE post_comments
          SET status = 'deleted',
-             body_html = '',
-             body_text = '',
              updated_at = $1,
              deleted_at = $2
          WHERE id = $3`,
@@ -1509,12 +1688,10 @@ export async function deletePostComment(params: {
       .prepare(
         `UPDATE post_comments
            SET status = 'deleted',
-               body_html = '',
-               body_text = '',
                updated_at = ?,
                deleted_at = ?
            WHERE id = ?`,
-        )
+      )
         .run(timestamp, timestamp, params.commentId);
 
     syncPostCommentsCountInSqlite(unitOfWork.database, comment.post_id);
@@ -1588,8 +1765,6 @@ export async function moderatePostComment(input: ModeratePostCommentInput) {
       await execAuthPostgres(
         `UPDATE post_comments
          SET status = 'deleted',
-             body_html = '',
-             body_text = '',
              updated_at = $1,
              deleted_at = $2
          WHERE id = $3`,
@@ -1600,8 +1775,6 @@ export async function moderatePostComment(input: ModeratePostCommentInput) {
         .prepare(
           `UPDATE post_comments
            SET status = 'deleted',
-               body_html = '',
-               body_text = '',
                updated_at = ?,
                deleted_at = ?
            WHERE id = ?`,

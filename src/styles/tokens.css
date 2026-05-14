@@ -75,21 +75,29 @@
   /* Labels */
   --label-primary: var(--foreground);
   --label-secondary: color-mix(in oklab, var(--foreground) 76%, var(--background-primary));
-  --label-tertiary: color-mix(in oklab, var(--foreground) 56%, var(--background-primary));
+  --label-tertiary: color-mix(in oklab, var(--foreground) 52%, var(--background-primary));
   --label-quaternary: color-mix(in oklab, var(--foreground) 34%, var(--background-primary));
   --label-inverse: var(--snow);
   --underline-primary: color-mix(in srgb, var(--label-primary) 18%, transparent);
   --underline-secondary: color-mix(in srgb, var(--label-secondary) 20%, transparent);
 
   /* Typography */
-  --type-page-title-size: 28px;
-  --type-page-title-leading: 1;
-  --type-page-title-lg-size: 30px;
-  --type-page-title-lg-leading: 1;
-  --type-modal-title-size: 26px;
-  --type-modal-title-leading: 1;
-  --type-feed-title-size: 20px;
-  --type-feed-title-leading: 24px;
+  --type-h1-size: 24px;
+  --type-h1-leading: 32px;
+  --type-h2-size: 22px;
+  --type-h2-leading: 28px;
+  --type-h3-size: 20px;
+  --type-h3-leading: 24px;
+  --type-h4-size: 18px;
+  --type-h4-leading: 22px;
+  --type-page-title-size: var(--type-h1-size);
+  --type-page-title-leading: var(--type-h1-leading);
+  --type-page-title-lg-size: var(--type-h1-size);
+  --type-page-title-lg-leading: var(--type-h1-leading);
+  --type-modal-title-size: var(--type-h2-size);
+  --type-modal-title-leading: var(--type-h2-leading);
+  --type-feed-title-size: var(--type-h2-size);
+  --type-feed-title-leading: var(--type-h2-leading);
   --type-section-title-size: 16px;
   --type-section-title-leading: 20px;
   --type-subtitle-size: 16px;
@@ -102,11 +110,11 @@
   --type-body-md-leading: 20px;
   --type-body-relaxed-size: 14px;
   --type-body-relaxed-leading: 20px;
-  --type-caption-size: 13px;
+  --type-caption-size: 14px;
   --type-caption-leading: 20px;
   --type-caption-tight-size: 12px;
   --type-caption-tight-leading: 16px;
-  --type-comment-author-size: 13px;
+  --type-comment-author-size: 14px;
   --type-comment-author-leading: 18px;
   --type-comment-meta-size: 12px;
   --type-comment-meta-leading: 18px;
@@ -122,7 +130,7 @@
   --type-avatar-lg-leading: 1;
   --type-avatar-md-size: 14px;
   --type-avatar-md-leading: 20px;
-  --type-avatar-sm-size: 13px;
+  --type-avatar-sm-size: 14px;
   --type-avatar-sm-leading: 20px;
   --type-avatar-comment-md-size: 12px;
   --type-avatar-comment-md-leading: 18px;
@@ -138,6 +146,8 @@
   /* Separators */
   --separator-primary: color-mix(in oklab, var(--separator) 92%, var(--foreground) 8%);
   --separator-strong: color-mix(in oklab, var(--separator) 78%, var(--foreground) 22%);
+  --color-field-border: color-mix(in oklab, var(--separator-primary) 68%, var(--background-primary) 32%);
+  --color-field-border-hover: color-mix(in oklab, var(--separator-primary) 84%, var(--foreground) 16%);
   --field-focus-border: color-mix(
     in oklab,
     var(--accent-primary) 82%,
@@ -149,6 +159,8 @@
 [data-theme="dark"] {
   --separator-primary: color-mix(in oklab, oklch(38% .006 286.033) 92%, var(--foreground) 8%);
   --separator-strong: color-mix(in oklab, oklch(38% .006 286.033) 78%, var(--foreground) 22%);
+  --color-field-border: color-mix(in oklab, var(--separator-primary) 72%, var(--background-primary) 28%);
+  --color-field-border-hover: color-mix(in oklab, var(--separator-primary) 88%, var(--foreground) 12%);
 
   /* Overlays */
   --overlay-scrim: color-mix(in srgb, #000 32%, transparent);

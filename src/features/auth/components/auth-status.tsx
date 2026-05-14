@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonClassName } from "@/components/ui/button-styles";
 import { UserAvatarAction } from "@/components/ui/user-avatar-action";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { buildOwnProfilePath } from "@/features/auth/lib/profile";
@@ -48,7 +49,12 @@ export function AuthStatus({
         type="button"
         aria-label="Войти"
         onClick={() => openAuthModal()}
-        className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full bg-transparent text-[var(--label-primary)] transition-colors hover:bg-[var(--color-accent-soft)] hover:text-[var(--accent-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96]"
+        className={buttonClassName({
+          className: "flex-none bg-transparent text-[var(--label-primary)] hover:bg-[var(--color-accent-soft)] hover:text-[var(--accent-primary)]",
+          isIconOnly: true,
+          size: "sm",
+          variant: "quaternary",
+        })}
       >
         <UnauthorizedProfileIcon />
       </button>

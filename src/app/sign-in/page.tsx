@@ -69,7 +69,7 @@ export default async function SignInPage({
 
   return (
     <AuthFlowModalPageShell nextPath={nextPath}>
-      <div className="modal-surface surface-elevated relative w-full max-w-[420px] px-5 py-6 min-[481px]:px-6">
+      <div className="modal-surface surface-elevated relative w-full max-w-[420px] px-5 py-6 min-[480px]:px-6">
         <Link
           href={nextPath}
           aria-label="Закрыть"

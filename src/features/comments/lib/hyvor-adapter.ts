@@ -125,6 +125,7 @@ function mapAuthor(comment: HyvorDataComment): CommentAuthor {
     handle: normalizeCommentHandle(comment.user.username, comment.user.name),
     avatarUrl: comment.user.picture_url ?? null,
     role: null,
+    specialistStatus: null,
     initials: getInitials(comment.user.name),
     kind: userKind,
   };
@@ -153,6 +154,7 @@ function mapComment(
     author: mapAuthor(comment),
     createdAt: comment.created_at,
     deletedAt: null,
+    deletedByModerator: false,
     deletedRelativeDate: null,
     deletedCompactRelativeDate: null,
     relativeDate: formatRelativeDate(comment.created_at),

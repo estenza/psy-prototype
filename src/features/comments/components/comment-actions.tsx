@@ -1,6 +1,7 @@
 "use client";
 
 import { ToggleButton, cn } from "@heroui/react";
+import { buttonClassName } from "@/components/ui/button-styles";
 import { ChevronDownSmallIcon, ChevronUpSmallIcon, CommentHeartIcon } from "@/components/ui/icons";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
 
@@ -37,10 +38,22 @@ export function CommentActions({
 }: CommentActionsProps) {
   const likedActionClassName =
     "bg-[var(--color-danger-soft)] text-[var(--danger)] hover:bg-[var(--color-danger-soft-hover)] data-[hovered=true]:bg-[var(--color-danger-soft-hover)] active:bg-[var(--color-danger-soft-hover)] data-[pressed=true]:bg-[var(--color-danger-soft-hover)]";
-  const actionClassName =
-    "interactive-action-soft type-body-md inline-flex h-7 items-center justify-center rounded-full px-3 font-normal transition-colors";
-  const tertiaryActionClassName =
-    "interactive-tertiary type-body-md inline-flex h-7 items-center justify-center rounded-full px-3 font-normal text-[var(--label-secondary)] transition-colors hover:text-[var(--accent-primary)] active:text-[var(--accent-primary)]";
+  const actionClassName = buttonClassName({
+    className: "type-body-md inline-flex font-medium",
+    size: "xs",
+    variant: "tertiary",
+  });
+  const iconOnlyActionClassName = buttonClassName({
+    className: "type-body-md inline-flex font-medium",
+    isIconOnly: true,
+    size: "xs",
+    variant: "tertiary",
+  });
+  const tertiaryAccentActionClassName = buttonClassName({
+    className: "type-body-md inline-flex gap-1 font-medium",
+    size: "xs",
+    variant: "tertiary-accent",
+  });
   const shouldShowLikeCount = !isReply && likeCount > 0;
 
   return (
@@ -63,9 +76,9 @@ export function CommentActions({
               isSelected={liked}
               onChange={onLike}
               className={cn(
-                actionClassName,
-                shouldShowLikeCount ? "gap-1 align-middle" : "button--icon-only w-9 px-0",
-                liked ? "pl-2 pr-3" : "",
+                shouldShowLikeCount ? actionClassName : iconOnlyActionClassName,
+                shouldShowLikeCount ? "gap-1 align-middle" : "",
+                liked && shouldShowLikeCount ? "pl-2 pr-3" : "",
                 liked ? likedActionClassName : "",
               )}
               isDisabled={!canLike}
@@ -96,9 +109,9 @@ export function CommentActions({
       {repliesToggleLabel && onRepliesToggle ? (
         <button
           type="button"
-          className={cn(tertiaryActionClassName, "gap-1")}
+          className={tertiaryAccentActionClassName}
           onClick={onRepliesToggle}
-          aria-label={repliesToggleOpen ? "Скрыть ответы" : "Показать ответы"}
+          aria-label={repliesToggleOpen ? "Скрыть комментарии" : "Показать комментарии"}
         >
           <span className="type-body-md-medium flex items-center">{repliesToggleLabel}</span>
           <span className="flex h-4 w-4 items-center justify-center">

@@ -11,8 +11,16 @@ import { getDatabase } from "@/lib/db";
 import { enqueueDomainEvent } from "@/lib/domain-events/outbox";
 import { sanitizeRichHtml } from "@/lib/safe-html";
 import { runStorageUnitOfWork } from "@/lib/unit-of-work";
-import { isPostIntent, isPostTopic, normalizePostTopic } from "@/constants/post-taxonomy";
+import {
+  DEFAULT_POST_SUBTOPIC,
+  POST_TOPIC_SUBTOPICS,
+  isPostIntent,
+  isPostTopic,
+  normalizePostTopic,
+} from "@/constants/post-taxonomy";
+import { canModerateContent, canUsePublicActivity } from "@/features/auth/lib/permissions";
 import type { SessionUser } from "@/features/auth/types";
+import type { SpecialistStatus } from "@/features/auth/types";
 import { formatRelativeDate, formatRelativeDateCompact } from "@/features/comments/lib/comment-format";
 import { TOPIC_TITLE_MAX_LENGTH } from "@/features/topic-creation/constants";
 import type { Post } from "@/features/feed/types";
@@ -23,14 +31,17 @@ type PostRow = {
   author_user_id: string;
   author_avatar_url: string | null;
   author_role: "user" | "specialist" | null;
+  author_specialist_status: SpecialistStatus | null;
   intent: PostIntent;
   topic: PostTopic | null;
+  subtopic: string | null;
   title: string;
   body_html: string;
   excerpt: string;
   media_type: "image" | null;
   media_url: string | null;
   media_alt: string | null;
+  status: "published" | "hidden" | "deleted";
   comments_count: number;
   likes_count: number;
   views_count: number;
@@ -48,6 +59,7 @@ type PostMutationInput = {
   author: SessionUser;
   content: string;
   intent: PostIntent;
+  subtopic?: string | null;
   title: string;
   topic: PostTopic | null;
 };
@@ -79,12 +91,14 @@ const PG_POST_COLUMNS = `
   posts.author_user_id,
   posts.intent,
   posts.topic,
+  posts.subtopic,
   posts.title,
   posts.body_html,
   posts.excerpt,
   posts.media_type,
   posts.media_url,
   posts.media_alt,
+  posts.status,
   posts.comments_count,
   posts.likes_count,
   posts.views_count,
@@ -93,7 +107,8 @@ const PG_POST_COLUMNS = `
   users.display_name AS author_display_name,
   users.nickname AS author_nickname,
   users.avatar_url AS author_avatar_url,
-  users.role AS author_role
+  users.role AS author_role,
+  users.specialist_status AS author_specialist_status
 `;
 
 const POST_EXCERPT_LIMIT = 240;
@@ -105,18 +120,19 @@ type PreparedPostRecord = {
   mediaAlt: string | null;
   mediaType: "image" | null;
   mediaUrl: string | null;
+  subtopic: string | null;
   title: string;
   topic: PostTopic | null;
 };
 
 export class PostRepositoryError extends Error {
-  readonly fieldErrors?: Partial<Record<"content" | "intent" | "title" | "topic", string>>;
+  readonly fieldErrors?: Partial<Record<"content" | "intent" | "subtopic" | "title" | "topic", string>>;
   readonly status: number;
 
   constructor(
     message: string,
     options?: {
-      fieldErrors?: Partial<Record<"content" | "intent" | "title" | "topic", string>>;
+      fieldErrors?: Partial<Record<"content" | "intent" | "subtopic" | "title" | "topic", string>>;
       status?: number;
     },
   ) {
@@ -266,6 +282,19 @@ function normalizeFeedTopic(topic: ListPostsOptions["topic"]) {
   return normalizePostTopic(topic);
 }
 
+function normalizePostSubtopic(topic: PostTopic | null, subtopic: string | null | undefined) {
+  if (!topic) {
+    return null;
+  }
+
+  const availableSubtopics = POST_TOPIC_SUBTOPICS[topic] ?? [];
+  const normalizedSubtopic = subtopic?.trim() || DEFAULT_POST_SUBTOPIC;
+
+  return availableSubtopics.includes(normalizedSubtopic)
+    ? normalizedSubtopic
+    : DEFAULT_POST_SUBTOPIC;
+}
+
 function mapPost(row: PostRow, currentUser: SessionUser | null): Post {
   const author = {
     id: row.author_user_id,
@@ -273,21 +302,24 @@ function mapPost(row: PostRow, currentUser: SessionUser | null): Post {
     handle: row.author_nickname ? `@${row.author_nickname}` : `@${row.author_display_name}`,
     avatarUrl: row.author_avatar_url,
     role: row.author_role,
+    specialistStatus: row.author_specialist_status,
   };
   const isAuthor = Boolean(currentUser && row.author_user_id === currentUser.id);
   const topic = normalizePostTopic(row.topic);
+  const subtopic = normalizePostSubtopic(topic, row.subtopic);
 
   return {
     id: row.id,
     createdAt: new Date(row.created_at),
     intent: row.intent,
     topic: topic ?? undefined,
+    subtopic,
     author,
     activity: {
       publishedAtLabel: formatPublishedAtLabel(row.created_at),
       compactPublishedAtLabel: formatCompactPublishedAtLabel(row.created_at),
       lastCommentAtLabel:
-        row.comments_count > 0 ? "Есть ответы" : "Без ответов",
+        row.comments_count > 0 ? "Есть комментарии" : "Без комментариев",
       lastCommentAuthor:
         row.comments_count > 0
           ? "Пост обновляется в комментариях"
@@ -311,6 +343,7 @@ function mapPost(row: PostRow, currentUser: SessionUser | null): Post {
     editorState: {
       content: row.body_html,
       intent: row.intent,
+      subtopic,
       topic,
       title: row.title,
     },
@@ -328,10 +361,11 @@ function mapPost(row: PostRow, currentUser: SessionUser | null): Post {
 function assertValidInput(input: {
   content: string;
   intent: unknown;
+  subtopic?: unknown;
   title: string;
   topic: unknown;
 }) {
-  const fieldErrors: Partial<Record<"content" | "intent" | "title" | "topic", string>> = {};
+  const fieldErrors: Partial<Record<"content" | "intent" | "subtopic" | "title" | "topic", string>> = {};
   const title = input.title.trim();
 
   if (!title) {
@@ -359,11 +393,13 @@ function assertValidInput(input: {
 function preparePostRecord(input: {
   content: string;
   intent: PostIntent;
+  subtopic?: string | null;
   title: string;
   topic: PostTopic | null;
 }): PreparedPostRecord {
   assertValidInput(input);
 
+  const topic = normalizePostTopic(input.topic);
   const bodyHtml = sanitizeRichHtml(input.content, {
     allowEmbeddedMedia: true,
   });
@@ -376,8 +412,9 @@ function preparePostRecord(input: {
     mediaAlt: null,
     mediaType: mediaUrl ? "image" : null,
     mediaUrl,
+    subtopic: normalizePostSubtopic(topic, input.subtopic),
     title: input.title.trim(),
-    topic: normalizePostTopic(input.topic),
+    topic,
   };
 }
 
@@ -416,7 +453,13 @@ export async function listPostsPage(
       LEFT JOIN user_ignored_authors AS ignored_author
         ON ignored_author.user_id = $1
         AND ignored_author.ignored_user_id = posts.author_user_id
-      WHERE ignored_author.user_id IS NULL
+      LEFT JOIN content_reports AS viewer_report
+        ON viewer_report.object_type = 'post'
+        AND viewer_report.object_id = posts.id
+        AND viewer_report.reporter_user_id = $1
+      WHERE posts.status = 'published'
+        AND ignored_author.user_id IS NULL
+        AND viewer_report.id IS NULL
         AND ($2::text IS NULL OR posts.topic = $2)
         AND (
           $3::integer IS NULL
@@ -462,6 +505,7 @@ export async function listPostsPage(
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
+        users.specialist_status AS author_specialist_status,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked,
         CASE WHEN viewer_bookmark.post_id IS NULL THEN 0 ELSE 1 END AS viewer_bookmarked,
         CASE WHEN viewer_profile_favorite.post_id IS NULL THEN 0 ELSE 1 END AS viewer_profile_favorite,
@@ -484,7 +528,13 @@ export async function listPostsPage(
       LEFT JOIN user_ignored_authors AS ignored_author
         ON ignored_author.user_id = ?
         AND ignored_author.ignored_user_id = posts.author_user_id
-      WHERE ignored_author.user_id IS NULL
+      LEFT JOIN content_reports AS viewer_report
+        ON viewer_report.object_type = 'post'
+        AND viewer_report.object_id = posts.id
+        AND viewer_report.reporter_user_id = ?
+      WHERE posts.status = 'published'
+        AND ignored_author.user_id IS NULL
+        AND viewer_report.id IS NULL
         AND (? IS NULL OR posts.topic = ?)
         AND (
           ? IS NULL
@@ -506,6 +556,7 @@ export async function listPostsPage(
       LIMIT ?`,
     )
     .all(
+      currentUser?.id ?? null,
       currentUser?.id ?? null,
       currentUser?.id ?? null,
       currentUser?.id ?? null,
@@ -565,6 +616,7 @@ export async function listPostsByAuthorUserId(
         ON viewer_bookmark.post_id = posts.id
         AND viewer_bookmark.user_id = $2
       WHERE posts.author_user_id = $1
+        AND posts.status = 'published'
       ORDER BY posts.created_at DESC`,
       [authorUserId, currentUser?.id ?? null],
     );
@@ -580,6 +632,7 @@ export async function listPostsByAuthorUserId(
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
+        users.specialist_status AS author_specialist_status,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked,
         CASE WHEN viewer_bookmark.post_id IS NULL THEN 0 ELSE 1 END AS viewer_bookmarked,
         CASE WHEN viewer_profile_favorite.post_id IS NULL THEN 0 ELSE 1 END AS viewer_profile_favorite
@@ -596,6 +649,7 @@ export async function listPostsByAuthorUserId(
         ON viewer_bookmark.post_id = posts.id
         AND viewer_bookmark.user_id = ?
       WHERE posts.author_user_id = ?
+        AND posts.status = 'published'
       ORDER BY posts.created_at DESC`,
     )
     .all(currentUser?.id ?? null, currentUser?.id ?? null, currentUser?.id ?? null, authorUserId) as PostRow[];
@@ -631,6 +685,7 @@ export async function listProfileFavoritePostsByUserId(
         ON ignored_author.user_id = $2
         AND ignored_author.ignored_user_id = posts.author_user_id
       WHERE profile_favorite.user_id = $1
+        AND posts.status = 'published'
         AND ignored_author.user_id IS NULL
       ORDER BY profile_favorite.created_at DESC`,
       [profileUserId, currentUser?.id ?? null],
@@ -647,6 +702,7 @@ export async function listProfileFavoritePostsByUserId(
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
+        users.specialist_status AS author_specialist_status,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked,
         CASE WHEN viewer_bookmark.post_id IS NULL THEN 0 ELSE 1 END AS viewer_bookmarked,
         CASE WHEN viewer_profile_favorite.post_id IS NULL THEN 0 ELSE 1 END AS viewer_profile_favorite
@@ -667,6 +723,7 @@ export async function listProfileFavoritePostsByUserId(
         ON ignored_author.user_id = ?
         AND ignored_author.ignored_user_id = posts.author_user_id
       WHERE profile_favorite.user_id = ?
+        AND posts.status = 'published'
         AND ignored_author.user_id IS NULL
       ORDER BY profile_favorite.created_at DESC`,
     )
@@ -709,6 +766,7 @@ export async function listBookmarkedPostsByUserId(
         ON ignored_author.user_id = $2
         AND ignored_author.ignored_user_id = posts.author_user_id
       WHERE bookmark.user_id = $1
+        AND posts.status = 'published'
         AND ignored_author.user_id IS NULL
       ORDER BY bookmark.created_at DESC`,
       [userId, currentUser?.id ?? null],
@@ -725,6 +783,7 @@ export async function listBookmarkedPostsByUserId(
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
+        users.specialist_status AS author_specialist_status,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked,
         CASE WHEN viewer_bookmark.post_id IS NULL THEN 0 ELSE 1 END AS viewer_bookmarked,
         CASE WHEN viewer_profile_favorite.post_id IS NULL THEN 0 ELSE 1 END AS viewer_profile_favorite
@@ -745,6 +804,7 @@ export async function listBookmarkedPostsByUserId(
         ON ignored_author.user_id = ?
         AND ignored_author.ignored_user_id = posts.author_user_id
       WHERE bookmark.user_id = ?
+        AND posts.status = 'published'
         AND ignored_author.user_id IS NULL
       ORDER BY bookmark.created_at DESC`,
     )
@@ -760,6 +820,8 @@ export async function listBookmarkedPostsByUserId(
 }
 
 export async function findPostById(postId: string, currentUser: SessionUser | null) {
+  const canViewModeratedPost = canModerateContent(currentUser);
+
   if (isPostgresAuthEnabled()) {
     const row = readPostRow(
       await queryPgOne<PostRow>(
@@ -781,8 +843,13 @@ export async function findPostById(postId: string, currentUser: SessionUser | nu
           ON viewer_bookmark.post_id = posts.id
           AND viewer_bookmark.user_id = $2
          WHERE posts.id = $1
+           AND (
+             posts.status = 'published'
+             OR posts.author_user_id = $2
+             OR $3 = TRUE
+           )
          LIMIT 1`,
-        [postId, currentUser?.id ?? null],
+        [postId, currentUser?.id ?? null, canViewModeratedPost],
       ),
     );
 
@@ -797,6 +864,7 @@ export async function findPostById(postId: string, currentUser: SessionUser | nu
         users.nickname AS author_nickname,
         users.avatar_url AS author_avatar_url,
         users.role AS author_role,
+        users.specialist_status AS author_specialist_status,
         CASE WHEN viewer_reaction.id IS NULL THEN 0 ELSE 1 END AS viewer_liked,
         CASE WHEN viewer_bookmark.post_id IS NULL THEN 0 ELSE 1 END AS viewer_bookmarked,
         CASE WHEN viewer_profile_favorite.post_id IS NULL THEN 0 ELSE 1 END AS viewer_profile_favorite
@@ -813,9 +881,21 @@ export async function findPostById(postId: string, currentUser: SessionUser | nu
         ON viewer_bookmark.post_id = posts.id
         AND viewer_bookmark.user_id = ?
       WHERE posts.id = ?
+        AND (
+          posts.status = 'published'
+          OR posts.author_user_id = ?
+          OR ? = 1
+        )
       LIMIT 1`,
     )
-    .get(currentUser?.id ?? null, currentUser?.id ?? null, currentUser?.id ?? null, postId);
+    .get(
+      currentUser?.id ?? null,
+      currentUser?.id ?? null,
+      currentUser?.id ?? null,
+      postId,
+      currentUser?.id ?? null,
+      canViewModeratedPost ? 1 : 0,
+    );
 
   const row = readPostRow(result);
   return row ? mapPost(row, currentUser) : null;
@@ -836,6 +916,7 @@ export async function incrementPostViews(postId: string) {
 }
 
 export async function createPost(input: PostMutationInput) {
+  assertCanUsePostActivity(input.author, "Публикация постов для этого аккаунта недоступна.");
   const prepared = preparePostRecord(input);
   const id = randomUUID();
   const timestamp = new Date().toISOString();
@@ -848,6 +929,7 @@ export async function createPost(input: PostMutationInput) {
           author_user_id,
           intent,
           topic,
+          subtopic,
           title,
           body_html,
           excerpt,
@@ -857,12 +939,13 @@ export async function createPost(input: PostMutationInput) {
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           id,
           input.author.id,
           prepared.intent,
           prepared.topic,
+          prepared.subtopic,
           prepared.title,
           prepared.bodyHtml,
           prepared.excerpt,
@@ -893,6 +976,7 @@ export async function createPost(input: PostMutationInput) {
           author_user_id,
           intent,
           topic,
+          subtopic,
           title,
           body_html,
           excerpt,
@@ -902,13 +986,14 @@ export async function createPost(input: PostMutationInput) {
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
         input.author.id,
         prepared.intent,
         prepared.topic,
+        prepared.subtopic,
         prepared.title,
         prepared.bodyHtml,
         prepared.excerpt,
@@ -941,12 +1026,25 @@ export async function createPost(input: PostMutationInput) {
   return createdPost;
 }
 
-function assertCanSetPostLike(actor: SessionUser) {
+function assertCanUsePostActivity(actor: SessionUser, bannedMessage: string) {
   if (actor.isBanned) {
-    throw new PostRepositoryError("Лайки для этого аккаунта недоступны.", {
+    throw new PostRepositoryError(bannedMessage, {
       status: 403,
     });
   }
+
+  if (!canUsePublicActivity(actor)) {
+    throw new PostRepositoryError(
+      "Активность для специалистов доступна только после верификации.",
+      {
+        status: 403,
+      },
+    );
+  }
+}
+
+function assertCanSetPostLike(actor: SessionUser) {
+  assertCanUsePostActivity(actor, "Лайки для этого аккаунта недоступны.");
 }
 
 async function syncPostLikesCountInPostgres(
@@ -1070,11 +1168,10 @@ export async function setPostProfileFavorite(params: {
   favorited: boolean;
   postId: string;
 }) {
-  if (params.actor.isBanned) {
-    throw new PostRepositoryError("Добавление в профиль для этого аккаунта недоступно.", {
-      status: 403,
-    });
-  }
+  assertCanUsePostActivity(
+    params.actor,
+    "Добавление в профиль для этого аккаунта недоступно.",
+  );
 
   const existingPost = await findPostById(params.postId, params.actor);
 
@@ -1150,11 +1247,7 @@ export async function setPostBookmark(params: {
   bookmarked: boolean;
   postId: string;
 }) {
-  if (params.actor.isBanned) {
-    throw new PostRepositoryError("Закладки для этого аккаунта недоступны.", {
-      status: 403,
-    });
-  }
+  assertCanUsePostActivity(params.actor, "Закладки для этого аккаунта недоступны.");
 
   const existingPost = await findPostById(params.postId, params.actor);
 
@@ -1226,6 +1319,8 @@ export async function setPostBookmark(params: {
 }
 
 export async function updatePost(postId: string, input: PostMutationInput) {
+  assertCanUsePostActivity(input.author, "Редактирование постов для этого аккаунта недоступно.");
+
   const existingPost = await findPostById(postId, input.author);
 
   if (!existingPost) {
@@ -1250,17 +1345,19 @@ export async function updatePost(postId: string, input: PostMutationInput) {
         SET
           intent = $1,
           topic = $2,
-          title = $3,
-          body_html = $4,
-          excerpt = $5,
-          media_type = $6,
-          media_url = $7,
-          media_alt = $8,
-          updated_at = $9
-        WHERE id = $10`,
+          subtopic = $3,
+          title = $4,
+          body_html = $5,
+          excerpt = $6,
+          media_type = $7,
+          media_url = $8,
+          media_alt = $9,
+          updated_at = $10
+        WHERE id = $11`,
         [
           prepared.intent,
           prepared.topic,
+          prepared.subtopic,
           prepared.title,
           prepared.bodyHtml,
           prepared.excerpt,
@@ -1280,6 +1377,7 @@ export async function updatePost(postId: string, input: PostMutationInput) {
           SET
             intent = ?,
             topic = ?,
+            subtopic = ?,
             title = ?,
             body_html = ?,
             excerpt = ?,
@@ -1292,6 +1390,100 @@ export async function updatePost(postId: string, input: PostMutationInput) {
       .run(
         prepared.intent,
         prepared.topic,
+        prepared.subtopic,
+        prepared.title,
+        prepared.bodyHtml,
+        prepared.excerpt,
+        prepared.mediaType,
+        prepared.mediaUrl,
+        prepared.mediaAlt,
+        updatedAt,
+        postId,
+      );
+  });
+
+  const updatedPost = await findPostById(postId, input.author);
+
+  if (!updatedPost) {
+    throw new PostRepositoryError("Не удалось загрузить обновлённый пост.", {
+      status: 500,
+    });
+  }
+
+  return updatedPost;
+}
+
+export async function updatePostAsModerator(postId: string, input: PostMutationInput) {
+  if (!canModerateContent(input.author)) {
+    throw new PostRepositoryError("Недостаточно прав для редактирования постов.", {
+      status: 403,
+    });
+  }
+
+  const existingPost = await findPostById(postId, input.author);
+
+  if (!existingPost) {
+    throw new PostRepositoryError("Пост не найден.", {
+      status: 404,
+    });
+  }
+
+  const prepared = preparePostRecord(input);
+  const updatedAt = new Date().toISOString();
+
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      await unitOfWork.transaction.query(
+        `UPDATE posts
+        SET
+          intent = $1,
+          topic = $2,
+          subtopic = $3,
+          title = $4,
+          body_html = $5,
+          excerpt = $6,
+          media_type = $7,
+          media_url = $8,
+          media_alt = $9,
+          updated_at = $10
+        WHERE id = $11`,
+        [
+          prepared.intent,
+          prepared.topic,
+          prepared.subtopic,
+          prepared.title,
+          prepared.bodyHtml,
+          prepared.excerpt,
+          prepared.mediaType,
+          prepared.mediaUrl,
+          prepared.mediaAlt,
+          updatedAt,
+          postId,
+        ],
+      );
+      return;
+    }
+
+    unitOfWork.database
+      .prepare(
+        `UPDATE posts
+          SET
+            intent = ?,
+            topic = ?,
+            subtopic = ?,
+            title = ?,
+            body_html = ?,
+            excerpt = ?,
+            media_type = ?,
+            media_url = ?,
+            media_alt = ?,
+            updated_at = ?
+          WHERE id = ?`,
+      )
+      .run(
+        prepared.intent,
+        prepared.topic,
+        prepared.subtopic,
         prepared.title,
         prepared.bodyHtml,
         prepared.excerpt,
@@ -1315,6 +1507,8 @@ export async function updatePost(postId: string, input: PostMutationInput) {
 }
 
 export async function deletePost(postId: string, actor: SessionUser) {
+  assertCanUsePostActivity(actor, "Удаление постов для этого аккаунта недоступно.");
+
   const existingPost = await findPostById(postId, actor);
 
   if (!existingPost) {
@@ -1329,21 +1523,127 @@ export async function deletePost(postId: string, actor: SessionUser) {
     });
   }
 
+  const timestamp = new Date().toISOString();
+
   await runStorageUnitOfWork(async (unitOfWork) => {
     if (unitOfWork.kind === "postgres") {
       await unitOfWork.transaction.query(
-        `DELETE FROM posts
-         WHERE id = $1`,
-        [postId],
+        `UPDATE posts
+         SET status = 'deleted',
+             hidden_reason = NULL,
+             hidden_at = NULL,
+             deleted_at = $1,
+             updated_at = $1
+         WHERE id = $2`,
+        [timestamp, postId],
       );
       return;
     }
 
     unitOfWork.database
       .prepare(
-        `DELETE FROM posts
+        `UPDATE posts
+         SET status = 'deleted',
+             hidden_reason = NULL,
+             hidden_at = NULL,
+             deleted_at = ?,
+             updated_at = ?
          WHERE id = ?`,
       )
-      .run(postId);
+      .run(timestamp, timestamp, postId);
+  });
+}
+
+export async function moderatePost(params: {
+  action: "delete" | "hide" | "restore";
+  actor: SessionUser;
+  postId: string;
+  reason?: string | null;
+}) {
+  if (!canModerateContent(params.actor)) {
+    throw new PostRepositoryError("Недостаточно прав для модерации постов.", {
+      status: 403,
+    });
+  }
+
+  const existingPost = await findPostById(params.postId, params.actor);
+
+  if (!existingPost) {
+    throw new PostRepositoryError("Пост не найден.", {
+      status: 404,
+    });
+  }
+
+  const timestamp = new Date().toISOString();
+
+  await runStorageUnitOfWork(async (unitOfWork) => {
+    if (unitOfWork.kind === "postgres") {
+      if (params.action === "restore") {
+        await unitOfWork.transaction.query(
+          `UPDATE posts
+           SET status = 'published',
+               hidden_reason = NULL,
+               hidden_at = NULL,
+               deleted_at = NULL,
+               updated_at = $1
+           WHERE id = $2`,
+          [timestamp, params.postId],
+        );
+        return;
+      }
+
+      await unitOfWork.transaction.query(
+        `UPDATE posts
+         SET status = $1,
+             hidden_reason = $2,
+             hidden_at = CASE WHEN $1 = 'hidden' THEN $3::timestamptz ELSE hidden_at END,
+             deleted_at = CASE WHEN $1 = 'deleted' THEN $3::timestamptz ELSE deleted_at END,
+             updated_at = $3
+         WHERE id = $4`,
+        [
+          params.action === "delete" ? "deleted" : "hidden",
+          params.reason?.trim() || null,
+          timestamp,
+          params.postId,
+        ],
+      );
+      return;
+    }
+
+    if (params.action === "restore") {
+      unitOfWork.database
+        .prepare(
+          `UPDATE posts
+           SET status = 'published',
+               hidden_reason = NULL,
+               hidden_at = NULL,
+               deleted_at = NULL,
+               updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(timestamp, params.postId);
+      return;
+    }
+
+    unitOfWork.database
+      .prepare(
+        `UPDATE posts
+         SET status = ?,
+             hidden_reason = ?,
+             hidden_at = CASE WHEN ? = 'hidden' THEN ? ELSE hidden_at END,
+             deleted_at = CASE WHEN ? = 'deleted' THEN ? ELSE deleted_at END,
+             updated_at = ?
+         WHERE id = ?`,
+      )
+      .run(
+        params.action === "delete" ? "deleted" : "hidden",
+        params.reason?.trim() || null,
+        params.action === "delete" ? "deleted" : "hidden",
+        timestamp,
+        params.action === "delete" ? "deleted" : "hidden",
+        timestamp,
+        timestamp,
+        params.postId,
+      );
   });
 }

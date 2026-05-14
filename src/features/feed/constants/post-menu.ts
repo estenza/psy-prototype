@@ -1,3 +1,5 @@
+import type { ContentReportReason } from "@/features/reports/types";
+
 export type PostMenuActionId =
   | "edit"
   | "delete"
@@ -7,6 +9,10 @@ export type PostMenuActionId =
   | "profile-favorite"
   | "hide"
   | "report";
+
+export type PostMenuActionPayload = {
+  reason?: ContentReportReason;
+};
 
 export const OWN_POST_MENU_ACTIONS = [
   {
@@ -54,7 +60,7 @@ export const COMMUNITY_POST_MENU_ACTIONS = [
   {
     id: "report",
     icon: "flag",
-    label: "Пожаловаться",
+    label: "Пожаловаться на пост",
   },
 ] as const satisfies ReadonlyArray<{
   icon: "bell" | "bookmark" | "eye-off" | "flag" | "ignore" | "person-plus";

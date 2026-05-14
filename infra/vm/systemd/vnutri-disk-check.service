@@ -1,0 +1,9 @@
+[Unit]
+Description=vnutri disk usage check
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/vnutri/app
+ExecStart=/opt/vnutri/app/scripts/server/check-disk.sh

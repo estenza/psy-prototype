@@ -96,7 +96,6 @@ export function CommentsComposer({
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="type-caption-medium !rounded-full !px-4 !py-2 font-semibold"
                     onClick={onCancel}
                     disabled={submitting}
                   >
@@ -108,11 +107,11 @@ export function CommentsComposer({
                   <Button
                     variant="primary"
                     size="sm"
-                    className="!rounded-full !px-4 !py-2 !text-[14px] !leading-5 font-semibold"
                     onClick={handleSubmit}
                     disabled={!canSubmit}
+                    isLoading={submitting}
                   >
-                    {submitting ? "Отправка..." : submitLabel}
+                    {submitLabel}
                   </Button>
                 ) : null}
               </>

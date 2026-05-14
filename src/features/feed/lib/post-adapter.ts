@@ -28,6 +28,7 @@ export function mapApiPostToPost(record: ApiPostRecord): Post {
       handle: record.author.username,
       avatarUrl: record.author.avatar_url,
       role: record.author.role ?? null,
+      specialistStatus: record.author.specialist_status ?? null,
     },
     activity: {
       publishedAtLabel: formatPostPublishedAtLabel(record.created_at_iso),

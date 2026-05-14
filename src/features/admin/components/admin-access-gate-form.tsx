@@ -68,7 +68,7 @@ export function AdminAccessGateForm({
         />
 
         {formError ? (
-          <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[13px] leading-5">
+          <div className="feedback-critical-surface rounded-2xl px-4 py-3 text-[14px] leading-5">
             {formError}
           </div>
         ) : null}
@@ -76,11 +76,12 @@ export function AdminAccessGateForm({
         <Button
           type="submit"
           variant="primary"
-          size="lg"
-          className="mt-2 w-full !rounded-full"
+          size="md"
+          className="mt-2 w-full"
           disabled={isSubmitting}
+          isLoading={isSubmitting}
         >
-          {isSubmitting ? "Секунду..." : "Продолжить"}
+          Продолжить
         </Button>
       </form>
     </div>

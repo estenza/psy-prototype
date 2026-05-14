@@ -1,9 +1,8 @@
 "use client";
 
-import { Dropdown, Label, toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { DropdownPopover } from "@/components/ui/dropdown-popover";
 import {
   FlagIcon,
   IgnoreAuthorIcon,
@@ -11,6 +10,7 @@ import {
   TelegramIcon,
 } from "@/components/ui/icons";
 import { MoreMenuButton } from "@/components/ui/more-menu-button";
+import { ResponsiveActionMenu } from "@/components/ui/responsive-action-menu";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
 import {
   requestIgnoreAuthor,
@@ -128,35 +128,21 @@ export function ProfileMoreMenu({
 
   return (
     <div className="pointer-events-auto relative z-30 shrink-0">
-      <Dropdown.Root isOpen={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <MoreMenuButton ariaLabel="Еще" isTooltipDisabled={isMenuOpen} />
-
-        <DropdownPopover placement="bottom end" className="min-w-[220px]">
-          <Dropdown.Menu
-            aria-label="Меню профиля"
-            selectionMode="none"
-            className="dropdown-menu-default"
-            onAction={(key) => {
-              setIsMenuOpen(false);
-              const item = items.find((entry) => entry.id === key);
-              void item?.onSelect();
-            }}
-          >
-            {items.map((item) => (
-              <Dropdown.Item key={item.id} id={item.id} textValue={item.label}>
-                <div className="flex w-full items-center gap-3">
-                  <span className="inline-flex h-5 w-5 flex-none items-center justify-center text-[var(--label-secondary)]">
-                    {item.icon}
-                  </span>
-                  <Label className="min-w-0 flex-1 truncate">
-                    {item.label}
-                  </Label>
-                </div>
-              </Dropdown.Item>
-            ))}
-          </Dropdown.Menu>
-        </DropdownPopover>
-      </Dropdown.Root>
+      <ResponsiveActionMenu
+        ariaLabel="Меню профиля"
+        isOpen={isMenuOpen}
+        onOpenChange={setIsMenuOpen}
+        items={items}
+        popoverClassName="min-w-[220px]"
+        renderTrigger={({ isOpen, isMobile, open }) => (
+          <MoreMenuButton
+            ariaLabel="Еще"
+            aria-expanded={isOpen}
+            isTooltipDisabled={isOpen}
+            onPress={isMobile ? open : undefined}
+          />
+        )}
+      />
     </div>
   );
 }

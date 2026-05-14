@@ -4,11 +4,13 @@ export type NavigationItemKey =
   | "profile"
   | "bookmarks"
   | "drafts"
-  | "settings";
+  | "settings"
+  | "for-psychologists";
 
 export type NavigationItem = {
   href: string;
   name: string;
   key: NavigationItemKey;
+  guestOnly?: boolean;
   requiresAuth?: boolean;
 };

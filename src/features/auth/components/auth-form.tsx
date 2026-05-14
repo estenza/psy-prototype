@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
+import { CloseIcon } from "@/components/ui/icons";
 import { AuthField } from "@/features/auth/components/auth-field";
 import { buildPostAuthRedirectPath } from "@/features/auth/lib/profile";
 import type { AuthErrorResponse, AuthSuccessResponse } from "@/features/auth/types";
@@ -115,19 +117,22 @@ export function AuthForm({
   }
 
   return (
-    <div className="modal-surface surface-elevated relative w-full max-w-[460px] px-5 py-6 min-[481px]:px-7">
+    <div className="modal-surface surface-elevated relative w-full max-w-[460px] px-5 py-6 min-[480px]:px-7">
       <Link
         href={resolvedCloseHref}
         aria-label="Закрыть"
-        className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-[var(--label-secondary)] hover:bg-[var(--fill-tertiary)] hover:text-[var(--label-primary)]"
+        className={buttonClassName({
+          className: "absolute right-5 top-5 text-[var(--label-secondary)] hover:text-[var(--label-primary)]",
+          isIconOnly: true,
+          size: "sm",
+          variant: "quaternary",
+        })}
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-        </svg>
+        <CloseIcon />
       </Link>
 
       <div className="flex flex-col gap-2">
-        <h1 className="type-page-title text-label-primary">
+        <h1 className="type-h1 font-bold text-label-primary">
           {heading}
         </h1>
         <p className="type-body-relaxed text-label-tertiary">
@@ -183,11 +188,12 @@ export function AuthForm({
         <Button
           type="submit"
           variant="primary"
-          size="lg"
-          className="mt-2 w-full !rounded-full"
+          size="md"
+          className="mt-2 w-full"
           disabled={isSubmitting}
+          isLoading={isSubmitting}
         >
-          {isSubmitting ? "Секунду..." : submitLabel}
+          {submitLabel}
         </Button>
       </form>
 

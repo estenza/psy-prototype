@@ -3,6 +3,7 @@
 import { Input } from "@heroui/react";
 import { forwardRef } from "react";
 import type { InputHTMLAttributes } from "react";
+import { fieldControlInputClassName } from "@/components/ui/field-control";
 
 type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
   invalid?: boolean;
@@ -19,7 +20,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         <Input
           ref={ref}
           data-invalid={invalid ? "true" : undefined}
-          className={`w-full rounded-[22px] px-5 py-4 ${className}`.trim()}
+          className={`${fieldControlInputClassName} w-full ${className}`.trim()}
           {...props}
         />
       </div>

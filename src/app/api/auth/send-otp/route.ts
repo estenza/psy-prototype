@@ -7,6 +7,7 @@ import type { AuthMessageResponse } from "@/features/auth/types";
 import {
   createOtpCode,
   deleteExpiredOtpCodes,
+  findUserByEmail,
 } from "@/features/auth/lib/auth-repository";
 import {
   buildOtpExpiresAt,
@@ -38,6 +39,20 @@ export async function POST(request: NextRequest) {
 
     if (purpose !== "sign-in" && purpose !== "sign-up") {
       throw new AuthServiceError({ message: "Некорректный запрос.", status: 400 });
+    }
+
+    const existingUser = await findUserByEmail(email);
+
+    if (existingUser?.role === "specialist" && existingUser.specialistStatus !== "verified") {
+      throw new AuthServiceError({
+        message: existingUser.specialistStatus === "pending"
+          ? "Заявка психолога пока на проверке. Мы пришлем письмо с итогом на указанный email."
+          : "Вход для этого email психолога сейчас недоступен.",
+        status: 403,
+        fieldErrors: {
+          email: "Этот email пока не подтвержден для входа психолога.",
+        },
+      });
     }
 
     await deleteExpiredOtpCodes();

@@ -83,7 +83,7 @@ export const TOPIC_FORMAT_META: Record<
   },
   specialists: {
     label: "Взгляд психологов",
-    description: "Публичная тема с акцентом на ответы специалистов",
+    description: "Публичная тема с акцентом на комментарии специалистов",
     legacyIntent: "discussion",
     fields: [
       {

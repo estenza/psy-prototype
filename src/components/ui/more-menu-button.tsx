@@ -1,24 +1,28 @@
 "use client";
 
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import { HoverTooltip } from "@/components/ui/hover-tooltip";
 import { MoreHorizontalIcon } from "@/components/ui/icons";
 
 type MoreMenuButtonProps = {
   ariaLabel?: string;
+  "aria-expanded"?: boolean;
   className?: string;
   isTooltipDisabled?: boolean;
+  onPress?: () => void;
   tooltipLabel?: string;
 };
 
 export function MoreMenuButton({
   ariaLabel = "Еще",
+  "aria-expanded": ariaExpanded,
   className = "",
   isTooltipDisabled = false,
+  onPress,
   tooltipLabel = "Еще",
 }: MoreMenuButtonProps) {
   const defaultClassName =
-    "interactive-tertiary button--blur-no-focus button--icon-only more-menu-button relative !inline-flex h-9 w-9 min-w-9 rounded-full px-0 text-[var(--label-secondary)]";
+    "button--blur-no-focus more-menu-button relative text-[var(--label-secondary)]";
 
   return (
     <HoverTooltip
@@ -28,10 +32,12 @@ export function MoreMenuButton({
     >
       <Button
         isIconOnly
-        variant="ghost"
+        variant="quaternary"
         size="sm"
         aria-label={ariaLabel}
+        aria-expanded={ariaExpanded}
         className={`${defaultClassName} ${className}`.trim()}
+        onPress={onPress}
       >
         <MoreHorizontalIcon aria-hidden />
       </Button>

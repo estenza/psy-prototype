@@ -1,7 +1,5 @@
 "use client";
 
-import { getAdminSpecialtyTone } from "@/features/admin/lib/admin-specialties";
-
 type AdminSpecialtyTagsProps = {
   specialties: string[];
 };
@@ -16,7 +14,7 @@ export function AdminSpecialtyTags({ specialties }: AdminSpecialtyTagsProps) {
       {specialties.map((specialty) => (
         <span
           key={specialty}
-          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium ${getAdminSpecialtyTone(specialty)}`.trim()}
+          className="inline-flex items-center rounded-full bg-[var(--color-accent-soft)] px-2.5 py-1 text-[14px] font-normal leading-5 text-[var(--accent-primary)]"
         >
           {specialty}
         </span>

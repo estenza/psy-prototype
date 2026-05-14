@@ -4,6 +4,7 @@ import { Modal, Slider } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button-styles";
 import {
   DEFAULT_IMAGE_CROP_VALUE,
   type ImageCropValue,
@@ -85,7 +86,12 @@ export function ImageCropModal({
       >
         <button
           type="button"
-          className="interactive-tertiary absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--label-primary)] text-lg"
+          className={buttonClassName({
+            className: "absolute right-3 top-3 text-lg text-[var(--label-primary)]",
+            isIconOnly: true,
+            size: "sm",
+            variant: "quaternary",
+          })}
           aria-label="Закрыть"
           onClick={onClose}
         >
@@ -159,7 +165,6 @@ export function ImageCropModal({
             <Button
               type="button"
               variant="primary"
-              className="!rounded-full !px-5"
               onClick={() => {
                 onApply({
                   croppedAreaPixels,

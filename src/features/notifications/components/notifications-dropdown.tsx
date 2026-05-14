@@ -19,10 +19,10 @@ type NotificationsResponse = {
 
 const circularControlClassName =
   buttonClassName({
-    className:
-      "button--icon-only relative h-10 w-10 flex-none px-0 text-[var(--label-primary)]",
-    size: "lg",
-    variant: "tertiary",
+    className: "button--icon-only relative flex-none text-[var(--label-primary)]",
+    isIconOnly: true,
+    size: "sm",
+    variant: "quaternary",
   });
 
 export function NotificationsDropdown({
@@ -125,7 +125,7 @@ export function NotificationsDropdown({
           <Badge
             size="sm"
             variant="primary"
-            className="pointer-events-none absolute top-2 right-2 min-h-[18px] min-w-[18px] select-none border-0 bg-[var(--accent-primary)] px-1 text-[11px] font-semibold leading-none text-white shadow-none"
+            className="pointer-events-none absolute top-2 right-2 min-h-[18px] min-w-[18px] select-none border-0 bg-[var(--accent-primary)] px-1 text-[12px] font-semibold leading-none text-white shadow-none"
           >
             {unreadCount > 99 ? "99+" : unreadCount}
           </Badge>
@@ -135,7 +135,7 @@ export function NotificationsDropdown({
       <DropdownPopover placement="bottom end" className="w-[min(380px,calc(100vw-24px))] overflow-hidden p-0">
         <section aria-label="Уведомления" className="max-h-[min(560px,calc(100svh-96px))] overflow-y-auto">
           <header className="sticky top-0 z-10 surface-elevated border-b border-[var(--separator)] px-4 py-3">
-            <h2 className="text-[16px] font-semibold text-[var(--label-primary)]">
+            <h2 className="type-h2 font-semibold text-[var(--label-primary)]">
               Уведомления
             </h2>
           </header>
@@ -162,7 +162,7 @@ export function NotificationsDropdown({
                       {notification.title}
                     </span>
                     {notification.body ? (
-                      <span className="mt-0.5 block truncate text-[13px] leading-5 text-[var(--label-secondary)]">
+                      <span className="mt-0.5 block truncate text-[14px] leading-5 text-[var(--label-secondary)]">
                         {notification.body}
                       </span>
                     ) : null}
@@ -178,14 +178,14 @@ export function NotificationsDropdown({
               <p className="text-[14px] font-medium text-[var(--label-primary)]">
                 Пока нет уведомлений
               </p>
-              <p className="mt-1 text-[13px] leading-5 text-[var(--label-secondary)]">
-                Ответы, подписки и важные сообщения появятся здесь.
+              <p className="mt-1 text-[14px] leading-5 text-[var(--label-secondary)]">
+                Комментарии, подписки и важные сообщения появятся здесь.
               </p>
             </div>
           )}
 
           {isLoading && notifications.length === 0 ? (
-            <div className="px-4 pb-4 text-center text-[13px] text-[var(--label-tertiary)]">
+            <div className="px-4 pb-4 text-center text-[14px] text-[var(--label-tertiary)]">
               Загружаем...
             </div>
           ) : null}

@@ -511,7 +511,7 @@ export async function createCommentNotifications(params: {
       await notify(post.author_user_id, {
         body: post.title,
         dedupeKey: `post-reply:${params.commentId}`,
-        title: `Новый ответ от ${actorHandle}`,
+        title: `Новый комментарий от ${actorHandle}`,
         type: "post_reply",
       });
     }
@@ -527,7 +527,7 @@ export async function createCommentNotifications(params: {
         await notify(parentComment.author_user_id, {
           body: post.title,
           dedupeKey: `direct-reply:${params.commentId}`,
-          title: `Вам ответил ${actorHandle}`,
+          title: `Новый комментарий от ${actorHandle}`,
           type: "direct_reply",
         });
       }
@@ -562,7 +562,7 @@ export async function createCommentNotifications(params: {
       notify(recipient.user_id, {
         body: post.title,
         dedupeKey: `followed-post-reply:${params.commentId}`,
-        title: `Новый ответ от ${actorHandle}`,
+        title: `Новый комментарий от ${actorHandle}`,
         type: "followed_post_reply",
       }),
     ),

@@ -23,8 +23,16 @@ export function canDeleteOwnComment(
   return canModerateContent(actor) || isOwner(actor, ownerUserId);
 }
 
-export function canReplyAsSpecialist(actor: SessionUser | null) {
+export function isVerifiedSpecialist(actor: SessionUser | null | undefined) {
   return actor?.role === "specialist" && actor.specialistStatus === "verified";
+}
+
+export function canUsePublicActivity(actor: SessionUser | null | undefined) {
+  return actor?.role !== "specialist" || isVerifiedSpecialist(actor);
+}
+
+export function canReplyAsSpecialist(actor: SessionUser | null) {
+  return isVerifiedSpecialist(actor);
 }
 
 export const canReplyAsPsychologist = canReplyAsSpecialist;

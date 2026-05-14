@@ -2,12 +2,19 @@
 
 import { CardPostItem } from "@/features/feed/components/card-post-item";
 import { CompactPostItem } from "@/features/feed/components/compact-post-item";
-import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
+import type {
+  PostMenuActionId,
+  PostMenuActionPayload,
+} from "@/features/feed/constants/post-menu";
 import { usePostViewTracker } from "@/features/feed/hooks/use-post-view-tracker";
 import type { Post, ViewMode } from "@/features/feed/types";
 
 type PostFeedItemProps = {
-  onPostMenuAction: (actionId: PostMenuActionId, postId: Post["id"]) => Promise<void> | void;
+  onPostMenuAction: (
+    actionId: PostMenuActionId,
+    postId: Post["id"],
+    payload?: PostMenuActionPayload,
+  ) => Promise<void> | void;
   post: Post;
   viewMode: ViewMode;
   onToggleBookmark: (postId: Post["id"]) => void;

@@ -9,6 +9,7 @@ export const navItems: readonly NavigationItem[] = [
   { name: "Закладки", key: "bookmarks", href: "/bookmarks", requiresAuth: true },
   { name: "Черновики", key: "drafts", href: "/drafts", requiresAuth: true },
   { name: "Настройки", key: "settings", href: "/settings/account", requiresAuth: true },
+  { name: "Специалистам", key: "for-psychologists", href: "/for-psychologists", guestOnly: true },
 ] as const;
 
 export function isNavigationItemCurrent(

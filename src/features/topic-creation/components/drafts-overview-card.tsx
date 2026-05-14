@@ -27,7 +27,7 @@ export function DraftsOverviewCard() {
   return (
     <section className="surface-elevated rounded-[28px] p-6">
       <div className="flex flex-col gap-3">
-        <h2 className="text-[18px] font-semibold text-[var(--label-primary)]">
+        <h2 className="type-h2 font-semibold text-[var(--label-primary)]">
           Локальные черновики
         </h2>
         <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
@@ -41,7 +41,7 @@ export function DraftsOverviewCard() {
             <div className="text-[16px] font-semibold text-[var(--label-primary)]">
               {draftTitle}
             </div>
-            <div className="mt-1 text-[13px] leading-5 text-[var(--label-secondary)]">
+            <div className="mt-1 text-[14px] leading-5 text-[var(--label-secondary)]">
               {formatDraftTimeLabel(draft?.updatedAt ?? null)}
             </div>
           </>
@@ -50,7 +50,7 @@ export function DraftsOverviewCard() {
             <div className="text-[16px] font-semibold text-[var(--label-primary)]">
               Сохранённых черновиков пока нет
             </div>
-            <div className="mt-1 text-[13px] leading-5 text-[var(--label-secondary)]">
+            <div className="mt-1 text-[14px] leading-5 text-[var(--label-secondary)]">
               Как только вы начнёте писать пост и закроете редактор, здесь появится быстрый доступ к восстановлению.
             </div>
           </>

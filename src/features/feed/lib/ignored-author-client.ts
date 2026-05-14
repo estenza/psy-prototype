@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import type { Post } from "@/features/feed/types";
 
 type RouteErrorResponse = {

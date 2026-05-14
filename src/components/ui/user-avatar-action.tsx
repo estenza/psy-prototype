@@ -1,5 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import type { MouseEventHandler } from "react";
+import {
+  AuthorProfilePopover,
+  type AuthorProfilePopoverUser,
+} from "@/components/ui/author-profile-popover";
 import { UserAvatar } from "@/features/auth/components/user-avatar";
 
 type UserAvatarActionProps = {
@@ -14,6 +20,7 @@ type UserAvatarActionProps = {
   ariaLabel?: string;
   className?: string;
   interactive?: boolean;
+  profileCard?: AuthorProfilePopoverUser | null;
 };
 
 const interactiveAvatarBaseClassName = [
@@ -35,6 +42,7 @@ export function UserAvatarAction({
   ariaLabel,
   className = "",
   interactive = true,
+  profileCard = null,
 }: UserAvatarActionProps) {
   const interactiveAvatarClassName = `${interactiveAvatarBaseClassName} ${
     size === "header" ? "active:scale-[0.88]" : "active:scale-[0.96]"
@@ -50,6 +58,18 @@ export function UserAvatarAction({
       size={size}
     />
   );
+
+  if (profileCard) {
+    return (
+      <AuthorProfilePopover
+        ariaLabel={ariaLabel}
+        triggerClassName={resolvedClassName}
+        user={profileCard}
+      >
+        {avatarNode}
+      </AuthorProfilePopover>
+    );
+  }
 
   if (href) {
     return (

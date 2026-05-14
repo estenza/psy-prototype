@@ -108,11 +108,11 @@ export function DesktopAppShell({
   const shellContent = (
     <div
       data-testid="mainRailWrapper"
-      className={`app-shell-main-rail ${mainRailClassName} min-[481px]:flex min-[481px]:flex-1 min-[481px]:flex-col`.trim()}
+      className={`app-shell-main-rail ${mainRailClassName} min-[480px]:flex min-[480px]:flex-1 min-[480px]:flex-col`.trim()}
     >
       <div
         data-testid="mainRailInner"
-        className="app-shell-main-rail-inner w-full min-w-0 min-[481px]:flex min-[481px]:flex-1"
+        className="app-shell-main-rail-inner w-full min-w-0 min-[480px]:flex min-[480px]:flex-1"
       >
         <div
           data-testid="mainColumnsRow"
@@ -171,7 +171,7 @@ export function DesktopAppShell({
   }, []);
 
   return (
-    <div className="app-responsive-shell w-full min-w-0 min-[481px]:flex min-[481px]:h-[calc(100dvh-var(--app-header-height))] min-[481px]:overflow-x-clip min-[481px]:overflow-y-visible">
+    <div className="app-responsive-shell w-full min-w-0 min-[480px]:flex min-[480px]:h-[calc(100dvh-var(--app-header-height))] min-[480px]:overflow-x-clip min-[480px]:overflow-y-visible">
       {showMenuColumn ? (
         <MenuColumn
           items={navItems}
@@ -186,9 +186,9 @@ export function DesktopAppShell({
         ref={mainRef}
         className={`app-shell-main min-w-0 ${
           fitCenterToContent
-            ? "min-[481px]:flex min-[481px]:flex-col min-[481px]:items-center"
+            ? "min-[480px]:flex min-[480px]:flex-col min-[480px]:items-center"
             : ""
-        } min-[481px]:flex min-[481px]:h-full min-[481px]:min-h-0 min-[481px]:grow min-[481px]:basis-auto min-[481px]:flex-shrink min-[481px]:flex-col min-[481px]:items-start min-[481px]:overflow-x-clip min-[481px]:overflow-y-auto`.trim()}
+        } min-[480px]:flex min-[480px]:h-full min-[480px]:min-h-0 min-[480px]:grow min-[480px]:basis-auto min-[480px]:flex-shrink min-[480px]:flex-col min-[480px]:items-start min-[480px]:overflow-x-clip min-[480px]:overflow-y-auto`.trim()}
       >
         {/* X-like layout: main itself grows to the right edge, and a narrower rail lives inside it. */}
         <MobilePullToRefreshShell>{shellContent}</MobilePullToRefreshShell>

@@ -13,6 +13,7 @@ const RESERVED_PROFILE_PATH_SEGMENTS = new Set([
   "drafts",
   "favicon.ico",
   "forgot-password",
+  "for-psychologists",
   "profile",
   "reset-password",
   "robots.txt",

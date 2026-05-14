@@ -34,6 +34,7 @@ type AppHeaderProps = {
 };
 
 const desktopHeaderSearchInputId = "app-header-search-input-desktop";
+const desktopHeaderSearchClearButtonId = "app-header-search-clear-desktop";
 
 type CreateTopicButtonProps = {
   ariaLabel?: string;
@@ -61,6 +62,8 @@ function CreateTopicButton({
       aria-label={ariaLabel}
       className={buttonClassName({
         className: `flex-none gap-2 whitespace-nowrap ${className}`.trim(),
+        isIconOnly: iconOnly,
+        size: iconOnly ? "sm" : "md",
         variant,
       })}
     >
@@ -146,7 +149,7 @@ function MobileTabBar({
   }
 
   return (
-    <div className="app-mobile-tabbar-bar z-[80] min-[481px]:hidden">
+    <div className="app-mobile-tabbar-bar z-[80] min-[480px]:hidden">
       <nav
         aria-label="Основная навигация"
         className="app-mobile-tabbar"
@@ -235,13 +238,13 @@ export function AppMobileTabBar() {
 
 function getMobilePanelItemClassName(isActive = false) {
   return buttonClassName({
-    className: `app-menu-item min-h-14 h-auto w-full justify-start gap-3 px-4 py-3 text-left text-[16px] ${
+    className: `app-menu-item w-full justify-start gap-3 text-left ${
       isActive
         ? "app-menu-item--active font-semibold text-[var(--label-primary)]"
         : "app-menu-item--inactive font-medium text-[var(--label-tertiary)]"
     }`,
     size: "lg",
-    variant: "tertiary",
+    variant: "quaternary",
   });
 }
 
@@ -277,7 +280,11 @@ export function AppHeader({
   const shouldShowSearch = showSearch && !isAdminHeader;
   const shouldShowMobileHeader = pathname === "/";
   const mobileMenuItems = navItems.filter((item) => (
-    item.key !== "forum" && item.key !== "drafts" && item.key !== "profile"
+    item.key !== "forum"
+    && item.key !== "drafts"
+    && item.key !== "profile"
+    && (!item.guestOnly || !user)
+    && (item.key !== "settings" || user)
   ));
 
   useEffect(() => {
@@ -316,7 +323,7 @@ export function AppHeader({
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(min-width: 481px)");
+    const mediaQuery = window.matchMedia("(min-width: 480px)");
 
     function handleMediaQueryChange(event: MediaQueryListEvent) {
       if (event.matches) {
@@ -410,7 +417,7 @@ export function AppHeader({
       <header className={`app-mobile-header surface-elevated relative z-50 shadow-[0_2px_12px_rgba(17,24,39,0.06)] ${
         isAdminHeader
           ? "fixed inset-x-0 top-0"
-          : "min-[481px]:hidden"
+          : "min-[480px]:hidden"
       }`.trim()}>
       {isAdminHeader ? (
         <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 px-[calc(var(--space-4)+16px)] py-3 min-[1280px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[1280px]:px-[var(--app-shell-desktop-side-offset)]">
@@ -432,7 +439,7 @@ export function AppHeader({
             <div className="flex min-w-0 items-center gap-0">
               {showCreateAction ? (
                 <CreateTopicButton
-                  className="h-10 px-3 text-[13px] min-[481px]:h-11 min-[481px]:px-4 min-[481px]:text-sm"
+                  className="h-10 px-3 text-[14px] min-[480px]:h-11 min-[480px]:px-4 min-[480px]:text-sm"
                   href={createTopicHref}
                 >
                   Написать
@@ -448,7 +455,7 @@ export function AppHeader({
       ) : (
         <>
           {shouldShowMobileHeader ? (
-            <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 px-3 py-2 min-[481px]:hidden">
+            <div className="relative z-10 mx-auto grid w-full max-w-[var(--app-shell-max-width)] grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-2 px-3 py-2 min-[480px]:hidden">
               <button
                 type="button"
                 aria-expanded={isMobileMenuOpen}
@@ -458,9 +465,10 @@ export function AppHeader({
                 onClick={() => setIsMobileMenuOpen((currentState) => !currentState)}
                 className={buttonClassName({
                   className:
-                    "button--icon-only relative h-11 w-11 justify-self-start px-0 text-[var(--label-primary)]",
-                  size: "lg",
-                  variant: "tertiary",
+                    "button--icon-only relative justify-self-start text-[var(--label-primary)]",
+                  isIconOnly: true,
+                  size: "sm",
+                  variant: "quaternary",
                 })}
               >
                 <span className="flex h-8 w-8 items-center justify-center">
@@ -483,15 +491,15 @@ export function AppHeader({
             </div>
           ) : null}
 
-          <div className="relative z-10 hidden w-full min-w-0 min-[481px]:flex min-[481px]:h-[var(--app-header-height)] min-[481px]:overflow-x-clip min-[481px]:overflow-y-visible">
-            <div className="relative z-[3] flex h-full min-w-0 shrink-0 flex-col items-start min-[481px]:w-[max(calc(var(--app-shell-nav-compact-width)+24px),calc((100vw-var(--app-shell-primary-column-width))/2))] min-[1140px]:w-auto min-[1140px]:grow min-[1140px]:basis-auto min-[1296px]:items-end">
+          <div className="relative z-10 hidden w-full min-w-0 min-[480px]:flex min-[480px]:h-[var(--app-header-height)] min-[480px]:overflow-x-clip min-[480px]:overflow-y-visible">
+            <div className="relative z-[3] flex h-full min-w-0 shrink-0 flex-col items-start min-[480px]:w-[max(calc(var(--app-shell-nav-compact-width)+24px),calc((100vw-var(--app-shell-primary-column-width))/2))] min-[1140px]:w-auto min-[1140px]:grow min-[1140px]:basis-auto min-[1296px]:items-end">
               <div className="flex h-full min-w-0 w-[calc(var(--app-shell-desktop-side-offset)+var(--app-shell-nav-compact-width))] items-stretch justify-start pl-[var(--app-shell-desktop-side-offset)] pr-0 transition-[width] duration-200 ease-out min-[1296px]:w-[calc(var(--app-shell-nav-width)+24px)] min-[1296px]:justify-end min-[1296px]:pl-2 min-[1296px]:pr-4">
                 <aside className="relative z-10 h-full w-[var(--app-shell-nav-compact-width)] min-w-[var(--app-shell-nav-compact-width)] min-[1296px]:w-[var(--app-shell-nav-width)] min-[1296px]:min-w-[var(--app-shell-nav-width)]">
                   <div className="flex h-full w-full items-center">
                     <Link
                       href={homeHref}
                       aria-label="внутри"
-                      className="inline-flex w-fit max-w-full cursor-pointer min-[481px]:max-w-[var(--app-shell-side-rail-width)]"
+                      className="inline-flex w-fit max-w-full cursor-pointer min-[480px]:max-w-[var(--app-shell-side-rail-width)]"
                     >
                       <AppBrand
                         wordmarkClassName="h-8 w-auto shrink-0"
@@ -526,7 +534,10 @@ export function AppHeader({
                               suppressHydrationWarning
                               className="!text-[14px] !leading-5"
                             />
-                            <HeroSearchField.ClearButton aria-label="Очистить поиск" />
+                            <HeroSearchField.ClearButton
+                              id={desktopHeaderSearchClearButtonId}
+                              aria-label="Очистить поиск"
+                            />
                           </HeroSearchField.Group>
                         </HeroSearchField>
                       ) : null}
@@ -561,7 +572,7 @@ export function AppHeader({
 
       {!isAdminHeader && shouldShowMobileHeader ? (
         <div
-          className={`fixed inset-0 z-[120] min-[481px]:hidden ${
+          className={`fixed inset-0 z-[120] min-[480px]:hidden ${
             isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"
           }`}
           aria-hidden={!isMobileMenuOpen}

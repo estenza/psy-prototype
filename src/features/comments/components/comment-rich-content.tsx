@@ -1,13 +1,16 @@
 "use client";
 
 import { memo, useEffect, useRef } from "react";
-import { buildPublicProfilePathFromHandle } from "@/features/auth/lib/profile";
+import {
+  buildProfilePathFromNickname,
+  buildPublicProfilePathFromHandle,
+} from "@/features/auth/lib/profile";
 
 type CommentRichContentProps = {
   html: string;
 };
 
-const COMMENT_MENTION_PATTERN = /@\[([^[\]|]+)(?:\|([^[\]|]+))?\]/g;
+const COMMENT_MENTION_PATTERN = /@\[([^[\]|]+)(?:\|([^[\]|]+))?(?:\|([^[\]|]+))?\]/g;
 const COMMENT_EMBEDDED_IFRAME_PATTERN =
   /<div\s+data-embedded-media="true"\s+data-kind="iframe">\s*<iframe\b[^>]*\ssrc="([^"]+)"[^>]*><\/iframe>\s*<\/div>/gi;
 const INSTAGRAM_EMBEDS_SRC = "https://www.instagram.com/embed.js";
@@ -236,14 +239,20 @@ function decorateCommentHtml(html: string) {
     )
     .replace(
       COMMENT_MENTION_PATTERN,
-      (_match, mentionLabel: string) => {
-      const profilePath = buildPublicProfilePathFromHandle(`@${mentionLabel}`);
+      (_match, mentionLabel: string, _targetCommentId: string | undefined, targetProfileNickname: string | undefined) => {
+      const trimmedMentionLabel = mentionLabel.trim();
+      const profilePath = targetProfileNickname
+        ? buildProfilePathFromNickname(targetProfileNickname)
+        : buildPublicProfilePathFromHandle(`@${trimmedMentionLabel}`);
+      const visibleMentionLabel = targetProfileNickname
+        ? trimmedMentionLabel
+        : `@${trimmedMentionLabel}`;
 
       if (!profilePath) {
-        return `@${mentionLabel}`;
+        return visibleMentionLabel;
       }
 
-      return `<a href="${profilePath}">@${mentionLabel}</a>`;
+      return `<a href="${profilePath}">${visibleMentionLabel}</a>`;
       },
     );
 }

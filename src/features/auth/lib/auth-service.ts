@@ -581,6 +581,8 @@ function validateSpecialistProfileInput(input: CompleteSpecialistProfileInput) {
     firstName,
     lastName,
     patronymic: patronymic || null,
+    specialistPhoneCountry: null,
+    specialistPhoneNumber: null,
   };
 }
 
@@ -861,16 +863,19 @@ export async function resetPassword(input: PasswordResetConfirmInput) {
 
 export async function selectRole(user: SessionUser, input: SelectRoleInput) {
   const role = validateRoleSelection(input);
-  const nextOnboardingStep = role === "specialist" ? "specialist-profile" : "user-profile";
-  const displayName = role === "user"
-    ? await generateUserCodeName(user.id)
-    : buildDisplayName({
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        nickname: user.nickname,
-        role,
-      });
+
+  if (role === "specialist") {
+    throw new AuthServiceError({
+      message: "Регистрация психолога доступна только после проверки заявки.",
+      status: 403,
+      fieldErrors: {
+        role: "Сначала заполните заявку в разделе «Специалистам».",
+      },
+    });
+  }
+
+  const nextOnboardingStep = "user-profile";
+  const displayName = await generateUserCodeName(user.id);
 
   const updatedUser = await updateUserProfileFields({
     displayName,
@@ -931,6 +936,8 @@ export async function completeSpecialistProfile(
     onboardingStep: "complete",
     patronymic: normalizedInput.patronymic,
     role: "specialist",
+    specialistPhoneCountry: normalizedInput.specialistPhoneCountry,
+    specialistPhoneNumber: normalizedInput.specialistPhoneNumber,
     userId: user.id,
   });
 

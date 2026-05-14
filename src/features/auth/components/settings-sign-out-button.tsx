@@ -26,7 +26,7 @@ export function SettingsSignOutButton() {
 
   return (
     <Button
-      className="w-full justify-center min-[481px]:w-auto"
+      className="w-full justify-center min-[480px]:w-auto"
       isDisabled={isSigningOut}
       onPress={() => {
         void handleSignOut();

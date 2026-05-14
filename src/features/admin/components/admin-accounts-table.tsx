@@ -3,10 +3,18 @@
 import type { SortDescriptor } from "@heroui/react";
 
 import { Chip, EmptyState, Modal, Popover, Table } from "@heroui/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CloseIcon, QuestionCircleIcon } from "@/components/ui/icons";
+import {
+  ChevronDownIcon,
+  CloseIcon,
+  VerifiedSpecialistIcon,
+} from "@/components/ui/icons";
 import { IconButton } from "@/components/ui/icon-button";
+import {
+  QuestionButtonIcon,
+  questionButtonClassName,
+} from "@/components/ui/question-button";
 import { UserAvatar } from "@/features/auth/components/user-avatar";
 import { AdminSpecialtyTags } from "@/features/admin/components/admin-specialty-tags";
 import { AdminUserEditorModal } from "@/features/admin/components/admin-user-editor-modal";
@@ -18,6 +26,18 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+const statusChipLabelStyle = {
+  fontSize: 12,
+  lineHeight: "16px",
+};
+const modalInternalPortalSelector = [
+  '[data-slot="modal-dialog"]',
+  '[data-slot="popover"]',
+  '[role="listbox"]',
+].join(", ");
+const detailsSectionLabelClassName =
+  "text-[14px] font-medium text-[var(--label-tertiary)]";
 
 const SPECIALIST_STATUS_LABELS: Record<string, string> = {
   none: "Без статуса",
@@ -51,6 +71,8 @@ const SPECIALISTS_COLUMNS = [
   { key: "actions", label: "Действия", allowsSorting: false },
 ] as const;
 
+type AccountColumn = (typeof USERS_COLUMNS)[number] | (typeof SPECIALISTS_COLUMNS)[number];
+
 type SortableColumnKey =
   | "accountType"
   | "createdAt"
@@ -59,17 +81,168 @@ type SortableColumnKey =
   | "specialties"
   | "status";
 
+type TruncatedSpecialties = {
+  hiddenCount: number;
+  visibleText: string;
+};
+
 function BanReasonPopover({ reason }: { reason: string }) {
   return (
     <Popover.Root>
-      <Popover.Trigger aria-label="Показать причину бана">
-        <QuestionCircleIcon />
+      <Popover.Trigger
+        aria-label="Показать причину бана"
+        className={questionButtonClassName}
+      >
+        <QuestionButtonIcon />
       </Popover.Trigger>
       <Popover.Content>
         <Popover.Dialog>{reason}</Popover.Dialog>
         <Popover.Arrow />
       </Popover.Content>
     </Popover.Root>
+  );
+}
+
+function AdminSpecialtiesCell({ specialties }: { specialties: string[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [truncatedSpecialties, setTruncatedSpecialties] =
+    useState<TruncatedSpecialties | null>(null);
+  const specialtiesText = specialties.length > 0 ? specialties.join(", ") : "—";
+
+  useEffect(() => {
+    const containerElement = containerRef.current;
+    const measureElement = measureRef.current;
+    if (!containerElement || !measureElement || specialties.length === 0) {
+      return;
+    }
+
+    const observedElement = containerElement;
+    const textMeasureElement = measureElement;
+    let animationFrameId: number | null = null;
+
+    function measureTextHeight(value: string) {
+      textMeasureElement.textContent = value;
+      return textMeasureElement.scrollHeight;
+    }
+
+    function setNextTruncatedSpecialties(nextValue: TruncatedSpecialties | null) {
+      setTruncatedSpecialties((currentValue) => {
+        if (
+          currentValue?.hiddenCount === nextValue?.hiddenCount
+          && currentValue?.visibleText === nextValue?.visibleText
+        ) {
+          return currentValue;
+        }
+
+        return nextValue;
+      });
+    }
+
+    function updateTruncatedText() {
+      const styles = window.getComputedStyle(textMeasureElement);
+      const lineHeight = Number.parseFloat(styles.lineHeight);
+      const maxHeight = (Number.isFinite(lineHeight) ? lineHeight : 20) * 2 + 1;
+
+      if (measureTextHeight(specialtiesText) <= maxHeight) {
+        setNextTruncatedSpecialties(null);
+        return;
+      }
+
+      for (let visibleCount = specialties.length - 1; visibleCount > 0; visibleCount -= 1) {
+        const hiddenCount = specialties.length - visibleCount;
+        const visibleText = specialties.slice(0, visibleCount).join(", ");
+
+        if (measureTextHeight(`${visibleText}… Еще ${hiddenCount}`) <= maxHeight) {
+          setNextTruncatedSpecialties({ hiddenCount, visibleText });
+          return;
+        }
+      }
+
+      setNextTruncatedSpecialties({
+        hiddenCount: specialties.length,
+        visibleText: "",
+      });
+    }
+
+    function scheduleTruncatedTextUpdate() {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      animationFrameId = requestAnimationFrame(updateTruncatedText);
+    }
+
+    scheduleTruncatedTextUpdate();
+
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+        }
+      };
+    }
+
+    const resizeObserver = new ResizeObserver(scheduleTruncatedTextUpdate);
+    resizeObserver.observe(observedElement);
+
+    return () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [specialties, specialties.length, specialtiesText]);
+
+  if (specialties.length === 0) {
+    return (
+      <span className="text-[14px] leading-5 text-[var(--label-primary)]">
+        {specialtiesText}
+      </span>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative min-w-0 text-[14px] leading-5 text-[var(--label-primary)]"
+    >
+      <div
+        ref={measureRef}
+        aria-hidden="true"
+        className="pointer-events-none invisible absolute inset-x-0 top-0 text-[14px] leading-5"
+      />
+
+      {truncatedSpecialties === null ? (
+        <span>{specialtiesText}</span>
+      ) : (
+        <>
+          {truncatedSpecialties.visibleText ? (
+            <>
+              <span>{truncatedSpecialties.visibleText}</span>
+              <span aria-hidden="true">… </span>
+            </>
+          ) : null}
+          <Popover.Root>
+            <Popover.Trigger
+              aria-label="Показать все психотерапевтические подходы"
+              className="inline p-0 align-baseline text-[14px] leading-5 text-[var(--label-tertiary)]"
+            >
+              Еще {truncatedSpecialties.hiddenCount}
+            </Popover.Trigger>
+            <Popover.Content
+              placement="bottom end"
+              className="max-w-[360px]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Popover.Dialog className="max-h-[320px] overflow-y-auto p-3 text-[14px] leading-5 text-[var(--label-primary)] outline-none">
+                {specialtiesText}
+              </Popover.Dialog>
+              <Popover.Arrow />
+            </Popover.Content>
+          </Popover.Root>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -102,11 +275,11 @@ function InfoBlock({
   className?: string;
 }) {
   return (
-    <div className={`border-separator rounded-[16px] border p-4 ${className}`.trim()}>
-      <div className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--label-tertiary)]">
+    <div className={`w-full ${className}`.trim()}>
+      <div className={detailsSectionLabelClassName}>
         {label}
       </div>
-      <div className="mt-3 text-[16px] text-[var(--label-primary)]">
+      <div className="mt-1 text-[16px] text-[var(--label-primary)]">
         {value}
       </div>
     </div>
@@ -190,11 +363,41 @@ function getSortableValue(
   }
 }
 
+function SortColumnLabel({
+  column,
+  sortDescriptor,
+}: {
+  column: AccountColumn;
+  sortDescriptor: SortDescriptor;
+}) {
+  const isActive = sortDescriptor.column === column.key;
+
+  return (
+    <span className="flex w-full items-center justify-between gap-3">
+      <span className="min-w-0 truncate">{column.label}</span>
+      {column.allowsSorting ? (
+        <span
+          className={`flex h-3 w-3 flex-none items-center justify-center text-[var(--label-tertiary)] transition-opacity ${
+            isActive ? "opacity-100" : "opacity-0"
+          } ${
+            isActive && sortDescriptor.direction === "ascending" ? "rotate-180" : ""
+          }`.trim()}
+          aria-hidden="true"
+        >
+          <ChevronDownIcon />
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function DetailsModal({
   onClose,
+  onUserChange,
   user,
 }: {
   onClose: () => void;
+  onUserChange: (user: AdminListedUser) => void;
   user: AdminListedUser;
 }) {
   const [view, setView] = useState<"details" | "editor">("details");
@@ -204,6 +407,8 @@ function DetailsModal({
     ? fullName || user.displayName
     : user.displayName;
   const secondaryName = user.role === "user" && user.nickname ? `@${user.nickname}` : null;
+  const isVerifiedSpecialist = user.role === "specialist"
+    && user.specialistStatus === "verified";
   const isEditorView = view === "editor";
 
   return (
@@ -213,7 +418,7 @@ function DetailsModal({
       isDismissable
       onClick={(event) => {
         const target = event.target instanceof HTMLElement ? event.target : null;
-        if (target?.closest('[data-slot="modal-dialog"]')) return;
+        if (target?.closest(modalInternalPortalSelector)) return;
         onClose();
       }}
       className="fixed inset-0 z-[260]"
@@ -240,19 +445,11 @@ function DetailsModal({
               isOpen
               onBack={() => setView("details")}
               onClose={() => setView("details")}
+              onSaved={onUserChange}
             />
           ) : (
             <>
-              <div className="pr-10">
-                <h2
-                  id="admin-account-details-title"
-                  className="font-helvetica text-[28px] font-bold leading-none"
-                >
-                  {user.role === "specialist" ? "Карточка специалиста" : "Карточка пользователя"}
-                </h2>
-              </div>
-
-              <div className="mt-6 flex items-center gap-4">
+              <div className="flex items-center gap-4 pr-10">
                 <UserAvatar
                   avatarUrl={user.avatarUrl}
                   avatarSeed={user.nickname || user.id}
@@ -260,53 +457,48 @@ function DetailsModal({
                   size="lg"
                 />
                 <div className="min-w-0">
-                  <div className="text-[22px] font-semibold text-[var(--label-primary)]">
-                    {primaryName}
+                  <div className="type-h2 inline-flex max-w-full items-center gap-1 font-semibold text-[var(--label-primary)]">
+                    <span className="min-w-0 truncate">{primaryName}</span>
+                    {isVerifiedSpecialist ? <VerifiedSpecialistIcon /> : null}
                   </div>
                   {secondaryName ? (
                     <div className="mt-1 text-[14px] text-[var(--label-secondary)]">{secondaryName}</div>
                   ) : null}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Chip color={statusCopy.color} variant="soft" className="admin-status-chip">
+                      <Chip.Label style={statusChipLabelStyle}>
+                        {statusCopy.label}
+                      </Chip.Label>
+                    </Chip>
+                    {statusCopy.note ? (
+                      <span className="text-[14px] leading-6 text-[var(--label-secondary)]">
+                        {statusCopy.note}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-4 min-[1280px]:grid-cols-2">
+              <div className="mt-6 grid w-full grid-cols-1 gap-8">
                 {user.role === "user" ? (
                   <>
                     <InfoBlock label="Имя" value={user.displayName} />
                     <InfoBlock label="Имя аккаунта" value={secondaryName ?? "Не указано"} />
                   </>
-                ) : (
-                  <>
-                    <InfoBlock label="Имя" value={user.firstName?.trim() || "Не указано"} />
-                    <InfoBlock label="Фамилия" value={user.lastName?.trim() || "Не указано"} />
-                  </>
-                )}
+                ) : null}
 
-                <InfoBlock label="Email" value={user.email} />
-                <InfoBlock
-                  label="Пароль"
-                  value="Пароль не хранится в открытом виде и не может быть показан."
-                />
-
-                <div className="border-separator rounded-[16px] border p-4">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--label-tertiary)]">
-                    Статус
+                <div className="w-full">
+                  <div className={detailsSectionLabelClassName}>
+                    Описание
                   </div>
-                  <div className="mt-3 space-y-2">
-                    <Chip color={statusCopy.color} variant="soft">{statusCopy.label}</Chip>
-                    {statusCopy.note ? (
-                      <p className="text-[14px] leading-6 text-[var(--label-secondary)]">
-                        {statusCopy.note}
-                      </p>
-                    ) : null}
+                  <div className="mt-1 text-[16px] leading-6 text-[var(--label-primary)]">
+                    {user.profileDescription?.trim() || "Описание не заполнено"}
                   </div>
                 </div>
 
-                <InfoBlock label="Создан" value={dateFormatter.format(new Date(user.createdAt))} />
-
                 {user.role === "specialist" ? (
-                  <div className="border-separator rounded-[16px] border p-4 min-[1280px]:col-span-2">
-                    <div className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--label-tertiary)]">
+                  <div className="w-full">
+                    <div className={detailsSectionLabelClassName}>
                       Психотерапевтические подходы
                     </div>
                     <div className="mt-3">
@@ -315,21 +507,61 @@ function DetailsModal({
                   </div>
                 ) : null}
 
-                <div className="border-separator rounded-[16px] border p-4 min-[1280px]:col-span-2">
-                  <div className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--label-tertiary)]">
-                    Описание
+                {user.role === "specialist" ? (
+                  <div className="w-full">
+                    <div className={detailsSectionLabelClassName}>
+                      Работает с темами
+                    </div>
+                    {user.workTopics.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {user.workTopics.map((workTopic) => (
+                          <span
+                            key={workTopic}
+                            className="rounded-full bg-[var(--fill-quaternary)] px-3 py-1 text-[14px] leading-5 text-[var(--label-primary)]"
+                          >
+                            {workTopic}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-[16px] leading-6 text-[var(--label-primary)]">
+                        Темы не выбраны
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-3 text-[14px] leading-6 text-[var(--label-secondary)]">
-                    {user.profileDescription?.trim() || "Описание не заполнено"}
+                ) : null}
+
+                {user.role === "specialist" ? (
+                  <div className="w-full">
+                    <div className={detailsSectionLabelClassName}>
+                      Образование
+                    </div>
+                    {user.education.length > 0 ? (
+                      <div className="mt-2 grid gap-3 text-[16px] leading-6 text-[var(--label-primary)]">
+                        {user.education.map((item) => (
+                          <div key={`${item.year}-${item.institution}`}>
+                            <div>{item.year}</div>
+                            <div>{item.institution}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-[16px] leading-6 text-[var(--label-primary)]">
+                        Образование не заполнено
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : null}
+
+                <InfoBlock label="Email" value={user.email} />
+
+                <InfoBlock label="Создан" value={dateFormatter.format(new Date(user.createdAt))} />
               </div>
 
               <div className="mt-6 flex justify-end">
                 <Button
                   type="button"
                   variant="primary"
-                  className="!rounded-full !px-5"
                   onClick={() => setView("editor")}
                 >
                   Редактировать
@@ -403,7 +635,10 @@ export function AdminAccountsTable({ section, users }: AdminAccountsTableProps) 
                   allowsSorting={column.allowsSorting}
                   isRowHeader={column.key === "identity"}
                 >
-                  {column.label}
+                  <SortColumnLabel
+                    column={column}
+                    sortDescriptor={sortDescriptor}
+                  />
                 </Table.Column>
               ))}
             </Table.Header>
@@ -423,9 +658,11 @@ export function AdminAccountsTable({ section, users }: AdminAccountsTableProps) 
                 const accountTypeLabel = getAccountTypeLabel(user);
                 const primaryName = getPrimaryName(user, isUsersSection);
                 const secondaryName = getSecondaryName(user, isUsersSection);
+                const isVerifiedSpecialist = user.role === "specialist"
+                  && user.specialistStatus === "verified";
 
                 return (
-                  <Table.Row key={user.id} id={user.id}>
+                  <Table.Row key={user.id} id={user.id} className="cursor-pointer">
                     <Table.Cell>
                       <div className="flex min-w-0 items-center gap-3">
                         <UserAvatar
@@ -435,7 +672,10 @@ export function AdminAccountsTable({ section, users }: AdminAccountsTableProps) 
                           size="sm"
                         />
                         <div className="min-w-0">
-                          <div>{primaryName}</div>
+                          <div className="inline-flex max-w-full items-center gap-1">
+                            <span className="min-w-0 truncate">{primaryName}</span>
+                            {isVerifiedSpecialist ? <VerifiedSpecialistIcon /> : null}
+                          </div>
                           {secondaryName ? <div>{secondaryName}</div> : null}
                         </div>
                       </div>
@@ -447,13 +687,17 @@ export function AdminAccountsTable({ section, users }: AdminAccountsTableProps) 
 
                     {!isUsersSection ? (
                       <Table.Cell>
-                        <AdminSpecialtyTags specialties={user.specialties} />
+                        <AdminSpecialtiesCell specialties={user.specialties} />
                       </Table.Cell>
                     ) : null}
 
                     <Table.Cell>
                       <div className="flex items-center gap-1.5">
-                        <Chip color={statusCopy.color} variant="soft">{statusCopy.label}</Chip>
+                        <Chip color={statusCopy.color} variant="soft" className="admin-status-chip">
+                          <Chip.Label style={statusChipLabelStyle}>
+                            {statusCopy.label}
+                          </Chip.Label>
+                        </Chip>
                         {statusCopy.note ? <BanReasonPopover reason={statusCopy.note} /> : null}
                       </div>
                     </Table.Cell>
@@ -472,7 +716,11 @@ export function AdminAccountsTable({ section, users }: AdminAccountsTableProps) 
       </Table>
 
       {selectedUser ? (
-        <DetailsModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+        <DetailsModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+          onUserChange={setSelectedUser}
+        />
       ) : null}
     </>
   );

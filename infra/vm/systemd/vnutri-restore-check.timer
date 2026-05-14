@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly vnutri PostgreSQL restore check
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00 UTC
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

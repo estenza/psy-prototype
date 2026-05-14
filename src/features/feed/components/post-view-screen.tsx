@@ -4,7 +4,7 @@ import {
   startTransition,
   useState,
 } from "react";
-import { toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/layout/app-header";
 import { DesktopAppShell } from "@/components/layout/desktop-app-shell";
@@ -24,7 +24,10 @@ import { normalizePostDates } from "@/features/feed/lib/post-normalization";
 import { normalizePostReturnTo } from "@/features/feed/lib/post-navigation";
 import { isPostOwnedByUser } from "@/features/feed/lib/post-ownership";
 import { usePostViewTracker } from "@/features/feed/hooks/use-post-view-tracker";
-import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
+import type {
+  PostMenuActionId,
+  PostMenuActionPayload,
+} from "@/features/feed/constants/post-menu";
 import type {
   PostMutationResponse,
   PostRouteErrorResponse,
@@ -175,7 +178,11 @@ export function PostViewScreen({
     });
   }
 
-  async function handlePostMenuAction(actionId: PostMenuActionId, postIdToHandle: Post["id"]) {
+  async function handlePostMenuAction(
+    actionId: PostMenuActionId,
+    postIdToHandle: Post["id"],
+    payload?: PostMenuActionPayload,
+  ) {
     const currentPost =
       post && post.id === postIdToHandle
         ? post
@@ -294,6 +301,31 @@ export function PostViewScreen({
       return;
     }
 
+    if (actionId === "report") {
+      await runIfAuthorized(async () => {
+        const response = await fetch(`/api/posts/${postIdToHandle}/report`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            reason: payload?.reason,
+          }),
+        });
+
+        if (!response.ok) {
+          const responsePayload = (await response.json().catch(() => null)) as PostRouteErrorResponse | null;
+          throw new Error(responsePayload?.error ?? "Не удалось отправить жалобу.");
+        }
+
+        toast.success("Жалоба на пост отправлена");
+        startTransition(() => {
+          router.push(returnTo ?? "/");
+        });
+      });
+      return;
+    }
+
     if (actionId === "delete") {
       if (!isPostOwnedByUser(currentPost, user)) {
         return;
@@ -339,10 +371,10 @@ export function PostViewScreen({
   }
 
   return (
-    <div className="surface-primary text-label-primary min-h-[100svh] min-[481px]:min-h-dvh">
+    <div className="surface-primary text-label-primary min-h-[100svh] min-[480px]:min-h-dvh">
       <AppHeader />
 
-      <div className="min-[481px]:pt-[var(--app-header-height)]">
+      <div className="min-[480px]:pt-[var(--app-header-height)]">
         <DesktopAppShell
           activeSection={null}
           centerClassName="w-full max-w-[672px]"
@@ -352,10 +384,10 @@ export function PostViewScreen({
             <PageHeader onBack={handleBack} title="Пост" />
 
             {detailedPost ? (
-              <div className="space-y-2 pb-8 min-[481px]:space-y-4 min-[481px]:pb-24">
+              <div className="space-y-2 pb-8 min-[480px]:space-y-4 min-[480px]:pb-24">
                 <div
                   ref={viewTrackerRef}
-                  className="surface-card px-3 py-4 min-[481px]:px-5 min-[481px]:px-6"
+                  className="surface-card px-3 py-4 min-[480px]:px-5 min-[480px]:px-6"
                 >
                   <CardPostItem
                     post={detailedPost}
@@ -367,7 +399,7 @@ export function PostViewScreen({
                 </div>
 
                 <div
-                  className={`surface-card feed-card-surface px-3 pt-0 min-[481px]:px-5 min-[481px]:px-6 ${
+                  className={`surface-card feed-card-surface px-3 pt-0 min-[480px]:px-5 min-[480px]:px-6 ${
                     hasComments ? "pb-8" : "pb-0"
                   }`.trim()}
                 >
@@ -380,7 +412,7 @@ export function PostViewScreen({
                 </div>
               </div>
             ) : (
-              <div className="pb-8 min-[481px]:pb-24">
+              <div className="pb-8 min-[480px]:pb-24">
                 <ContentPlaceholder
                   titleAs="h1"
                   title="Пост не найден"

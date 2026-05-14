@@ -8,9 +8,25 @@ import { getDatabase } from "@/lib/db";
 import { enqueueDomainEvent } from "@/lib/domain-events/outbox";
 import { runStorageUnitOfWork } from "@/lib/unit-of-work";
 import { findUserById } from "@/features/auth/lib/auth-repository";
-import type { AuthorFollowSummary, SessionUser } from "@/features/auth/types";
+import { canUsePublicActivity } from "@/features/auth/lib/permissions";
+import type {
+  AuthorFollowListUser,
+  AuthorFollowSummary,
+  SessionUser,
+  SpecialistStatus,
+  UserRole,
+} from "@/features/auth/types";
 
 type BooleanLike = boolean | number | null;
+
+type FollowListUserRow = {
+  avatar_url: string | null;
+  display_name: string;
+  id: string;
+  nickname: string | null;
+  role: UserRole;
+  specialist_status: SpecialistStatus;
+};
 
 export class FollowRepositoryError extends Error {
   readonly status: number;
@@ -24,6 +40,17 @@ export class FollowRepositoryError extends Error {
 
 function readBoolean(value: BooleanLike | undefined) {
   return value === true || value === 1;
+}
+
+function mapFollowListUser(row: FollowListUserRow): AuthorFollowListUser {
+  return {
+    avatarUrl: row.avatar_url,
+    displayName: row.display_name,
+    id: row.id,
+    nickname: row.nickname,
+    role: row.role,
+    specialistStatus: row.specialist_status,
+  };
 }
 
 async function queryPgRows<T extends Record<string, unknown>>(query: string, values: unknown[] = []) {
@@ -41,6 +68,15 @@ async function assertActorCanFollow(actor: SessionUser) {
     throw new FollowRepositoryError("Заблокированный аккаунт не может оформлять подписки.", {
       status: 403,
     });
+  }
+
+  if (!canUsePublicActivity(actor)) {
+    throw new FollowRepositoryError(
+      "Активность для специалистов доступна только после верификации.",
+      {
+        status: 403,
+      },
+    );
   }
 }
 
@@ -243,6 +279,92 @@ export async function getAuthorFollowSummary(
     followingCount: row?.following_count ?? 0,
     viewerFollowing: readBoolean(row?.viewer_following ?? 0),
   };
+}
+
+export async function listAuthorFollowers(
+  profileUserId: string,
+): Promise<AuthorFollowListUser[]> {
+  if (isPostgresAuthEnabled()) {
+    const rows = await queryPgRows<FollowListUserRow>(
+      `SELECT
+        users.id,
+        users.display_name,
+        users.nickname,
+        users.avatar_url,
+        users.role,
+        users.specialist_status
+       FROM user_followed_authors
+       INNER JOIN users ON users.id = user_followed_authors.follower_user_id
+       WHERE user_followed_authors.followed_user_id = $1
+       ORDER BY user_followed_authors.created_at DESC
+       LIMIT 100`,
+      [profileUserId],
+    );
+
+    return rows.map(mapFollowListUser);
+  }
+
+  const rows = getDatabase()
+    .prepare(
+      `SELECT
+        users.id,
+        users.display_name,
+        users.nickname,
+        users.avatar_url,
+        users.role,
+        users.specialist_status
+       FROM user_followed_authors
+       INNER JOIN users ON users.id = user_followed_authors.follower_user_id
+       WHERE user_followed_authors.followed_user_id = ?
+       ORDER BY user_followed_authors.created_at DESC
+       LIMIT 100`,
+    )
+    .all(profileUserId) as FollowListUserRow[];
+
+  return rows.map(mapFollowListUser);
+}
+
+export async function listAuthorFollowing(
+  profileUserId: string,
+): Promise<AuthorFollowListUser[]> {
+  if (isPostgresAuthEnabled()) {
+    const rows = await queryPgRows<FollowListUserRow>(
+      `SELECT
+        users.id,
+        users.display_name,
+        users.nickname,
+        users.avatar_url,
+        users.role,
+        users.specialist_status
+       FROM user_followed_authors
+       INNER JOIN users ON users.id = user_followed_authors.followed_user_id
+       WHERE user_followed_authors.follower_user_id = $1
+       ORDER BY user_followed_authors.created_at DESC
+       LIMIT 100`,
+      [profileUserId],
+    );
+
+    return rows.map(mapFollowListUser);
+  }
+
+  const rows = getDatabase()
+    .prepare(
+      `SELECT
+        users.id,
+        users.display_name,
+        users.nickname,
+        users.avatar_url,
+        users.role,
+        users.specialist_status
+       FROM user_followed_authors
+       INNER JOIN users ON users.id = user_followed_authors.followed_user_id
+       WHERE user_followed_authors.follower_user_id = ?
+       ORDER BY user_followed_authors.created_at DESC
+       LIMIT 100`,
+    )
+    .all(profileUserId) as FollowListUserRow[];
+
+  return rows.map(mapFollowListUser);
 }
 
 export async function setPostFollow(params: {

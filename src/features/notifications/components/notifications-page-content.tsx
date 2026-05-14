@@ -37,7 +37,7 @@ export function NotificationsPageContent({
     return (
       <ContentPlaceholder
         title="Пока нет уведомлений"
-        description="Ответы, подписки и важные сообщения появятся здесь."
+        description="Комментарии, подписки и важные сообщения появятся здесь."
       />
     );
   }
@@ -64,7 +64,7 @@ export function NotificationsPageContent({
               {notification.title}
             </span>
             {notification.body ? (
-              <span className="mt-0.5 block truncate text-[13px] leading-5 text-[var(--label-secondary)]">
+              <span className="mt-0.5 block truncate text-[14px] leading-5 text-[var(--label-secondary)]">
                 {notification.body}
               </span>
             ) : null}

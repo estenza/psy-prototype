@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { useState } from "react";
 import { NotIgnoreAuthorIcon } from "@/components/ui/icons";
 import { UserAvatar } from "@/features/auth/components/user-avatar";
@@ -54,10 +54,10 @@ export function IgnoredAuthorsSettingsCard({
     <section className="surface-elevated rounded-[28px] p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-[16px] font-semibold text-[var(--label-primary)]">
+          <h2 className="type-h2 font-semibold text-[var(--label-primary)]">
             Игнор-лист
           </h2>
-          <p className="mt-2 text-[13px] leading-5 text-[var(--label-secondary)]">
+          <p className="mt-2 text-[14px] leading-5 text-[var(--label-secondary)]">
             Посты этих авторов не будут появляться в вашей ленте. Авторы об этом не узнают.
           </p>
         </div>
@@ -78,7 +78,7 @@ export function IgnoredAuthorsSettingsCard({
                   <p className="truncate text-[16px] font-semibold text-[var(--label-primary)]">
                     {author.name}
                   </p>
-                  <p className="truncate text-[13px] text-[var(--label-tertiary)]">
+                  <p className="truncate text-[14px] text-[var(--label-tertiary)]">
                     {author.handle}
                   </p>
                 </div>
@@ -86,11 +86,11 @@ export function IgnoredAuthorsSettingsCard({
 
               <button
                 type="button"
-                className="interactive-tertiary inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-[13px] font-semibold text-[var(--label-primary)]"
+                className="interactive-quaternary inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-[14px] font-semibold text-[var(--label-primary)]"
                 onClick={() => handleUnignore(author)}
               >
                 <NotIgnoreAuthorIcon />
-                <span className="hidden min-[481px]:inline">Не игнорировать</span>
+                <span className="hidden min-[480px]:inline">Не игнорировать</span>
               </button>
             </li>
           ))}

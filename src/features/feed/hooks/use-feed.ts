@@ -1,10 +1,13 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
-import { toast } from "@heroui/react";
+import { toast } from "@/components/feedback/toast";
 import { useAuthClient } from "@/features/auth/components/auth-required-provider";
 import { useAuthRequiredAction } from "@/features/auth/hooks/use-auth-required-action";
-import type { PostMenuActionId } from "@/features/feed/constants/post-menu";
+import type {
+  PostMenuActionId,
+  PostMenuActionPayload,
+} from "@/features/feed/constants/post-menu";
 import {
   DEFAULT_FEED_SORT_MODE,
   DEFAULT_VIEW_MODE,
@@ -61,7 +64,7 @@ function sortFeed(posts: Post[], sortMode: FeedSortMode): Post[] {
     );
   }
 
-  if (sortMode === "Горячее") {
+  if (sortMode === "Обсуждают") {
     return sortedPosts.sort((left, right) => {
       if (right.stats.likes !== left.stats.likes) {
         return right.stats.likes - left.stats.likes;
@@ -71,20 +74,7 @@ function sortFeed(posts: Post[], sortMode: FeedSortMode): Post[] {
     });
   }
 
-  return sortedPosts.sort((left, right) => {
-    const leftHasNoAnswers = left.stats.comments === 0;
-    const rightHasNoAnswers = right.stats.comments === 0;
-
-    if (leftHasNoAnswers !== rightHasNoAnswers) {
-      return leftHasNoAnswers ? -1 : 1;
-    }
-
-    if (left.stats.comments !== right.stats.comments) {
-      return left.stats.comments - right.stats.comments;
-    }
-
-    return right.stats.likes - left.stats.likes;
-  });
+  return sortedPosts;
 }
 
 export function useFeed({
@@ -326,6 +316,7 @@ export function useFeed({
   const handlePostMenuAction = async (
     actionId: PostMenuActionId,
     postId: Post["id"],
+    payload?: PostMenuActionPayload,
   ) => {
     if (actionId === "edit") {
       const postToEdit = posts.find((post) => post.id === postId);
@@ -462,6 +453,28 @@ export function useFeed({
           ? error.message
           : "Не удалось обновить игнор-лист.";
         toast.danger(message);
+      });
+    }
+
+    if (actionId === "report") {
+      await runIfAuthorized(async () => {
+        const response = await fetch(`/api/posts/${postId}/report`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            reason: payload?.reason,
+          }),
+        });
+
+        if (!response.ok) {
+          const responsePayload = (await response.json().catch(() => null)) as PostRouteErrorResponse | null;
+          throw new Error(responsePayload?.error ?? "Не удалось отправить жалобу.");
+        }
+
+        setPosts((current) => current.filter((post) => post.id !== postId));
+        toast.success("Жалоба на пост отправлена");
       });
     }
   };

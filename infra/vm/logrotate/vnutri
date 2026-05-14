@@ -1,0 +1,9 @@
+/var/log/vnutri/*.log /opt/vnutri/.pm2/logs/*.log {
+  daily
+  rotate 14
+  compress
+  missingok
+  notifempty
+  copytruncate
+  create 0640 vnutri vnutri
+}

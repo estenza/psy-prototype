@@ -3,13 +3,18 @@ import {
   normalizeNickname,
   RESERVED_NICKNAME_MESSAGE,
 } from "@/features/auth/lib/profile";
+import {
+  NICKNAME_MAX_LENGTH,
+  NICKNAME_MIN_LENGTH,
+  NICKNAME_PATTERN,
+} from "@/features/auth/constants";
 
 export const ADMIN_USER_NAME_MAX_LENGTH = 30;
-export const ADMIN_ACCOUNT_NAME_MIN_LENGTH = 3;
-export const ADMIN_ACCOUNT_NAME_MAX_LENGTH = 15;
-export const ADMIN_ACCOUNT_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
+export const ADMIN_ACCOUNT_NAME_MIN_LENGTH = NICKNAME_MIN_LENGTH;
+export const ADMIN_ACCOUNT_NAME_MAX_LENGTH = NICKNAME_MAX_LENGTH;
+export const ADMIN_ACCOUNT_NAME_PATTERN = NICKNAME_PATTERN;
 export const ADMIN_ACCOUNT_NAME_VALIDATION_MESSAGE =
-  `Имя аккаунта может содержать буквы, цифры и символы подчеркивания и должно иметь длину от ${ADMIN_ACCOUNT_NAME_MIN_LENGTH} до ${ADMIN_ACCOUNT_NAME_MAX_LENGTH} символов.`;
+  `Имя аккаунта может содержать буквы, цифры, точку и символ подчеркивания и должно иметь длину от ${ADMIN_ACCOUNT_NAME_MIN_LENGTH} до ${ADMIN_ACCOUNT_NAME_MAX_LENGTH} символов.`;
 
 export function normalizeAdminAccountName(value: string | null | undefined) {
   return normalizeNickname(value);

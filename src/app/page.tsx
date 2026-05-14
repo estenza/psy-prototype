@@ -22,10 +22,10 @@ export default async function Home() {
   const postsPage = await listFeedPosts(currentUser);
 
   return (
-    <div className="surface-primary text-label-primary min-h-[100svh] min-[481px]:min-h-dvh">
+    <div className="surface-primary text-label-primary min-h-[100svh] min-[480px]:min-h-dvh">
       <AppHeader />
 
-      <div className="min-[481px]:pt-[var(--app-header-height)]">
+      <div className="min-[480px]:pt-[var(--app-header-height)]">
         <DesktopAppShell
           centerClassName="w-full max-w-[672px]"
           fitCenterToContent
