@@ -43,6 +43,15 @@ function readMigrationFiles() {
     .map((fileName) => join(migrationsDir, fileName));
 }
 
+async function ensureSchemaMigrationsTable(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
 const pool = new Pool({
   connectionString: databaseUrl,
   max: 1,
@@ -53,6 +62,7 @@ try {
   const client = await pool.connect();
 
   try {
+    await ensureSchemaMigrationsTable(client);
     await client.query("BEGIN");
 
     for (const migrationPath of readMigrationFiles()) {
