@@ -1,0 +1,67 @@
+name: vnutri
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    image: ${APP_IMAGE:-ghcr.io/estenza/psy-prototype:selectel}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./runtime.env
+    environment:
+      NODE_ENV: production
+      APP_ENV: ${APP_ENV:-staging}
+      AUTH_APP_URL: https://${SITE_DOMAIN:?Set SITE_DOMAIN in .env}
+      AUTH_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      AUTH_DATABASE_SSL: "false"
+    expose:
+      - "3000"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
