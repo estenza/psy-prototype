@@ -33,6 +33,13 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Validate single-VDS Compose configuration
+        run: |
+          cp infra/selectel/.env.example infra/selectel/.env
+          cp infra/selectel/runtime.env.example infra/selectel/runtime.env
+          sed -i "s/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=$(openssl rand -hex 32)/" infra/selectel/.env
+          docker compose --project-directory infra/selectel -f infra/selectel/compose.yml config --quiet
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
