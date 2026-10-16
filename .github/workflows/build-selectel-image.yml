@@ -1,0 +1,61 @@
+name: Build Selectel VDS image
+
+# Migration branch builds are isolated from the existing Yandex Cloud deploys.
+# Do not auto-deploy or change vnutri.live DNS.
+on:
+  push:
+    branches:
+      - migration/selectel-mvp
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "package.json"
+      - "yarn.lock"
+      - "src/**"
+      - "infra/selectel/**"
+      - ".github/workflows/build-selectel-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: selectel-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Publish linux/amd64 image to GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate single-VDS Compose configuration
+        run: |
+          cp infra/selectel/.env.example infra/selectel/.env
+          cp infra/selectel/runtime.env.example infra/selectel/runtime.env
+          sed -i "s/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=$(openssl rand -hex 32)/" infra/selectel/.env
+          docker compose --project-directory infra/selectel -f infra/selectel/compose.yml config --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/estenza/psy-prototype:selectel
+            ghcr.io/estenza/psy-prototype:selectel-${{ github.sha }}

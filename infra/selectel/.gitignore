@@ -1,0 +1,5 @@
+.env
+runtime.env
+*.dump
+*.sql
+*.backup
